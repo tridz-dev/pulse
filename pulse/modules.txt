@@ -1,1 +1,2 @@
-Pulse
+Pulse Core
+Pulse Setup

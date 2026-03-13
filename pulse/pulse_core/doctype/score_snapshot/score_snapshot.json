@@ -1,0 +1,127 @@
+{
+ "actions": [],
+ "autoname": "format:PLS-SCORE-{#####}",
+ "creation": "2026-03-12 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "period_type",
+  "period_key",
+  "own_score",
+  "team_score",
+  "combined_score",
+  "total_items",
+  "completed_items",
+  "computed_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Employee",
+   "options": "Pulse Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "period_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Period Type",
+   "options": "Day\nWeek\nMonth",
+   "reqd": 1
+  },
+  {
+   "fieldname": "period_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Period Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "own_score",
+   "fieldtype": "Float",
+   "label": "Own Score",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "team_score",
+   "fieldtype": "Float",
+   "label": "Team Score",
+   "reqd": 1
+  },
+  {
+   "fieldname": "combined_score",
+   "fieldtype": "Float",
+   "label": "Combined Score",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_items",
+   "fieldtype": "Int",
+   "label": "Total Items",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "completed_items",
+   "fieldtype": "Int",
+   "label": "Completed Items",
+   "reqd": 1
+  },
+  {
+   "fieldname": "computed_at",
+   "fieldtype": "Datetime",
+   "label": "Computed At",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-12 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse Core",
+ "name": "Score Snapshot",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Executive"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Leader"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

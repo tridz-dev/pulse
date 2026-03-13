@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/assets/pulse/frontend/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pulse</title>
+    <script type="module" crossorigin src="/assets/pulse/frontend/assets/index-fDN7AUDR.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/pulse/frontend/assets/vendor-CwgAYrH0.js">
+    <link rel="modulepreload" crossorigin href="/assets/pulse/frontend/assets/recharts-D43K19nT.js">
+    <link rel="modulepreload" crossorigin href="/assets/pulse/frontend/assets/ui-yRMK7Buj.js">
+    <link rel="stylesheet" crossorigin href="/assets/pulse/frontend/assets/index-BSXms4VO.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.csrf_token = "{{ csrf_token }}";
+      if (!window.frappe) window.frappe = {};
+      window.app_name = "{{ app_name }}";
+      frappe.boot = JSON.parse({{ boot }});
+    </script>
+  </body>
+</html>

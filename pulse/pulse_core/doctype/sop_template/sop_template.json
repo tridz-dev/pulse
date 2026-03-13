@@ -1,0 +1,119 @@
+{
+ "actions": [],
+ "autoname": "format:SOP-TMPL-{####}",
+ "creation": "2026-03-12 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "department",
+  "frequency_type",
+  "owner_role",
+  "active_from",
+  "active_to",
+  "is_active",
+  "checklist_items"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Pulse Department"
+  },
+  {
+   "fieldname": "frequency_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Frequency Type",
+   "options": "Daily\nWeekly\nMonthly\nCustom",
+   "reqd": 1
+  },
+  {
+   "fieldname": "owner_role",
+   "fieldtype": "Link",
+   "label": "Owner Role",
+   "options": "Pulse Role"
+  },
+  {
+   "fieldname": "active_from",
+   "fieldtype": "Date",
+   "label": "Active From",
+   "reqd": 1
+  },
+  {
+   "fieldname": "active_to",
+   "fieldtype": "Date",
+   "label": "Active To"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active",
+   "reqd": 1
+  },
+  {
+   "fieldname": "checklist_items",
+   "fieldtype": "Table",
+   "label": "Checklist Items",
+   "options": "SOP Checklist Item",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-12 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse Core",
+ "name": "SOP Template",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Leader",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Executive"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

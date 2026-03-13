@@ -4,6 +4,8 @@ app_publisher = "Tridz"
 app_description = "Pulse tracks SOP execution across teams and converts daily operational activity into measurable performance signals for managers and leadership."
 app_email = "pulse@tridz.com"
 app_license = "agpl-3.0"
+app_logo_url = "/assets/pulse/logo.svg"
+app_url = "pulse"
 
 # Apps
 # ------------------
@@ -11,15 +13,15 @@ app_license = "agpl-3.0"
 # required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "pulse",
-# 		"logo": "/assets/pulse/logo.png",
-# 		"title": "Pulse",
-# 		"route": "/pulse",
-# 		"has_permission": "pulse.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "pulse",
+		"logo": app_logo_url,
+		"title": "Pulse",
+		"route": app_url,
+		"has_permission": "pulse.api.permissions.has_app_permission"
+	}
+]
 
 # Includes in <head>
 # ------------------
@@ -34,10 +36,6 @@ app_license = "agpl-3.0"
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "pulse/public/scss/website"
-
-# include js, css files in header of web form
-# webform_include_js = {"doctype": "public/js/doctype.js"}
-# webform_include_css = {"doctype": "public/css/doctype.css"}
 
 # include js in page
 # page_js = {"page" : "public/js/file.js"}
@@ -55,6 +53,11 @@ app_license = "agpl-3.0"
 
 # Home Pages
 # ----------
+
+# Website route rules for frontend SPA
+website_route_rules = [
+	{"from_route": "/pulse/<path:app_path>", "to_route": "pulse"},
+]
 
 # application home page (will override Website Settings)
 # home_page = "login"
@@ -86,7 +89,12 @@ app_license = "agpl-3.0"
 # ------------
 
 # before_install = "pulse.install.before_install"
-# after_install = "pulse.install.after_install"
+after_install = "pulse.install.after_install"
+
+# Setup Wizard (first-time site setup: optional demo data)
+# ------------
+setup_wizard_requires = "assets/pulse/js/setup_wizard.js"
+setup_wizard_complete = "pulse.setup.setup_wizard.setup_demo"
 
 # Uninstallation
 # ------------
@@ -96,7 +104,6 @@ app_license = "agpl-3.0"
 
 # Integration Setup
 # ------------------
-# To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
 # before_app_install = "pulse.utils.before_app_install"
@@ -104,8 +111,6 @@ app_license = "agpl-3.0"
 
 # Integration Cleanup
 # -------------------
-# To clean up dependencies/integrations with other apps
-# Name of the app being uninstalled is passed as an argument
 
 # before_app_uninstall = "pulse.utils.before_app_uninstall"
 # after_app_uninstall = "pulse.utils.after_app_uninstall"
@@ -120,17 +125,14 @@ app_license = "agpl-3.0"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"SOP Run": "pulse.api.permissions.sop_run_conditions",
+	"Score Snapshot": "pulse.api.permissions.score_snapshot_conditions",
+	"Corrective Action": "pulse.api.permissions.corrective_action_conditions",
+}
 
 # Document Events
 # ---------------
-# Hook on document methods and events
 
 # doc_events = {
 # 	"*": {
@@ -143,23 +145,20 @@ app_license = "agpl-3.0"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"pulse.tasks.all"
-# 	],
-# 	"daily": [
-# 		"pulse.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"pulse.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"pulse.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"pulse.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"pulse.tasks.daily"
+	],
+	"hourly": [
+		"pulse.tasks.hourly"
+	],
+	"weekly": [
+		"pulse.tasks.weekly"
+	],
+	"monthly": [
+		"pulse.tasks.monthly"
+	],
+}
 
 # Testing
 # -------
@@ -168,28 +167,21 @@ app_license = "agpl-3.0"
 
 # Extend DocType Class
 # ------------------------------
-#
-# Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
 # 	"Task": "pulse.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
-#
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "pulse.event.get_events"
 # }
 #
-# each overriding function accepts a `data` argument;
-# generated from the base implementation of the doctype dashboard,
-# along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
 # 	"Task": "pulse.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
-#
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
 # Ignore links to specified DocTypes when deleting documents
@@ -204,7 +196,7 @@ app_license = "agpl-3.0"
 
 # Job Events
 # ----------
-# before_job = ["pulse.utils.before_job"]
+# before_job = ["pulse.utils.bob"]
 # after_job = ["pulse.utils.after_job"]
 
 # User Data Protection
@@ -217,18 +209,6 @@ app_license = "agpl-3.0"
 # 		"redact_fields": ["{field_1}", "{field_2}"],
 # 		"partial": 1,
 # 	},
-# 	{
-# 		"doctype": "{doctype_2}",
-# 		"filter_by": "{filter_by}",
-# 		"partial": 1,
-# 	},
-# 	{
-# 		"doctype": "{doctype_3}",
-# 		"strict": False,
-# 	},
-# 	{
-# 		"doctype": "{doctype_4}"
-# 	}
 # ]
 
 # Authentication and authorization
@@ -242,11 +222,9 @@ app_license = "agpl-3.0"
 # export_python_type_annotations = True
 
 # default_log_clearing_doctypes = {
-# 	"Logging DocType Name": 30  # days to retain logs
+# 	"Logging DocType Name": 30  # days to retain
 # }
 
 # Translation
 # ------------
-# List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

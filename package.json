@@ -1,0 +1,22 @@
+{
+   "private": true,
+   "type": "module",
+   "name": "pulse",
+   "version": "0.0.1",
+   "description": "Pulse Application",
+   "main": "index.js",
+   "scripts": {
+      "dev": "cd frontend && yarn dev",
+      "install": "cd frontend && yarn install",
+      "build": "yarn build-frontend",
+      "build-frontend": "cd frontend && yarn install && yarn build",
+      "postinstall": "cd frontend && yarn install && yarn build",
+      "screenshots": "node scripts/capture_screenshots.mjs"
+   },
+   "dependencies": {
+      "react-is": "^19.2.4"
+   },
+   "devDependencies": {
+      "playwright": "^1.58.0"
+   }
+}
