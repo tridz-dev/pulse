@@ -55,7 +55,7 @@ export function Operations() {
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Operations Overview</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Operations Overview</h1>
           <p className="text-zinc-400 text-sm mt-1">Hierarchical roll-up of organizational execution.</p>
         </div>
         <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shrink-0 self-start sm:self-center">
@@ -91,17 +91,15 @@ export function Operations() {
                 Organization Health ({periodType})
               </span>
             </div>
-            <div className="text-xs text-zinc-500 font-mono">Select a row to drill down</div>
+            <div className="text-xs text-zinc-500 font-mono hidden sm:block">Select a row to drill down</div>
           </div>
-          <div className="p-2 overflow-x-auto">
-            <div className="min-w-[600px]">
+          <div className="p-2 overflow-x-hidden">
               <OperationNode
                 node={treeData}
                 level={0}
                 defaultExpanded={true}
                 onUserClick={(u) => navigate(`/operations/${u.id}`)}
               />
-            </div>
           </div>
         </div>
       ) : null}
@@ -132,26 +130,26 @@ function OperationNode({
   else scoreColor = 'text-rose-400 bg-rose-400/10 border-rose-400/20';
 
   return (
-    <div className="flex flex-col min-w-max">
+    <div className="flex flex-col">
       <div
-        className={cn('flex items-center p-3 rounded-lg transition-colors hover:bg-zinc-800/40 relative group cursor-pointer')}
-        style={{ paddingLeft: `${Math.max(0.75, level * 2)}rem` }}
+        className={cn('flex items-center p-2 sm:p-3 rounded-lg transition-colors hover:bg-zinc-800/40 relative group cursor-pointer')}
+        style={{ paddingLeft: `${Math.max(0.5, level * 1.25)}rem` }}
         onClick={() => onUserClick(node.user)}
       >
         {level > 0 && (
           <div
-            className="absolute left-0 top-1/2 w-6 border-t border-zinc-800 -z-10 group-hover:border-zinc-700 transition-colors pointer-events-none"
-            style={{ left: `${(level - 1) * 2 + 1}rem` }}
+            className="absolute left-0 top-1/2 w-4 sm:w-6 border-t border-zinc-800 -z-10 group-hover:border-zinc-700 transition-colors pointer-events-none"
+            style={{ left: `${(level - 1) * 1.25 + 0.75}rem` }}
           />
         )}
         {level > 0 && (
           <div
             className="absolute top-0 bottom-1/2 border-l border-zinc-800 -z-10 group-hover:border-zinc-700 transition-colors pointer-events-none"
-            style={{ left: `${(level - 1) * 2 + 1}rem` }}
+            style={{ left: `${(level - 1) * 1.25 + 0.75}rem` }}
           />
         )}
         <div
-          className="w-8 h-8 flex items-center justify-center shrink-0 mr-1 text-zinc-500 hover:text-white transition-colors hover:bg-zinc-800 rounded-md z-10"
+          className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shrink-0 mr-1 text-zinc-500 hover:text-white transition-colors hover:bg-zinc-800 rounded-md z-10"
           onClick={(e) => {
             if (hasChildren) {
               e.stopPropagation();
@@ -160,18 +158,18 @@ function OperationNode({
           }}
         >
           {hasChildren ? (
-            isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />
+            isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
           ) : (
             <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
           )}
         </div>
-        <Avatar className="h-8 w-8 rounded-md border border-zinc-700 mr-3 shrink-0">
+        <Avatar className="h-7 w-7 sm:h-8 sm:w-8 rounded-md border border-zinc-700 mr-2 sm:mr-3 shrink-0">
           <AvatarImage src={node.user.avatarUrl} />
           <AvatarFallback className="text-xs bg-zinc-800 text-zinc-300 rounded-md">
             {node.user.name?.charAt(0) ?? '?'}
           </AvatarFallback>
         </Avatar>
-        <div className="flex flex-col min-w-[200px] pr-4">
+        <div className="flex flex-col min-w-0 flex-1 pr-2 sm:pr-4">
           <span className="font-medium text-sm text-zinc-200 truncate group-hover:text-indigo-300 transition-colors">
             {node.user.name}
           </span>
@@ -179,15 +177,15 @@ function OperationNode({
             {node.user.role} {node.user.branch ? `• ${node.user.branch}` : ''}
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-4 pl-4 shrink-0">
-          <div className="flex flex-col text-right w-20">
+        <div className="ml-auto flex items-center gap-2 sm:gap-4 pl-2 sm:pl-4 shrink-0">
+          <div className="hidden sm:flex flex-col text-right w-20">
             <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Own Score</span>
             <span className="text-xs text-zinc-400 font-mono mt-0.5">{Math.round(ownScore * 100)}%</span>
           </div>
-          <div className="w-px h-6 bg-zinc-800 mx-1" />
-          <div className="flex flex-col text-right w-24">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Combined KPI</span>
-            <div className="flex items-center justify-end gap-2 mt-0.5">
+          <div className="w-px h-6 bg-zinc-800 mx-1 hidden sm:block" />
+          <div className="flex flex-col text-right">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold hidden sm:block">Combined KPI</span>
+            <div className="flex items-center justify-end gap-2 mt-0 sm:mt-0.5">
               <Badge
                 variant="outline"
                 className={cn('px-1.5 py-0 border font-mono text-xs shadow-sm shadow-black', scoreColor)}
@@ -202,7 +200,7 @@ function OperationNode({
         <div className="flex flex-col relative">
           <div
             className="absolute top-0 bottom-6 border-l border-zinc-800 -z-10 pointer-events-none"
-            style={{ left: `${level * 2 + 1.35}rem` }}
+            style={{ left: `${level * 1.25 + 0.75}rem` }}
           />
           {node.children!.map((child) => (
             <OperationNode

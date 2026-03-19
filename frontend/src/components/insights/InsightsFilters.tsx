@@ -99,9 +99,9 @@ export function InsightsFiltersBar({
   const hasActiveFilters = selectedDepts.length > 0 || selectedBranches.length > 0 || filters.employee;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 overflow-x-auto">
       {/* Date range presets */}
-      <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
+      <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1 shrink-0 overflow-x-auto">
         {PRESETS.map(({ id, label }) => (
           <button
             key={id}

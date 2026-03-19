@@ -149,7 +149,7 @@ export function Dashboard() {
       )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Execution Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Execution Dashboard</h1>
           <p className="text-zinc-400 text-sm mt-1">
             {currentUser.systemRole === 'Pulse User'
               ? 'Your performance overview.'
@@ -188,25 +188,25 @@ export function Dashboard() {
       ) : (
         <>
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-[#141415] border-zinc-800 md:col-span-2 p-8 relative overflow-hidden flex items-center gap-12 group hover:border-zinc-700/50 transition-all">
+            <Card className="bg-[#141415] border-zinc-800 md:col-span-2 p-5 sm:p-8 relative overflow-hidden flex flex-col items-center md:flex-row md:items-center gap-6 md:gap-12 group hover:border-zinc-700/50 transition-all">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
               <Gauge
                 value={combinedPct}
-                size={220}
+                size={typeof window !== 'undefined' && window.innerWidth < 768 ? 160 : 220}
                 label={`${periodType} KPI`}
                 mode="gradient"
                 showTicks
                 showGlow
               />
-              <div className="flex flex-col justify-center gap-6 flex-1">
-                <div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Execution Health</h2>
-                  <p className="text-sm text-zinc-500 mt-2 max-w-sm leading-relaxed">
+              <div className="flex flex-col justify-center gap-4 sm:gap-6 flex-1 w-full">
+                <div className="text-center md:text-left">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Execution Health</h2>
+                  <p className="text-xs sm:text-sm text-zinc-500 mt-2 max-w-sm leading-relaxed mx-auto md:mx-0">
                     Your overall performance rating based on {completedItems} completed tasks and team roll-ups for
                     this {periodType.toLowerCase()}.
                   </p>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center justify-center md:justify-start gap-6">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
                       Trend
@@ -280,7 +280,7 @@ export function Dashboard() {
                 </div>
                 <Calendar className="h-4 w-4 text-zinc-600" />
               </CardHeader>
-              <CardContent className="h-[300px] w-full mt-4">
+              <CardContent className="h-[220px] sm:h-[300px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" />

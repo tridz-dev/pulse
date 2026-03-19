@@ -77,7 +77,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
           </div>
         ) : breakdown ? (
           <>
-            <SheetHeader className="p-6 border-b border-zinc-800/80 bg-zinc-900/30">
+            <SheetHeader className="p-4 sm:p-6 border-b border-zinc-800/80 bg-zinc-900/30">
               <div className="flex items-center gap-4">
                 <Activity className="text-indigo-400" size={24} />
                 <div className="flex flex-col">
@@ -110,7 +110,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
               </div>
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-8">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl flex flex-col gap-1">
                   <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
