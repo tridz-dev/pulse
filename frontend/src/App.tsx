@@ -22,6 +22,8 @@ import { Assignments } from './pages/admin/Assignments';
 import { AssignmentForm } from './pages/admin/AssignmentForm';
 import { CorrectiveActions } from './pages/CorrectiveActions';
 import { CorrectiveActionDetail } from './pages/CorrectiveActionDetail';
+import { Settings } from './pages/admin/Settings';
+import { Roles } from './pages/admin/Roles';
 import { GoHomePage } from './pages/go/GoHomePage';
 import { GoChecklistsPage } from './pages/go/GoChecklistsPage';
 import { GoAlertsPage } from './pages/go/GoAlertsPage';
@@ -64,6 +66,8 @@ export default function App() {
               <Route path="corrective-actions" element={<CorrectiveActions />} />
               <Route path="corrective-actions/new" element={<CorrectiveActionDetail />} />
               <Route path="corrective-actions/:id" element={<CorrectiveActionDetail />} />
+              <Route path="admin/settings" element={<Settings />} />
+              <Route path="admin/roles" element={<Roles />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -15,7 +15,9 @@ import {
     FolderTree,
     UserCog,
     ClipboardList,
-    Flag
+    Flag,
+    Shield,
+    Settings as SettingsIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -59,6 +61,8 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         { name: 'Departments', path: '/admin/departments', icon: FolderTree, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Employees', path: '/admin/employees', icon: UserCog, hideFor: ['Pulse User'] },
         { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Roles', path: '/admin/roles', icon: Shield, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
+        { name: 'Settings', path: '/admin/settings', icon: SettingsIcon, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
     ];
 
     return (
