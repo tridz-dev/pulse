@@ -9,14 +9,28 @@ import {
     Search,
     Bell,
     FileText,
-    BarChart3
+    BarChart3,
+    Smartphone,
+    Building2,
+    FolderTree,
+    UserCog,
+    ClipboardList
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
+}
+
+interface NavItemConfig {
+    name: string;
+    path: string;
+    icon: LucideIcon;
+    showFor?: string[];
+    hideFor?: string[];
 }
 
 interface SidebarProps {
@@ -28,13 +42,21 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     const { currentUser } = useAuth();
     const location = useLocation();
 
-    const navItems = [
+    const navItems: NavItemConfig[] = [
         { name: 'Dashboard', path: '/', icon: LayoutDashboard },
         { name: 'My Tasks', path: '/tasks', icon: CheckSquare },
+        { name: 'Pulse Go', path: '/go', icon: Smartphone },
         { name: 'Team', path: '/team', icon: Users, hideFor: ['Pulse User'] },
         { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'] },
+    ];
+
+    const adminItems: NavItemConfig[] = [
+        { name: 'Branches', path: '/admin/branches', icon: Building2, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Departments', path: '/admin/departments', icon: FolderTree, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Employees', path: '/admin/employees', icon: UserCog, hideFor: ['Pulse User'] },
+        { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList, hideFor: ['Pulse User', 'Pulse Manager'] },
     ];
 
     return (
@@ -73,6 +95,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                     </div>
                 )}
                 {navItems.map((item) => {
+                    if (item.showFor && !item.showFor.includes(currentUser?.systemRole || '')) return null;
                     if (item.hideFor?.includes(currentUser?.systemRole || '')) return null;
 
                     const isActive = location.pathname === item.path ||
@@ -102,6 +125,48 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                         </NavLink>
                     );
                 })}
+                
+                {/* Admin Section */}
+                {adminItems.some(item => !item.hideFor?.includes(currentUser?.systemRole || '')) && (
+                    <>
+                        {!collapsed && (
+                            <div className="px-2 mb-2 mt-6 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                                Administration
+                            </div>
+                        )}
+                        {adminItems.map((item) => {
+                            if (item.showFor && !item.showFor.includes(currentUser?.systemRole || '')) return null;
+                            if (item.hideFor?.includes(currentUser?.systemRole || '')) return null;
+
+                            const isActive = location.pathname === item.path ||
+                                location.pathname.startsWith(item.path);
+
+                            return (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    title={item.name}
+                                    className={cn(
+                                        "flex items-center rounded-md text-sm transition-all duration-200 group relative",
+                                        collapsed ? "justify-center p-2" : "gap-2.5 px-2 py-1.5",
+                                        isActive
+                                            ? "bg-zinc-800/80 text-zinc-100 font-medium shadow-sm"
+                                            : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                                    )}
+                                >
+                                    <item.icon
+                                        size={16}
+                                        className={cn(
+                                            "transition-colors flex-shrink-0",
+                                            isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
+                                        )}
+                                    />
+                                    {!collapsed && <span className="truncate">{item.name}</span>}
+                                </NavLink>
+                            );
+                        })}
+                    </>
+                )}
             </div>
 
             {/* Bottom Actions */}
@@ -114,9 +179,9 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                 >
                     {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
                 </button>
-                <button className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors shrink-0" title="Notifications">
+                <NavLink to="/go/alerts" className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors shrink-0" title="Alerts">
                     <Bell size={16} />
-                </button>
+                </NavLink>
             </div>
         </aside>
     );
