@@ -22,7 +22,7 @@ def get_system_settings() -> dict:
                 'missed_penalty': settings.missed_penalty or 0,
                 'default_reminder_time': settings.default_reminder_time or '09:00',
                 'business_hours_start': settings.business_hours_start or '09:00',
-                'business_hours_end': settings.business_hours_end || '18:00',
+                'business_hours_end': settings.business_hours_end or '18:00',
                 'enable_email_notifications': settings.enable_email_notifications or 1,
                 'enable_in_app_notifications': settings.enable_in_app_notifications or 1,
                 'auto_archive_resolved_ca': settings.auto_archive_resolved_ca or 30,
@@ -82,18 +82,21 @@ def get_roles() -> list:
     """List all Pulse roles with permissions."""
     roles = frappe.get_all(
         'Pulse Role',
-        fields=['name', 'role_name', 'alias', 'system_role', 'description', 'is_active'],
+        fields=['name', 'role_name', 'alias', 'system_role', 'description', 'level'],
         order_by='name'
     )
     
-    # Get permissions for each role
+    # Get permissions for each role (Pulse Role Permission DocType may not exist)
     for role in roles:
-        permissions = frappe.get_all(
-            'Pulse Role Permission',
-            filters={'parent': role['name']},
-            fields=['permission', 'allowed']
-        )
-        role['permissions'] = {p['permission']: p['allowed'] for p in permissions}
+        try:
+            permissions = frappe.get_all(
+                'Pulse Role Permission',
+                filters={'parent': role['name']},
+                fields=['permission', 'allowed']
+            )
+            role['permissions'] = {p['permission']: p['allowed'] for p in permissions}
+        except Exception:
+            role['permissions'] = {}
     
     return roles
 
