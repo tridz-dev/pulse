@@ -10,24 +10,26 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-// Generate heatmap gradient stops (green → yellow → orange → red)
+// Generate heatmap gradient stops (red → orange → yellow → green)
+// For SOP checklist: higher score is better (0% = red/poor, 100% = green/good)
 function heatmapStops() {
   return [
-    { offset: "0%", color: "#10b981" },
-    { offset: "25%", color: "#84cc16" },
+    { offset: "0%", color: "#ef4444" },
+    { offset: "25%", color: "#f97316" },
     { offset: "50%", color: "#eab308" },
-    { offset: "75%", color: "#f97316" },
-    { offset: "100%", color: "#ef4444" },
+    { offset: "75%", color: "#84cc16" },
+    { offset: "100%", color: "#10b981" },
   ];
 }
 
 // Get a solid color from a value (0–100)
+// For SOP checklist: higher score is better (0% = red/poor, 100% = green/good)
 function solidColorFromValue(value: number) {
-  if (value <= 25) return "#10b981";
-  if (value <= 50) return "#84cc16";
+  if (value <= 25) return "#ef4444";
+  if (value <= 50) return "#f97316";
   if (value <= 75) return "#eab308";
-  if (value <= 90) return "#f97316";
-  return "#ef4444";
+  if (value <= 90) return "#84cc16";
+  return "#10b981";
 }
 
 // ─── Tick marks ─────────────────────────────────────────
