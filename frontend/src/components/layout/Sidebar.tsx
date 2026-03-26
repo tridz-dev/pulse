@@ -17,7 +17,9 @@ import {
     ClipboardList,
     Flag,
     Shield,
-    Settings as SettingsIcon
+    Settings as SettingsIcon,
+    History,
+    GitBranch
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -39,9 +41,10 @@ interface NavItemConfig {
 interface SidebarProps {
     collapsed: boolean;
     onToggleCollapse: () => void;
+    onOpenSearch?: () => void;
 }
 
-export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarProps) {
     const { currentUser } = useAuth();
     const location = useLocation();
 
@@ -61,7 +64,9 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         { name: 'Departments', path: '/admin/departments', icon: FolderTree, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Employees', path: '/admin/employees', icon: UserCog, hideFor: ['Pulse User'] },
         { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Org Chart', path: '/admin/org-chart', icon: GitBranch, hideFor: ['Pulse User'] },
         { name: 'Roles', path: '/admin/roles', icon: Shield, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
+        { name: 'Audit Log', path: '/admin/audit', icon: History, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Settings', path: '/admin/settings', icon: SettingsIcon, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
     ];
 
@@ -82,7 +87,10 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
 
             {!collapsed && (
                 <div className="px-3 mb-6">
-                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-400 bg-zinc-900/50 border border-zinc-800/80 rounded-md hover:bg-zinc-800 transition-colors shadow-sm">
+                    <button 
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-400 bg-zinc-900/50 border border-zinc-800/80 rounded-md hover:bg-zinc-800 transition-colors shadow-sm"
+                        onClick={onOpenSearch}
+                    >
                         <Search size={14} className="text-zinc-500" />
                         <span>Search...</span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-60">

@@ -24,6 +24,8 @@ import { CorrectiveActions } from './pages/CorrectiveActions';
 import { CorrectiveActionDetail } from './pages/CorrectiveActionDetail';
 import { Settings } from './pages/admin/Settings';
 import { Roles } from './pages/admin/Roles';
+import { AuditLog } from './pages/admin/AuditLog';
+import { OrgChart } from './pages/admin/OrgChart';
 import { GoHomePage } from './pages/go/GoHomePage';
 import { GoChecklistsPage } from './pages/go/GoChecklistsPage';
 import { GoAlertsPage } from './pages/go/GoAlertsPage';
@@ -68,6 +70,8 @@ export default function App() {
               <Route path="corrective-actions/:id" element={<CorrectiveActionDetail />} />
               <Route path="admin/settings" element={<Settings />} />
               <Route path="admin/roles" element={<Roles />} />
+              <Route path="admin/audit" element={<AuditLog />} />
+              <Route path="admin/org-chart" element={<OrgChart />} />
             </Route>
           </Routes>
         </BrowserRouter>
