@@ -123,19 +123,23 @@ For a full method list, TTLs, and hook wiring, see [`AGENTS.md`](AGENTS.md).
 | **Phase 4** | ✅ Complete | System Settings (Pulse Settings, UI preferences) |
 | **Phase 5** | ✅ Complete | Global Search (cross-entity search with filters) |
 | **Phase 6** | ✅ Complete | Organization Chart (hierarchical employee tree view) |
-| **Phase 7** | 🔄 Planned | Data Import/Export, Enhanced UX, Notifications |
+| **Phase 7** | ✅ Complete | Data Import/Export, Enhanced UX, Notifications |
+| **Phase 8** | 🚀 In Progress | AI-Powered Analytics, Predictions, NLP Queries |
 
-### Recent Fixes
+### Recent Updates
 
-| Fix | Status |
-|-----|--------|
+| Update | Status |
+|--------|--------|
+| **Phase 8 AI Analytics** | 🚀 In Progress (Anomaly detection, NLP queries, predictions) |
+| **Phase 7 Features** | ✅ Complete (Import/Export, Theme, Notifications) |
 | **Gauge Color Direction** | ✅ Fixed (colors now correctly show red for low, green for high scores) |
 | **Responsive Design** | ✅ Complete (mobile and tablet optimized) |
 | **Get System Settings API** | ✅ Fixed (syntax error resolved) |
+| **Get Roles API** | ✅ Fixed (500 error resolved) |
 
 ### Test Status
 
-**Regression Testing:** 12/13 tests passing
+**Regression Testing:** 13/13 tests passing ✅
 
 ```
 ✅ Login: chairman@pm.local
@@ -155,7 +159,50 @@ For a full method list, TTLs, and hook wiring, see [`AGENTS.md`](AGENTS.md).
 
 ---
 
-## Phase 7 Roadmap (Planned)
+## Phase 8: AI-Powered Analytics & Advanced Insights 🚀
+
+Transform Pulse from a tracking tool into an **intelligent SOP management platform** that predicts issues, recommends actions, and answers natural language queries.
+
+### AI Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| **Anomaly Detection** | ML-powered detection of unusual patterns in SOP compliance |
+| **Performance Prediction** | Predict future scores based on historical trends |
+| **Natural Language Queries** | Ask questions about your data in plain English |
+| **Real-time Streaming** | Live metrics updates via WebSocket/SSE |
+| **Smart Recommendations** | AI-driven action suggestions for managers |
+| **Trend Forecasting** | Future performance projections with confidence intervals |
+| **Benchmark Comparisons** | AI-powered cross-branch/department analysis |
+
+### NLP Query Examples
+
+```
+"Show me branches with declining performance this month"
+→ Returns: Branch N1 (-12%), Branch S1 (-8%)
+
+"Which employees have missed the most temperature checks?"
+→ Returns: Employee list with miss counts, sorted
+
+"Predict next week's scores for Kitchen department"
+→ Returns: Forecast chart with 85% ± 5% prediction
+
+"Compare Branch N1 and Branch N2 completion rates"
+→ Returns: Comparative analysis with AI insights
+
+"What are the top 3 risks for next month?"
+→ Returns: Predicted issues with confidence scores
+```
+
+### Analytics Dashboard Screenshot
+
+![AI Analytics Dashboard](docs/assets/analytics-dashboard.png)
+
+*AI-powered analytics with real-time metrics, predictions, and anomaly alerts*
+
+---
+
+## Phase 7: Data Import/Export & Advanced Features ✅
 
 | Feature | Description |
 |---------|-------------|

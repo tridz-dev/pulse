@@ -48,4 +48,12 @@ export const pulseQueryKeys = {
     all: ['pulse', 'departments'] as const,
     list: () => ['pulse', 'departments', 'list'] as const,
   },
+  analytics: {
+    all: ['pulse', 'analytics'] as const,
+    anomalies: () => ['pulse', 'analytics', 'anomalies'] as const,
+    predictions: (days: number) => ['pulse', 'analytics', 'predictions', days] as const,
+    recommendations: () => ['pulse', 'analytics', 'recommendations'] as const,
+    compliance: (range: string) => ['pulse', 'analytics', 'compliance', range] as const,
+    trends: () => ['pulse', 'analytics', 'trends'] as const,
+  },
 };

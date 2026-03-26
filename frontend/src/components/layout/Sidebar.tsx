@@ -22,7 +22,8 @@ import {
     GitBranch,
     Upload,
     Calendar,
-    Workflow
+    Workflow,
+    ChartLine
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -58,6 +59,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
         { name: 'Team', path: '/team', icon: Users, hideFor: ['Pulse User'] },
         { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Analytics', path: '/analytics', icon: ChartLine, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'] },
         { name: 'Corrective Actions', path: '/corrective-actions', icon: Flag, hideFor: ['Pulse User'] },
     ];

@@ -11,6 +11,7 @@ import { Operations } from './pages/Operations';
 import { Templates } from './pages/Templates';
 import { TemplateForm } from './pages/TemplateForm';
 import { Insights } from './pages/Insights';
+import { Analytics } from './pages/Analytics';
 import { UserProfile } from './pages/UserProfile';
 import { Branches } from './pages/admin/Branches';
 import { BranchForm } from './pages/admin/BranchForm';
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="templates/new" element={<TemplateForm />} />
               <Route path="templates/:id/edit" element={<TemplateForm />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="analytics" element={<Analytics />} />
               {/* Admin Routes */}
               <Route path="admin/branches" element={<Branches />} />
               <Route path="admin/branches/new" element={<BranchForm />} />

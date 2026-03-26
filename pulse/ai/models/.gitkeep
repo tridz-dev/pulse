@@ -1,0 +1,12 @@
+# AI Models Directory
+
+This directory contains trained machine learning models for the Pulse AI Insights Engine.
+
+## Model Files
+
+- `performance_predictor.pkl` - Trained model for performance prediction (placeholder)
+
+## Note
+
+Models are loaded by the analytics engine. Placeholder files ensure the directory structure
+is preserved in version control. Actual model files are generated and cached separately.

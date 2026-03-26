@@ -2,8 +2,8 @@
 name: pulse-development
 description: |
   Complete Pulse SOP tracking application development guide.
-  Covers all 7 phases - from org structure to import/export, 
-  theme system, notifications, and advanced features.
+  Covers all 8 phases - from org structure to AI-powered analytics,
+  natural language queries, and real-time streaming.
   
   Use this skill when:
   - Building new features for Pulse
@@ -11,6 +11,9 @@ description: |
   - Adding new DocTypes
   - Creating frontend components
   - Working with the Gauge, Score calculation, or hierarchy
+  - Implementing AI/ML features (Phase 8)
+  - Adding real-time WebSocket functionality
+  - Building NLP query interfaces
 ---
 
 # Pulse Development Skill
@@ -35,7 +38,7 @@ frontend/src/hooks/       # Custom hooks (useTheme, useNotifications)
 frontend/src/services/    # API client wrappers
 ```
 
-## All 7 Phases Reference
+## All 8 Phases Reference
 
 | Phase | Feature | API File | UI Location |
 |-------|---------|----------|-------------|
@@ -46,6 +49,7 @@ frontend/src/services/    # API client wrappers
 | 5 | Search, Audit | search.py | SearchModal (⌘K), /admin/audit |
 | 6 | Org Chart | employees.py (hierarchy) | /admin/org-chart |
 | 7 | Import/Export, Theme, Notifications | imports.py, exports.py, reports.py, follow_up_rules.py | /admin/import-export, ThemeToggle, NotificationDropdown |
+| 8 | AI Analytics, NLP, Real-time | ai_insights.py, nlp.py, realtime.py | /analytics, /nlp-query, /predictions, /anomalies |
 
 ## Key Patterns
 
@@ -167,6 +171,123 @@ cd apps/pulse/frontend && npm run build
    - Colors reversed: 0%=red, 100%=green
    - Check `solidColorFromValue()` function
 
+## AI/ML Patterns (Phase 8)
+
+### Anomaly Detection
+```python
+from pulse.api.ai_insights import detect_anomalies
+
+# Detect anomalies in branch performance
+anomalies = detect_anomalies(
+    entity_type="branch",
+    entity_id="Branch N1",
+    metric="completion_rate",
+    lookback_days=30
+)
+# Returns: [{"date": "2025-03-20", "score": 0.85, "is_anomaly": True, "severity": "high"}]
+```
+
+### Performance Prediction
+```python
+from pulse.api.ai_insights import predict_performance
+
+# Predict next 14 days of performance
+predictions = predict_performance(
+    employee_id="PLS-EMP-0001",
+    days_ahead=14
+)
+# Returns: {"forecast": [...], "confidence_intervals": [...], "trend": "declining"}
+```
+
+### NLP Query Processing
+```python
+from pulse.api.nlp import process_natural_query
+
+# Process natural language query
+result = process_natural_query(
+    query="Show me branches with declining performance",
+    context={"user_role": "Executive"}
+)
+# Returns: {"sql": "...", "results": [...], "explanation": "Branch N1 declined 12%..."}
+```
+
+## Real-time Hooks (Phase 8)
+
+### WebSocket Connection
+```typescript
+// frontend/src/hooks/useRealtime.ts
+import { useEffect } from 'react';
+
+export function useRealtime(channels: string[], onMessage: (msg: any) => void) {
+  useEffect(() => {
+    const ws = new WebSocket(`wss://${window.location.host}/ws`);
+    
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ action: 'subscribe', channels }));
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      onMessage(data);
+    };
+    
+    return () => ws.close();
+  }, [channels]);
+}
+```
+
+### Server Broadcast
+```python
+# pulse/api/realtime.py
+@frappe.whitelist()
+def broadcast_event(event_type: str, payload: dict):
+    """Broadcast event to connected clients."""
+    redis = frappe.cache()
+    redis.publish(f"pulse:events:{event_type}", json.dumps(payload))
+```
+
+## NLP Query Examples
+
+### Supported Query Patterns
+```
+# Comparisons
+"Compare Branch N1 and Branch N2 performance"
+→ Returns: Comparative bar chart with trend analysis
+
+# Filtering
+"Show me operators with scores below 70%"
+→ Returns: Filtered employee list with scores
+
+# Trending
+"Which departments are improving this month?"
+→ Returns: Trend chart with % change per department
+
+# Aggregation
+"Average completion rate by branch"
+→ Returns: Grouped bar chart with averages
+
+# Predictions
+"What will next week's scores look like?"
+→ Returns: Forecast chart with confidence bands
+
+# Anomalies
+"Any unusual patterns in Kitchen this week?"
+→ Returns: Anomaly alerts with severity
+```
+
+### Query Response Format
+```typescript
+interface NLPQueryResponse {
+  query: string;
+  intent: 'comparison' | 'filter' | 'trend' | 'aggregate' | 'predict' | 'anomaly';
+  sql: string;                    // Generated SQL
+  results: any[];                 // Query results
+  explanation: string;            // Human-readable explanation
+  visualization: 'table' | 'chart' | 'gauge' | 'text';
+  suggested_queries: string[];    // Follow-up suggestions
+}
+```
+
 ## DocType Reference
 
 | DocType | Module | Key Fields |
@@ -177,9 +298,37 @@ cd apps/pulse/frontend && npm run build
 | Corrective Action | pulse_core | description, status, priority, assigned_to |
 | SOP Assignment | pulse_core | template, employee, is_active |
 | SOP Follow Up Rule | pulse_core | source_template, trigger_condition, action |
+| ML Model Cache | pulse_core | model_name, entity_id, predictions, computed_at |
+| NLP Query Log | pulse_core | query, intent, sql, execution_time |
 
 ## Environment
 - **Bench Root**: `/workspace/development/edge16`
 - **Site**: `pulse.localhost:8001`
 - **Frontend Build**: `npm run build` (outputs to `pulse/public/frontend/`)
 - **Demo Login**: `chairman@pm.localhost` / `Demo@123`
+
+## Phase 8 Development Notes
+
+### ML Model Storage
+Models are cached in Redis with TTL:
+- Predictions: 1 hour TTL
+- Anomalies: 15 minutes TTL  
+- NLP embeddings: 24 hours TTL
+
+### WebSocket Channels
+- `scores:{employee_id}` - Personal score updates
+- `runs:{branch}` - Branch run completions
+- `anomalies` - System-wide anomaly alerts
+- `notifications:{user_id}` - User-specific notifications
+
+### Testing AI Features
+```bash
+# Run AI-specific tests
+bench --site pulse.localhost execute pulse.tests.test_ai_insights
+
+# Test NLP query parsing
+bench --site pulse.localhost execute pulse.tests.test_nlp
+
+# Load test WebSocket
+bench --site pulse.localhost execute pulse.tests.test_realtime_load
+```
