@@ -188,64 +188,65 @@ export function CorrectiveActions() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Corrective Actions</h1>
-          <p className="text-muted-foreground">Track and manage issues from SOP runs</p>
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">Corrective Actions</h1>
+          <p className="text-sm text-muted-foreground">Track and manage issues from SOP runs</p>
         </div>
-        <Button onClick={() => navigate('/corrective-actions/new')}>
+        <Button size="sm" onClick={() => navigate('/corrective-actions/new')}>
           <Plus className="mr-2 h-4 w-4" />
-          New Corrective Action
+          <span className="hidden sm:inline">New Corrective Action</span>
+          <span className="sm:hidden">New</span>
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Flag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.total || 0}</div>
+            <div className="text-xl lg:text-2xl font-bold">{summary?.total || 0}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Open</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{summary?.open || 0}</div>
+            <div className="text-xl lg:text-2xl font-bold text-red-600">{summary?.open || 0}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">In Progress</CardTitle>
             <Clock className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{summary?.in_progress || 0}</div>
+            <div className="text-xl lg:text-2xl font-bold text-blue-600">{summary?.in_progress || 0}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Resolved</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summary?.resolved || 0}</div>
+            <div className="text-xl lg:text-2xl font-bold text-green-600">{summary?.resolved || 0}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Closed</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Closed</CardTitle>
             <XCircle className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{summary?.closed || 0}</div>
+            <div className="text-xl lg:text-2xl font-bold text-gray-600">{summary?.closed || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -270,11 +271,11 @@ export function CorrectiveActions() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 sm:flex-none">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
-              className="pl-8 w-[200px]"
+              className="pl-8 w-full sm:w-[180px]"
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             />
@@ -283,8 +284,8 @@ export function CorrectiveActions() {
             value={filters.status || undefined} 
             onValueChange={(v) => setFilters({ ...filters, status: v || '' })}
           >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className="w-[130px] sm:w-[140px]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All Status</SelectItem>
@@ -297,7 +298,7 @@ export function CorrectiveActions() {
             value={filters.priority || undefined} 
             onValueChange={(v) => setFilters({ ...filters, priority: v || '' })}
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[120px] sm:w-[130px]">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
             <SelectContent>

@@ -145,65 +145,66 @@ export function Assignments() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">SOP Assignments</h1>
-          <p className="text-muted-foreground">Manage SOP template assignments to employees</p>
+          <h1 className="text-xl lg:text-2xl font-semibold tracking-tight">SOP Assignments</h1>
+          <p className="text-sm text-muted-foreground">Manage SOP template assignments to employees</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowBulkDialog(true)}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowBulkDialog(true)}>
             <Users className="mr-2 h-4 w-4" />
-            Bulk Assign
+            <span className="hidden sm:inline">Bulk Assign</span>
+            <span className="sm:hidden">Bulk</span>
           </Button>
-          <Button onClick={() => navigate('/admin/assignments/new')}>
+          <Button size="sm" onClick={() => navigate('/admin/assignments/new')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Assignment
+            New
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assignments.length}</div>
+            <div className="text-xl lg:text-2xl font-bold">{assignments.length}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Active</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-xl lg:text-2xl font-bold text-green-600">
               {assignments.filter((a) => a.is_active).length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Inactive</CardTitle>
             <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-muted-foreground">
+            <div className="text-xl lg:text-2xl font-bold text-muted-foreground">
               {assignments.filter((a) => !a.is_active).length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Templates</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Templates</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-xl lg:text-2xl font-bold">
               {new Set(assignments.map((a) => a.template)).size}
             </div>
           </CardContent>
@@ -211,7 +212,7 @@ export function Assignments() {
       </div>
 
       {/* View Toggle & Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
           <Button 
             variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
@@ -233,11 +234,11 @@ export function Assignments() {
 
         {viewMode === 'list' && (
           <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative flex-1 sm:flex-none">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search assignments..."
-                className="pl-8 w-[200px]"
+                placeholder="Search..."
+                className="pl-8 w-full sm:w-[180px]"
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               />
@@ -246,7 +247,7 @@ export function Assignments() {
               value={filters.template || undefined} 
               onValueChange={(v) => setFilters({ ...filters, template: v || '' })}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="All Templates" />
               </SelectTrigger>
               <SelectContent>
@@ -260,11 +261,11 @@ export function Assignments() {
               value={filters.is_active || undefined} 
               onValueChange={(v) => setFilters({ ...filters, is_active: v || '' })}
             >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="All Status" />
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="">All</SelectItem>
                 <SelectItem value="1">Active</SelectItem>
                 <SelectItem value="0">Inactive</SelectItem>
               </SelectContent>
@@ -277,90 +278,96 @@ export function Assignments() {
       {viewMode === 'list' ? (
         <Card>
           <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>SOP Template</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Runs</TableHead>
-                    <TableHead className="w-[100px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAssignments.length === 0 ? (
+            <div className="overflow-x-auto">
+              {loading ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No assignments found
-                      </TableCell>
+                      <TableHead className="min-w-[140px]">Template</TableHead>
+                      <TableHead className="min-w-[140px] hidden sm:table-cell">Employee</TableHead>
+                      <TableHead className="w-[80px]">Status</TableHead>
+                      <TableHead className="w-[60px] hidden md:table-cell">Runs</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
-                  ) : (
-                    filteredAssignments.map((assignment) => (
-                      <TableRow key={assignment.name}>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{assignment.template_title}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {assignment.template_department} • {assignment.template_frequency}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{assignment.employee_name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {assignment.employee_role} • {assignment.employee_branch}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={assignment.is_active ? 'default' : 'secondary'}>
-                            {assignment.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span>{assignment.run_count}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleToggleStatus(assignment.name, Boolean(assignment.is_active))}>
-                                {assignment.is_active ? (
-                                  <><XCircle className="mr-2 h-4 w-4" /> Deactivate</>
-                                ) : (
-                                  <><CheckCircle2 className="mr-2 h-4 w-4" /> Activate</>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-red-600"
-                                onClick={() => handleDelete(assignment.name)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAssignments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No assignments found
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
+                    ) : (
+                      filteredAssignments.map((assignment) => (
+                        <TableRow key={assignment.name}>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{assignment.template_title}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {assignment.template_department} • {assignment.template_frequency}
+                              </span>
+                              {/* Mobile-only employee info */}
+                              <span className="text-xs text-muted-foreground sm:hidden mt-1">
+                                {assignment.employee_name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{assignment.employee_name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {assignment.employee_role}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={assignment.is_active ? 'default' : 'secondary'} className="text-xs">
+                              {assignment.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                              <span className="text-sm">{assignment.run_count}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleToggleStatus(assignment.name, Boolean(assignment.is_active))}>
+                                  {assignment.is_active ? (
+                                    <><XCircle className="mr-2 h-4 w-4" /> Deactivate</>
+                                  ) : (
+                                    <><CheckCircle2 className="mr-2 h-4 w-4" /> Activate</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-red-600"
+                                  onClick={() => handleDelete(assignment.name)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
