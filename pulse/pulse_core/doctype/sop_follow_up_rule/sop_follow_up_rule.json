@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:SOP-RULE-{#####}",
+ "creation": "2026-03-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "source_template",
+  "trigger_on",
+  "source_item_key",
+  "action",
+  "target_template",
+  "target_assignee",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source Template",
+   "options": "SOP Template",
+   "reqd": 1
+  },
+  {
+   "default": "ItemOutcomeFail",
+   "fieldname": "trigger_on",
+   "fieldtype": "Select",
+   "label": "Trigger On",
+   "options": "ItemOutcomeFail",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_item_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Source Item Key",
+   "reqd": 1
+  },
+  {
+   "default": "CreateRun",
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "label": "Action",
+   "options": "CreateRun",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_template",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Template",
+   "options": "SOP Template",
+   "reqd": 1
+  },
+  {
+   "default": "SameEmployee",
+   "fieldname": "target_assignee",
+   "fieldtype": "Select",
+   "label": "Target Assignee",
+   "options": "SameEmployee\nEmployeesManager",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse Core",
+ "name": "SOP Follow-up Rule",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Leader"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Executive"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

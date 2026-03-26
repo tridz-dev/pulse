@@ -6,14 +6,25 @@
  "engine": "InnoDB",
  "field_order": [
   "checklist_item",
+  "item_key",
+  "instructions",
   "weight",
   "item_type",
+  "outcome_mode",
   "status",
+  "outcome",
+  "failure_remark",
   "completed_at",
   "numeric_value",
   "notes",
   "evidence",
-  "evidence_required"
+  "evidence_required",
+  "proof_requirement",
+  "proof_media_type",
+  "proof_capture_mode",
+  "proof_captured_at",
+  "prerequisite_item_key",
+  "prerequisite_trigger"
  ],
  "fields": [
   {
@@ -22,6 +33,19 @@
    "in_list_view": 1,
    "label": "Checklist Item",
    "reqd": 1
+  },
+  {
+   "fieldname": "item_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Key",
+   "read_only": 1
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Small Text",
+   "label": "Instructions",
+   "read_only": 1
   },
   {
    "default": "1.0",
@@ -39,13 +63,32 @@
    "reqd": 1
   },
   {
+   "default": "SimpleCompletion",
+   "fieldname": "outcome_mode",
+   "fieldtype": "Select",
+   "label": "Outcome Mode",
+   "options": "SimpleCompletion\nPassFail\nNumeric\nPhotoProof",
+   "read_only": 1
+  },
+  {
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nCompleted\nMissed",
+   "options": "Pending\nCompleted\nMissed\nNotApplicable",
    "reqd": 1
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "\nPass\nFail\nNotApplicable"
+  },
+  {
+   "fieldname": "failure_remark",
+   "fieldtype": "Small Text",
+   "label": "Failure Remark"
   },
   {
    "fieldname": "completed_at",
@@ -65,20 +108,64 @@
   },
   {
    "fieldname": "evidence",
-   "fieldtype": "Attach Image",
+   "fieldtype": "Attach",
    "label": "Evidence"
   },
   {
    "fieldname": "evidence_required",
    "fieldtype": "Select",
-   "label": "Evidence Required",
+   "label": "Evidence Required (deprecated)",
    "options": "None\nPhoto"
+  },
+  {
+   "default": "None",
+   "fieldname": "proof_requirement",
+   "fieldtype": "Select",
+   "label": "Proof Requirement",
+   "options": "None\nOptional\nRequired",
+   "read_only": 1
+  },
+  {
+   "default": "Image",
+   "fieldname": "proof_media_type",
+   "fieldtype": "Select",
+   "label": "Proof Media Type",
+   "options": "Image\nFile\nAny",
+   "read_only": 1
+  },
+  {
+   "default": "Any",
+   "fieldname": "proof_capture_mode",
+   "fieldtype": "Select",
+   "label": "Proof Capture Mode",
+   "options": "Any\nCameraOnly",
+   "read_only": 1
+  },
+  {
+   "fieldname": "proof_captured_at",
+   "fieldtype": "Datetime",
+   "label": "Proof Captured At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "prerequisite_item_key",
+   "fieldtype": "Data",
+   "label": "Prerequisite Item Key",
+   "read_only": 1
+  },
+  {
+   "default": "None",
+   "fieldname": "prerequisite_trigger",
+   "fieldtype": "Select",
+   "label": "Prerequisite Trigger",
+   "options": "None\nAnyOutcome\nOutcomeFail\nOutcomePass",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-03-12 00:00:00.000000",
+ "modified": "2026-03-26 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Pulse Core",
  "name": "SOP Run Item",

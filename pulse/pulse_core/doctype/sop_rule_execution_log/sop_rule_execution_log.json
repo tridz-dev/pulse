@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "autoname": "format:SOP-RULELOG-{#####}",
+ "creation": "2026-03-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule",
+  "source_run",
+  "source_run_item",
+  "trigger_event",
+  "target_run",
+  "status",
+  "error_message"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Rule",
+   "options": "SOP Follow-up Rule",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_run",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source Run",
+   "options": "SOP Run",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_run_item",
+   "fieldtype": "Data",
+   "label": "Source Run Item",
+   "reqd": 1
+  },
+  {
+   "default": "ItemOutcomeFail",
+   "fieldname": "trigger_event",
+   "fieldtype": "Data",
+   "label": "Trigger Event",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_run",
+   "fieldtype": "Link",
+   "label": "Target Run",
+   "options": "SOP Run"
+  },
+  {
+   "default": "Triggered",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Triggered\nFailed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse Core",
+ "name": "SOP Rule Execution Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Leader"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

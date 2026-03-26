@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import type { ScoreSnapshot } from '@/types';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/AuthContext';
 import { getScoreForUser, getTeamScores, getFailureAnalytics } from '@/services/scores';
 import type { TeamScoreItem } from '@/services/scores';
 import { getDemoStatus, installDemoData } from '@/services/demo';
+import { pulseQueryKeys } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2 } from 'lucide-react';
@@ -28,45 +29,56 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const MANAGER_ROLES = ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'] as const;
+
 export function Dashboard() {
   const { currentUser, refetch } = useAuth();
+  const queryClient = useQueryClient();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
-  const [score, setScore] = useState<ScoreSnapshot | null>(null);
-  const [teamData, setTeamData] = useState<TeamScoreItem[]>([]);
-  const [analytics, setAnalytics] = useState<{ id: string; taskName: string; templateName: string; misses: number }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [demoStatus, setDemoStatus] = useState<{ can_load_demo: boolean; can_clear_demo: boolean; has_demo_data: boolean } | null>(null);
   const [demoLoading, setDemoLoading] = useState(false);
 
-  useEffect(() => {
-    getDemoStatus().then(setDemoStatus).catch(() => setDemoStatus(null));
-  }, []);
+  const today = todayISO();
+  const isManagerPlus = !!(
+    currentUser?.systemRole && MANAGER_ROLES.includes(currentUser.systemRole as (typeof MANAGER_ROLES)[number])
+  );
 
-  useEffect(() => {
-    async function loadStats() {
-      if (!currentUser) return;
-      setIsLoading(true);
-      const today = todayISO();
+  const { data: demoStatus } = useQuery({
+    queryKey: pulseQueryKeys.demoStatus,
+    queryFn: async () => {
       try {
-        const userScore = await getScoreForUser(currentUser.id, today, periodType);
-        setScore(userScore);
-
-        if (currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole)) {
-          const team = await getTeamScores(currentUser.id, today, periodType);
-          setTeamData(team);
-          const analyticsData = await getFailureAnalytics(currentUser.id, today);
-          setAnalytics(analyticsData.mostMissedTasks ?? []);
-        } else {
-          setTeamData([]);
-          setAnalytics([]);
-        }
-      } catch (error) {
-        console.error('Failed to load dashboard stats', error);
+        return await getDemoStatus();
+      } catch {
+        return null;
       }
-      setIsLoading(false);
-    }
-    loadStats();
-  }, [currentUser, periodType]);
+    },
+    staleTime: 300_000,
+  });
+
+  const { data: score, isLoading: scoreLoading } = useQuery({
+    queryKey: pulseQueryKeys.dashboardScore(currentUser?.id ?? '_', today, periodType),
+    queryFn: () => getScoreForUser(currentUser!.id, today, periodType),
+    enabled: !!currentUser,
+    staleTime: 90_000,
+  });
+
+  const { data: teamData = [], isLoading: teamLoading } = useQuery({
+    queryKey: pulseQueryKeys.dashboardTeam(currentUser?.id ?? '_', today, periodType),
+    queryFn: () => getTeamScores(currentUser!.id, today, periodType),
+    enabled: !!currentUser && isManagerPlus,
+    staleTime: 90_000,
+  });
+
+  const { data: analytics = [] } = useQuery({
+    queryKey: pulseQueryKeys.dashboardAnalytics(currentUser?.id ?? '_', today),
+    queryFn: async () => {
+      const r = await getFailureAnalytics(currentUser!.id, today);
+      return r.mostMissedTasks ?? [];
+    },
+    enabled: !!currentUser && isManagerPlus && periodType === 'Day',
+    staleTime: 120_000,
+  });
+
+  const isLoading = !!currentUser && (scoreLoading || (isManagerPlus && teamLoading));
 
   const handleLoadDemo = async () => {
     setDemoLoading(true);
@@ -75,7 +87,7 @@ export function Dashboard() {
       if (r?.ok) {
         window.alert(r.message ?? 'Demo data load queued. It will run in the background.');
         refetch();
-        getDemoStatus().then(setDemoStatus);
+        await queryClient.invalidateQueries({ queryKey: ['pulse'] });
       }
     } catch (e) {
       console.error(e);
@@ -120,7 +132,7 @@ export function Dashboard() {
   const combinedPct = Math.round(combinedScore * 100);
   const ownPct = Math.round(ownScore * 100);
 
-  const barChartData = teamData.map((t) => ({
+  const barChartData = teamData.map((t: TeamScoreItem) => ({
     name: t.user?.name?.split(' ')[0] ?? t.user?.id ?? '',
     score: Math.round((t.combined_score ?? 0) * 100),
     role: t.user?.role,

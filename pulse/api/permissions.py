@@ -127,3 +127,28 @@ def corrective_action_conditions(user: str | None = None, doctype: str | None = 
 		subs.append(emp)
 		return f" ( `tabCorrective Action`.assigned_to in ({','.join(frappe.db.escape(e) for e in subs)}) or `tabCorrective Action`.raised_by in ({','.join(frappe.db.escape(e) for e in subs)}) ) "
 	return f" ( `tabCorrective Action`.assigned_to = {frappe.db.escape(emp)} or `tabCorrective Action`.raised_by = {frappe.db.escape(emp)} ) "
+
+
+def pulse_notification_conditions(user: str | None = None, doctype: str | None = None) -> str:
+	"""Restrict Pulse Notification: own recipient for User; team/subtree for Manager/Leader; all for Executive/Admin."""
+	user = user or frappe.session.user
+	if frappe.session.user == "Administrator" or "Pulse Admin" in frappe.get_roles(user):
+		return ""
+
+	emp = _get_employee_for_user(user)
+	if not emp:
+		return " 1 = 0 "
+
+	roles = frappe.get_roles(user)
+	if "Pulse Executive" in roles:
+		return ""
+	if "Pulse Leader" in roles:
+		subtree = _get_subtree_employee_names(emp)
+		if not subtree:
+			return f" `tabPulse Notification`.recipient = {frappe.db.escape(emp)} "
+		return f" `tabPulse Notification`.recipient in ({','.join(frappe.db.escape(e) for e in subtree)}) "
+	if "Pulse Manager" in roles:
+		subs = _get_subordinate_employee_names(emp)
+		subs.append(emp)
+		return f" `tabPulse Notification`.recipient in ({','.join(frappe.db.escape(e) for e in subs)}) "
+	return f" `tabPulse Notification`.recipient = {frappe.db.escape(emp)} "

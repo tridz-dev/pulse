@@ -5,3 +5,5 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 pulse.pulse_core.patches.v1_1.migrate_roles
+pulse.pulse_core.patches.v1_2.sop_extensions_data
+pulse.pulse_core.patches.v1_3.add_prerequisite_fields

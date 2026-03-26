@@ -41,9 +41,10 @@
   },
   {
    "fieldname": "branch",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Branch"
+   "label": "Branch",
+   "options": "Pulse Branch"
   },
   {
    "fieldname": "department",

@@ -12,6 +12,13 @@
   "active_from",
   "active_to",
   "is_active",
+  "schedule_section",
+  "schedule_kind",
+  "schedule_time",
+  "schedule_days_of_week",
+  "interval_minutes",
+  "open_run_policy",
+  "grace_minutes",
   "checklist_items"
  ],
  "fields": [
@@ -62,6 +69,48 @@
    "reqd": 1
   },
   {
+   "collapsible": 1,
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule"
+  },
+  {
+   "default": "CalendarDay",
+   "fieldname": "schedule_kind",
+   "fieldtype": "Select",
+   "label": "Schedule Kind",
+   "options": "CalendarDay\nTimeOfDay\nInterval"
+  },
+  {
+   "fieldname": "schedule_time",
+   "fieldtype": "Time",
+   "label": "Schedule Time"
+  },
+  {
+   "description": "Comma-separated weekday indices: 0=Monday ... 6=Sunday. Example: 0,1,2,3,4 for weekdays.",
+   "fieldname": "schedule_days_of_week",
+   "fieldtype": "Data",
+   "label": "Schedule Days Of Week"
+  },
+  {
+   "fieldname": "interval_minutes",
+   "fieldtype": "Int",
+   "label": "Interval Minutes"
+  },
+  {
+   "default": "AllowMultiple",
+   "fieldname": "open_run_policy",
+   "fieldtype": "Select",
+   "label": "Open Run Policy",
+   "options": "AllowMultiple\nRequirePreviousClosed"
+  },
+  {
+   "default": "30",
+   "fieldname": "grace_minutes",
+   "fieldtype": "Int",
+   "label": "Grace Minutes"
+  },
+  {
    "fieldname": "checklist_items",
    "fieldtype": "Table",
    "label": "Checklist Items",
@@ -71,7 +120,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 00:00:00.000000",
+ "modified": "2026-03-26 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Pulse Core",
  "name": "SOP Template",

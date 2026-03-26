@@ -4,6 +4,7 @@ import { getCurrentEmployee } from '@/services/auth';
 
 interface AuthContextType {
   currentUser: User | null;
+  authError: string | null;
   isLoading: boolean;
   refetch: () => Promise<void>;
 }
@@ -12,6 +13,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = async () => {
@@ -21,8 +23,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.location.href = '/desk/setup-wizard';
       return;
     }
-    const employee = await getCurrentEmployee();
-    setCurrentUser(employee);
+    const result = await getCurrentEmployee();
+    setCurrentUser(result.user);
+    setAuthError(result.error);
   };
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser,
+        authError,
         isLoading,
         refetch: async () => {
           setIsLoading(true);

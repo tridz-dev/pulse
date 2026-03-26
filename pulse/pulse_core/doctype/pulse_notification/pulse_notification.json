@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:PNOT-{#####}",
+ "creation": "2026-03-26 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "recipient",
+  "title",
+  "body",
+  "notification_type",
+  "severity",
+  "priority",
+  "source_doctype",
+  "source_name",
+  "is_read",
+  "read_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "recipient",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Recipient",
+   "options": "Pulse Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Small Text",
+   "label": "Body"
+  },
+  {
+   "default": "Custom",
+   "fieldname": "notification_type",
+   "fieldtype": "Select",
+   "label": "Notification Type",
+   "options": "RunAlert\nItemFail\nFollowUpCreated\nSystem\nCustom"
+  },
+  {
+   "default": "Info",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "options": "Info\nWarning\nCritical"
+  },
+  {
+   "default": "Normal",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Low\nNormal\nHigh\nUrgent"
+  },
+  {
+   "fieldname": "source_doctype",
+   "fieldtype": "Data",
+   "label": "Source DocType"
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Data",
+   "label": "Source Name"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_read",
+   "fieldtype": "Check",
+   "label": "Is Read"
+  },
+  {
+   "fieldname": "read_at",
+   "fieldtype": "Datetime",
+   "label": "Read At",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse Core",
+ "name": "Pulse Notification",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Executive",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Leader",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Pulse User",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

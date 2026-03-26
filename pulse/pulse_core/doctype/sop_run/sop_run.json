@@ -8,11 +8,16 @@
   "template",
   "employee",
   "period_date",
+  "period_datetime",
   "status",
   "run_items",
   "total_items",
   "completed_items",
+  "passed_items",
+  "failed_items",
+  "missed_items",
   "progress",
+  "score",
   "closed_at"
  ],
  "fields": [
@@ -38,6 +43,11 @@
    "in_list_view": 1,
    "label": "Period Date",
    "reqd": 1
+  },
+  {
+   "fieldname": "period_datetime",
+   "fieldtype": "Datetime",
+   "label": "Period Datetime"
   },
   {
    "default": "Open",
@@ -68,9 +78,36 @@
    "read_only": 1
   },
   {
+   "default": "0",
+   "fieldname": "passed_items",
+   "fieldtype": "Int",
+   "label": "Passed Items",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "failed_items",
+   "fieldtype": "Int",
+   "label": "Failed Items",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "missed_items",
+   "fieldtype": "Int",
+   "label": "Missed Items",
+   "read_only": 1
+  },
+  {
    "fieldname": "progress",
    "fieldtype": "Percent",
    "label": "Progress",
+   "read_only": 1
+  },
+  {
+   "fieldname": "score",
+   "fieldtype": "Percent",
+   "label": "Score",
    "read_only": 1
   },
   {
@@ -82,7 +119,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 00:00:00.000000",
+ "modified": "2026-03-26 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Pulse Core",
  "name": "SOP Run",

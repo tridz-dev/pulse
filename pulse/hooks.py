@@ -129,23 +129,26 @@ permission_query_conditions = {
 	"SOP Run": "pulse.api.permissions.sop_run_conditions",
 	"Score Snapshot": "pulse.api.permissions.score_snapshot_conditions",
 	"Corrective Action": "pulse.api.permissions.corrective_action_conditions",
+	"Pulse Notification": "pulse.api.permissions.pulse_notification_conditions",
 }
 
 # Document Events
 # ---------------
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"SOP Run": {"on_update": "pulse.api.pulse_cache_invalidate.on_sop_run_saved"},
+	"SOP Run Item": {"on_update": "pulse.api.pulse_cache_invalidate.on_sop_run_item_saved"},
+}
 
 # Scheduled Tasks
 # ---------------
 
 scheduler_events = {
+	"cron": {
+		"0/15 * * * *": [
+			"pulse.tasks.every_quarter_hour",
+		],
+	},
 	"daily": [
 		"pulse.tasks.daily"
 	],

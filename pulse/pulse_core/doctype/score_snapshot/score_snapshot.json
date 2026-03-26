@@ -13,6 +13,8 @@
   "combined_score",
   "total_items",
   "completed_items",
+  "passed_items",
+  "failed_items",
   "computed_at"
  ],
  "fields": [
@@ -73,6 +75,20 @@
    "reqd": 1
   },
   {
+   "default": "0",
+   "fieldname": "passed_items",
+   "fieldtype": "Int",
+   "label": "Passed Items",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "failed_items",
+   "fieldtype": "Int",
+   "label": "Failed Items",
+   "reqd": 1
+  },
+  {
    "fieldname": "computed_at",
    "fieldtype": "Datetime",
    "label": "Computed At",
@@ -81,7 +97,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 00:00:00.000000",
+ "modified": "2026-03-26 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Pulse Core",
  "name": "Score Snapshot",

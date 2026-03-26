@@ -694,24 +694,213 @@ Ramesh Agarwal (Chairman · Executive · HQ)
 
 ## Skills Directory
 
-This repository includes a `skills/` directory containing structured
-knowledge about features, UI patterns, design system elements, and
-developer workflows.
+This repository includes a `.agents/skills/` directory containing structured
+knowledge for AI agents working on the Pulse codebase.
 
-Before working on any area of the codebase, check if a relevant skill
-exists:
+### Available Skills
 
-1. Read `skills/_index.json` for the full catalog
-2. Open the relevant `skills/<name>/SKILL.md` for detailed context
-3. Check `references/` subdirectories for supplementary detail
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| `pulse-admin` | Org management (branches, employees, departments) | Creating/managing organizational structure |
+| `browserless-testing` | Docker browser automation | Testing UI when local Chrome fails |
+| `frappe-pulse-dev` | Full development guide | Building features, fixing bugs, general dev |
 
-Skills help you understand *how* things work here, *where* the code
-lives, and *what to watch out for* — consult them before making changes.
+### Using Skills
+
+1. Check `.agents/skills/<name>/SKILL.md` for detailed guidance
+2. Skills contain API patterns, code examples, and troubleshooting
+3. Each skill has `scripts/`, `references/`, and `assets/` as needed
+
+### Skill Locations (in priority order)
+
+- **Project level:** `.agents/skills/` (this repo)
+- **User level:** `~/.config/agents/skills/` or `~/.kimi/skills/`
+
+Consult relevant skills before making changes — they capture patterns
+and gotchas from previous development sessions.
+
+---
+
+## Testing with Browserless (Docker)
+
+When running in a Docker environment, the standard Playwright browser launch may fail due to sandbox restrictions. Use the **browserless** service via REST API instead.
+
+### Docker Compose Setup
+
+```yaml
+browserless:
+  image: ghcr.io/browserless/chromium:latest
+  ports:
+    - 3000:3000
+  environment:
+    - CONNECTION_TIMEOUT=60000
+    - MAX_CONCURRENT_SESSIONS=10
+    - TOKEN=123  # Optional authentication
+```
+
+### Connection Details
+
+| Property | Value |
+|----------|-------|
+| **Internal URL** | `http://192.168.97.1:3000` (host IP from container) |
+| **Health Check** | `http://192.168.97.1:3000/pressure?token=123` |
+| **Token** | `123` (if configured) |
+
+> Note: The hostname `browserless` is not resolvable from within the container due to Docker DNS limitations. Use the host IP `192.168.97.1` instead.
+
+### Screenshot API
+
+```bash
+# Basic screenshot
+curl -X POST "http://192.168.97.1:3000/screenshot?token=123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "http://192.168.97.5:8001/pulse",
+    "waitFor": 3000,
+    "viewport": {"width": 1400, "height": 900}
+  }' \
+  --output screenshot.png
+
+# With session cookies (logged-in pages)
+curl -X POST "http://192.168.97.1:3000/screenshot?token=123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "http://192.168.97.5:8001/pulse/admin/branches",
+    "cookies": [
+      {"name": "sid", "value": "<session_id>", "domain": "192.168.97.5", "path": "/"},
+      {"name": "system_user", "value": "yes", "domain": "192.168.97.5", "path": "/"}
+    ],
+    "waitFor": 4000,
+    "viewport": {"width": 1400, "height": 900}
+  }'
+```
+
+### Content API (HTML)
+
+```bash
+curl -X POST "http://192.168.97.1:3000/content?token=123" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "http://192.168.97.5:8001/pulse",
+    "viewport": {"width": 1280, "height": 720}
+  }'
+```
+
+### Function API (Custom Scripts)
+
+```bash
+curl -X POST "http://192.168.97.1:3000/function?token=123" \
+  -H "Content-Type: application/javascript" \
+  -d 'module.exports = async ({ page }) => {
+    await page.goto("http://192.168.97.5:8001/pulse");
+    await page.fill("#login_email", "chairman@pm.local");
+    await page.fill("#login_password", "Demo@123");
+    await page.click(".btn-login");
+    await page.waitForTimeout(3000);
+    return { url: page.url(), title: await page.title() };
+  };'
+```
+
+### Demo Login Credentials
+
+| Email | Password | Role |
+|-------|----------|------|
+| `chairman@pm.local` | `Demo@123` | Executive |
+| `md@pm.local` | `Demo@123` | Executive |
+| `rm.north@pm.local` | `Demo@123` | Area Manager |
+| `bm.n1@pm.local` | `Demo@123` | Supervisor |
+| `chef.n1@pm.local` | `Demo@123` | Operator |
+
+---
+
+## Phase 7: Data Import/Export & Advanced Features
+
+**Status:** 🔄 Planned
+
+This phase adds comprehensive data import/export capabilities and advanced UI/UX features.
+
+### Phase 7 Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Import/Export APIs | Backend APIs for bulk data import/export | Planned |
+| Import Templates | CSV/Excel templates for data migration | Planned |
+| Export Reports | PDF, Excel, CSV export for insights | Planned |
+| Follow-up Rules Management | UI for managing SOP Follow-up Rules | Planned |
+| Theme Toggle | Light/Dark mode switch | Planned |
+| Desktop Notifications | Browser-based notifications | Planned |
+
+### Phase 7 APIs
+
+#### `import_export.py` (Planned)
+
+| Method | Purpose |
+|---|---|
+| `import_data(doctype, data, format?)` | Import data from CSV/Excel |
+| `export_data(doctype, filters?, format?)` | Export data to CSV/Excel |
+| `get_import_template(doctype)` | Download import template |
+| `validate_import_data(doctype, data)` | Validate data before import |
+
+#### `reports.py` (Planned)
+
+| Method | Purpose |
+|---|---|
+| `export_insights_report(report_type, format, filters?)` | Export insights as PDF/Excel/CSV |
+| `generate_pdf_report(report_config)` | Generate PDF report |
+| `schedule_report(report_config, schedule)` | Schedule automated report delivery |
+
+### Phase 7 Frontend Routes
+
+| Route | Page | Purpose |
+|---|---|---|
+| `/admin/import` | `DataImport.tsx` | Import data from CSV/Excel |
+| `/admin/export` | `DataExport.tsx` | Export data and reports |
+| `/admin/follow-up-rules` | `FollowUpRules.tsx` | Manage SOP Follow-up Rules |
+| `/settings` | `Settings.tsx` | User settings including theme toggle |
+
+### Phase 7 Components
+
+| Component | Location | Purpose |
+|---|---|---|
+| `ThemeToggle` | `components/shared/` | Light/dark mode switch |
+| `NotificationManager` | `components/shared/` | Desktop notification handler |
+| `DataImporter` | `components/admin/` | CSV/Excel upload and preview |
+| `FollowUpRuleEditor` | `components/admin/` | CRUD for SOP Follow-up Rules |
+| `ReportExporter` | `components/insights/` | Export controls for reports |
+
+---
+
+## Testing Status
+
+### Current Test Results
+
+**Regression Testing:** 12/13 tests passing
+
+```
+✅ Login: chairman@pm.local
+✅ Get Branches
+✅ Get Employees  
+✅ Get Departments
+✅ Get Assignments
+✅ Get Assignment Options
+✅ Get Corrective Actions
+✅ Get CA Summary
+✅ Get System Settings (fixed - was syntax error)
+❌ Get Roles - Status: 500
+✅ Global Search
+✅ Quick Actions
+✅ Get Employee Hierarchy
+```
+
+### Known Issues
+1. `get_roles` API returns 500 - needs debugging
+2. Pulse Settings DocType doesn't exist - API returns defaults
 
 ---
 
 ## Open Items
 
+- [ ] Phase 7: Data Import/Export & Advanced Features
 - [ ] Real-time run updates (WebSocket / Server-Sent Events)
 - [ ] AI failure prediction from historical trends
 - [ ] Offline PWA with sync on reconnect

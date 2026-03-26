@@ -6,23 +6,20 @@ export interface RunListItem {
   template: string | SOPTemplate;
   employee: string;
   period_date: string;
+  period_datetime?: string | null;
   status: string;
   total_items?: number;
   completed_items?: number;
   progress: number;
+  score?: number;
+  passed_items?: number;
+  failed_items?: number;
 }
 
 export interface RunDetailsResponse {
   run: SOPRun;
   template: SOPTemplate;
-  items: (SOPRunItem & { templateItem: SOPChecklistItem })[];
-}
-
-interface SOPChecklistItem {
-  description: string;
-  weight: number;
-  item_type: string;
-  sequence?: number;
+  items: (SOPRunItem & { template_item?: Record<string, unknown> })[];
 }
 
 export async function getMyRuns(date: string): Promise<RunListItem[]> {
@@ -44,16 +41,27 @@ export async function getRunDetails(runName: string): Promise<RunDetailsResponse
   return res.message as RunDetailsResponse;
 }
 
+export type UpdateRunItemOptions = {
+  notes?: string;
+  numeric_value?: number;
+  outcome?: string;
+  failure_remark?: string;
+  file_url?: string;
+};
+
 export async function updateRunItem(
   runItemName: string,
   status: string,
-  options?: { notes?: string; numeric_value?: number }
+  options?: UpdateRunItemOptions,
 ): Promise<void> {
   await call.post('pulse.api.tasks.update_run_item', {
     run_item_name: runItemName,
     status,
     notes: options?.notes,
     numeric_value: options?.numeric_value,
+    outcome: options?.outcome,
+    failure_remark: options?.failure_remark,
+    file_url: options?.file_url,
   });
 }
 

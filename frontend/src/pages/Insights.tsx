@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store/AuthContext';
+import { pulseQueryKeys } from '@/lib/queryClient';
 import {
   getScoreTrends,
   getDepartmentComparison,
@@ -12,19 +14,20 @@ import {
   getDayOfWeekHeatmap,
   getScoreDistribution,
   getMostMissedItems,
+  getOutcomeSummary,
   getEmployeesByDepartment,
   getEmployeesByBranch,
 } from '@/services/insights';
 import type {
   ScoreTrendPoint,
   DeptBranchItem,
-  PerformerItem,
   TemplatePerformanceItem,
   CompletionTrendPoint,
   CorrectiveActionSummary,
   DayOfWeekItem,
   ScoreDistributionItem,
   MostMissedItem,
+  OutcomeSummaryRow,
   InsightFilters,
   FilteredEmployeeScore,
 } from '@/services/insights';
@@ -77,64 +80,72 @@ export function Insights() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
-  const [isLoading, setIsLoading] = useState(true);
-  const [scoreTrends, setScoreTrends] = useState<ScoreTrendPoint[]>([]);
-  const [deptComparison, setDeptComparison] = useState<DeptBranchItem[]>([]);
-  const [branchComparison, setBranchComparison] = useState<DeptBranchItem[]>([]);
-  const [performers, setPerformers] = useState<{ top: PerformerItem[]; bottom: PerformerItem[] }>({ top: [], bottom: [] });
-  const [templatePerf, setTemplatePerf] = useState<TemplatePerformanceItem[]>([]);
-  const [completionTrend, setCompletionTrend] = useState<CompletionTrendPoint[]>([]);
-  const [caSummary, setCaSummary] = useState<CorrectiveActionSummary | null>(null);
-  const [dayHeatmap, setDayHeatmap] = useState<DayOfWeekItem[]>([]);
-  const [scoreDist, setScoreDist] = useState<ScoreDistributionItem[]>([]);
-  const [mostMissed, setMostMissed] = useState<MostMissedItem[]>([]);
   const [filters, setFilters] = useState<InsightFilters>({});
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => rangeFromPreset('90d'));
   const [filteredEmployees, setFilteredEmployees] = useState<FilteredEmployeeScore[]>([]);
   const [drillLabel, setDrillLabel] = useState<string | null>(null);
 
-  const showInsights = currentUser && currentUser.systemRole && ['Pulse Executive', 'Pulse Leader'].includes(currentUser.systemRole);
+  const showInsights = !!(currentUser && currentUser.systemRole && ['Pulse Executive', 'Pulse Leader'].includes(currentUser.systemRole));
 
-  useEffect(() => {
-    if (!showInsights) {
-      setIsLoading(false);
-      return;
-    }
-    async function load() {
-      setIsLoading(true);
+  const insightsKey = useMemo(
+    () =>
+      JSON.stringify({
+        periodType,
+        start: dateRange.start,
+        end: dateRange.end,
+        filters,
+      }),
+    [periodType, dateRange.start, dateRange.end, filters],
+  );
+
+  const { data: bundle, isLoading } = useQuery({
+    queryKey: pulseQueryKeys.insightsBundle(insightsKey),
+    enabled: showInsights,
+    staleTime: 120_000,
+    gcTime: 15 * 60_000,
+    queryFn: async () => {
       const { start, end } = dateRange;
-      // Use range end for single-date widgets so "Demo data" preset shows data
       const refDate = end || todayISO();
-      try {
-        const [trends, dept, branch, perf, tmpl, compl, ca, heat, dist, missed] = await Promise.all([
-          getScoreTrends(start, end, periodType, filters),
-          getDepartmentComparison(refDate, periodType, filters),
-          getBranchComparison(refDate, periodType, filters),
-          getTopBottomPerformers(refDate, periodType, 5, filters),
-          getTemplatePerformance(start, end, filters),
-          getCompletionTrend(start, end, filters),
-          getCorrectiveActionSummary(filters),
-          getDayOfWeekHeatmap(start, end, filters),
-          getScoreDistribution(refDate, periodType, filters),
-          getMostMissedItems(start, end, 10, filters),
-        ]);
-        setScoreTrends(trends);
-        setDeptComparison(dept);
-        setBranchComparison(branch);
-        setPerformers(perf);
-        setTemplatePerf(tmpl);
-        setCompletionTrend(compl);
-        setCaSummary(ca);
-        setDayHeatmap(heat);
-        setScoreDist(dist);
-        setMostMissed(missed);
-      } catch (e) {
-        console.error('Insights load failed', e);
-      }
-      setIsLoading(false);
-    }
-    load();
-  }, [showInsights, periodType, filters, dateRange.start, dateRange.end]);
+      const [trends, dept, branch, perf, tmpl, compl, ca, heat, dist, missed, outcomes] = await Promise.all([
+        getScoreTrends(start, end, periodType, filters),
+        getDepartmentComparison(refDate, periodType, filters),
+        getBranchComparison(refDate, periodType, filters),
+        getTopBottomPerformers(refDate, periodType, 5, filters),
+        getTemplatePerformance(start, end, filters),
+        getCompletionTrend(start, end, filters),
+        getCorrectiveActionSummary(filters),
+        getDayOfWeekHeatmap(start, end, filters),
+        getScoreDistribution(refDate, periodType, filters),
+        getMostMissedItems(start, end, 10, filters),
+        getOutcomeSummary(start, end, filters),
+      ]);
+      return {
+        scoreTrends: trends,
+        deptComparison: dept,
+        branchComparison: branch,
+        performers: perf,
+        templatePerf: tmpl,
+        completionTrend: compl,
+        caSummary: ca,
+        dayHeatmap: heat,
+        scoreDist: dist,
+        mostMissed: missed,
+        outcomeSummary: outcomes,
+      };
+    },
+  });
+
+  const scoreTrends: ScoreTrendPoint[] = bundle?.scoreTrends ?? [];
+  const deptComparison: DeptBranchItem[] = bundle?.deptComparison ?? [];
+  const branchComparison: DeptBranchItem[] = bundle?.branchComparison ?? [];
+  const performers = bundle?.performers ?? { top: [], bottom: [] };
+  const templatePerf: TemplatePerformanceItem[] = bundle?.templatePerf ?? [];
+  const completionTrend: CompletionTrendPoint[] = bundle?.completionTrend ?? [];
+  const caSummary: CorrectiveActionSummary | null = bundle?.caSummary ?? null;
+  const dayHeatmap: DayOfWeekItem[] = bundle?.dayHeatmap ?? [];
+  const scoreDist: ScoreDistributionItem[] = bundle?.scoreDist ?? [];
+  const mostMissed: MostMissedItem[] = bundle?.mostMissed ?? [];
+  const outcomeSummary: OutcomeSummaryRow[] = bundle?.outcomeSummary ?? [];
 
   const handleDeptBarClick = (dept: string) => {
     setFilters((f) => ({ ...f, department: dept }));
@@ -459,6 +470,42 @@ export function Insights() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="bg-[#141415] border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-sm text-zinc-200">Pass / Fail outcomes</CardTitle>
+                <CardDescription className="text-xs">Pass/Fail checklist items (excludes N/A)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                      <TableHead className="text-zinc-400">Template</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Pass</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Fail</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Pass rate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {outcomeSummary.map((r) => (
+                      <TableRow key={r.template_id} className="border-zinc-800">
+                        <TableCell className="text-zinc-200 text-xs max-w-[140px] truncate">{r.template_title}</TableCell>
+                        <TableCell className="text-right text-emerald-400 text-xs">{r.passed}</TableCell>
+                        <TableCell className="text-right text-rose-400 text-xs">{r.failed}</TableCell>
+                        <TableCell className="text-right text-zinc-300 text-xs">{Math.round(r.pass_rate * 100)}%</TableCell>
+                      </TableRow>
+                    ))}
+                    {outcomeSummary.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-xs text-zinc-500">
+                          No Pass/Fail items in range
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="bg-[#141415] border-zinc-800">

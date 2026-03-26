@@ -462,3 +462,61 @@ def get_employees_by_branch(branch, date=None, period_type="Day"):
 		snap["reports_to_name"] = reports_to_name
 		out.append(snap)
 	return out
+
+
+@frappe.whitelist()
+def get_outcome_summary(
+	start_date=None,
+	end_date=None,
+	department=None,
+	branch=None,
+	employee=None,
+):
+	"""Aggregate pass/fail outcomes by template for Insights charts."""
+	scope, _ = _get_insight_employee_scope()
+	employees = _apply_filters(scope, department=department, branch=branch, employee=employee)
+	if not employees:
+		return []
+	start, end = _default_date_range(30)
+	if start_date:
+		start = getdate(start_date).strftime("%Y-%m-%d")
+	if end_date:
+		end = getdate(end_date).strftime("%Y-%m-%d")
+	placeholders = ", ".join(["%s"] * len(employees))
+	rows = frappe.db.sql(
+		f"""
+		SELECT t.name AS template_id,
+		       t.title AS template_title,
+		       SUM(CASE WHEN ri.outcome = 'Pass' THEN 1 ELSE 0 END) AS passed,
+		       SUM(CASE WHEN ri.outcome = 'Fail' THEN 1 ELSE 0 END) AS failed,
+		       COUNT(*) AS total_items
+		FROM `tabSOP Run Item` ri
+		JOIN `tabSOP Run` r ON ri.parent = r.name
+		JOIN `tabSOP Template` t ON r.template = t.name
+		WHERE r.employee IN ({placeholders})
+		  AND r.period_date BETWEEN %s AND %s
+		  AND ri.status = 'Completed'
+		  AND ri.outcome_mode = 'PassFail'
+		  AND IFNULL(ri.outcome, '') != ''
+		  AND ri.outcome != 'NotApplicable'
+		GROUP BY t.name, t.title
+		ORDER BY total_items DESC
+		""",
+		employees + [start, end],
+		as_dict=True,
+	)
+	out = []
+	for r in rows or []:
+		ti = int(r.get("total_items") or 0)
+		p = int(r.get("passed") or 0)
+		f = int(r.get("failed") or 0)
+		denom = p + f
+		out.append({
+			"template_id": r.get("template_id"),
+			"template_title": r.get("template_title") or "—",
+			"total_items": ti,
+			"passed": p,
+			"failed": f,
+			"pass_rate": round(p / denom, 4) if denom else 0.0,
+		})
+	return out

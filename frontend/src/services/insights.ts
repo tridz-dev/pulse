@@ -280,3 +280,25 @@ export async function getInsightBranches(): Promise<string[]> {
   const res = await call.get('pulse.api.insights.get_insight_branches', {});
   return (res.message as string[]) ?? [];
 }
+
+export interface OutcomeSummaryRow {
+  template_id: string;
+  template_title: string;
+  total_items: number;
+  passed: number;
+  failed: number;
+  pass_rate: number;
+}
+
+export async function getOutcomeSummary(
+  startDate?: string,
+  endDate?: string,
+  filters?: InsightFilters,
+): Promise<OutcomeSummaryRow[]> {
+  const res = await call.get('pulse.api.insights.get_outcome_summary', {
+    start_date: startDate,
+    end_date: endDate,
+    ...filtersParams(filters),
+  });
+  return (res.message as OutcomeSummaryRow[]) ?? [];
+}
