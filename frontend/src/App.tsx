@@ -20,6 +20,8 @@ import { EmployeeForm } from './pages/admin/EmployeeForm';
 import { EmployeeProfile } from './pages/admin/EmployeeProfile';
 import { Assignments } from './pages/admin/Assignments';
 import { AssignmentForm } from './pages/admin/AssignmentForm';
+import { CorrectiveActions } from './pages/CorrectiveActions';
+import { CorrectiveActionDetail } from './pages/CorrectiveActionDetail';
 import { GoHomePage } from './pages/go/GoHomePage';
 import { GoChecklistsPage } from './pages/go/GoChecklistsPage';
 import { GoAlertsPage } from './pages/go/GoAlertsPage';
@@ -59,6 +61,9 @@ export default function App() {
               <Route path="admin/employees/:id/edit" element={<EmployeeForm />} />
               <Route path="admin/assignments" element={<Assignments />} />
               <Route path="admin/assignments/new" element={<AssignmentForm />} />
+              <Route path="corrective-actions" element={<CorrectiveActions />} />
+              <Route path="corrective-actions/new" element={<CorrectiveActionDetail />} />
+              <Route path="corrective-actions/:id" element={<CorrectiveActionDetail />} />
             </Route>
           </Routes>
         </BrowserRouter>

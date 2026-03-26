@@ -14,7 +14,8 @@ import {
     Building2,
     FolderTree,
     UserCog,
-    ClipboardList
+    ClipboardList,
+    Flag
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -50,6 +51,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'] },
+        { name: 'Corrective Actions', path: '/corrective-actions', icon: Flag, hideFor: ['Pulse User'] },
     ];
 
     const adminItems: NavItemConfig[] = [
