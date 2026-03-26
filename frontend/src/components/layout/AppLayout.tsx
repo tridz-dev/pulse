@@ -1,37 +1,46 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { SearchModal } from '../search/SearchModal';
+import { CommandPalette } from '@/voice/CommandPalette';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 
 export function AppLayout() {
     const { currentUser, authError, isLoading } = useAuth();
+    const location = useLocation();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [voicePaletteOpen, setVoicePaletteOpen] = useState(false);
 
     // Initialize theme on mount (also listens for system changes)
     useTheme();
 
-    // Keyboard shortcut for search (Cmd/Ctrl + K)
+    // Keyboard shortcut for search (Cmd/Ctrl + K) and voice (Cmd/Ctrl + Shift + V)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 setSearchOpen(true);
             }
+            // Voice command shortcut: Cmd/Ctrl + Shift + V
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) {
+                e.preventDefault();
+                setVoicePaletteOpen(true);
+            }
             if (e.key === 'Escape') {
                 setSidebarOpen(false);
+                setVoicePaletteOpen(false);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [location.pathname]);
 
     // Close sidebar on route change on mobile
     useEffect(() => {
@@ -135,6 +144,12 @@ export function AppLayout() {
 
             {/* Search Modal */}
             <SearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+            
+            {/* Voice Command Palette */}
+            <CommandPalette 
+                isOpen={voicePaletteOpen} 
+                onClose={() => setVoicePaletteOpen(false)} 
+            />
         </div>
     );
 }

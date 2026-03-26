@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from '@/hooks/useTranslation';
 import { useAuth } from '@/store/AuthContext';
 import { getScoreForUser, getTeamScores, getFailureAnalytics } from '@/services/scores';
 import type { TeamScoreItem } from '@/services/scores';
@@ -32,6 +33,7 @@ function todayISO(): string {
 const MANAGER_ROLES = ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'] as const;
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const { currentUser, refetch } = useAuth();
   const queryClient = useQueryClient();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
@@ -85,13 +87,13 @@ export function Dashboard() {
     try {
       const r = await installDemoData(true);
       if (r?.ok) {
-        window.alert(r.message ?? 'Demo data load queued. It will run in the background.');
+        window.alert(r.message ?? t('common.loadingDemo') + ' - ' + t('common.loading'));
         refetch();
         await queryClient.invalidateQueries({ queryKey: ['pulse'] });
       }
     } catch (e) {
       console.error(e);
-      window.alert('Failed to load demo data.');
+      window.alert(t('errors.generic'));
     }
     setDemoLoading(false);
   };
@@ -100,21 +102,21 @@ export function Dashboard() {
     const canLoad = demoStatus?.can_load_demo && !demoStatus?.has_demo_data;
     return (
       <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">Execution Dashboard</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">{t('common.executionDashboard')}</h1>
         <Card className="bg-[#141415] border-zinc-800 max-w-xl">
           <CardHeader>
-            <CardTitle className="text-lg text-white">No employee record</CardTitle>
+            <CardTitle className="text-lg text-white">{t('common.noEmployeeRecord')}</CardTitle>
             <CardDescription>
               {canLoad
-                ? 'Load demo data to create sample users, employees, SOPs, and runs so you can explore the app.'
-                : 'Your user is not linked to a PM Employee. Contact your administrator or load demo data if you are an admin.'}
+                ? t('common.demoDataDescription')
+                : t('common.contactAdmin')}
             </CardDescription>
           </CardHeader>
           {canLoad && (
             <CardContent>
               <Button onClick={handleLoadDemo} disabled={demoLoading} className="gap-2">
                 {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                Load demo data
+                {t('common.loadingDemo')}
               </Button>
             </CardContent>
           )}
@@ -140,6 +142,21 @@ export function Dashboard() {
 
   const showLoadDemoCard = demoStatus?.can_load_demo && !demoStatus?.has_demo_data;
 
+  const getStatusText = (pct: number) => {
+    if (pct >= 80) return t('common.exceptional');
+    if (pct >= 50) return t('common.stable');
+    return t('common.critical');
+  };
+
+  const getPeriodLabel = (p: string) => {
+    switch (p) {
+      case 'Day': return t('common.day');
+      case 'Week': return t('common.week');
+      case 'Month': return t('common.month');
+      default: return p;
+    }
+  };
+
   return (
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       {showLoadDemoCard && (
@@ -148,24 +165,24 @@ export function Dashboard() {
             <div className="flex items-center gap-3">
               <Database className="h-5 w-5 text-amber-500" />
               <div>
-                <p className="text-sm font-medium text-amber-200">No demo data on this site</p>
-                <p className="text-xs text-amber-200/70">Load sample users, employees, SOPs and runs to explore the app.</p>
+                <p className="text-sm font-medium text-amber-200">{t('common.noDemoData')}</p>
+                <p className="text-xs text-amber-200/70">{t('common.loadSampleData')}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={handleLoadDemo} disabled={demoLoading} className="gap-2 border-amber-700 text-amber-200 hover:bg-amber-900/30">
               {demoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-              Load demo data
+              {t('common.loadingDemo')}
             </Button>
           </CardContent>
         </Card>
       )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Execution Dashboard</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">{t('common.executionDashboard')}</h1>
           <p className="text-zinc-400 text-sm mt-1">
             {currentUser.systemRole === 'Pulse User'
-              ? 'Your performance overview.'
-              : 'High-level metrics and performance roll-ups.'}
+              ? t('common.performanceOverview')
+              : t('common.highLevelMetrics')}
           </p>
         </div>
         <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shrink-0 self-start sm:self-center">
@@ -182,7 +199,7 @@ export function Dashboard() {
                   : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
               )}
             >
-              {p}
+              {getPeriodLabel(p)}
             </Button>
           ))}
         </div>
@@ -205,23 +222,22 @@ export function Dashboard() {
               <Gauge
                 value={combinedPct}
                 size={220}
-                label={`${periodType} KPI`}
+                label={`${getPeriodLabel(periodType)} KPI`}
                 mode="gradient"
                 showTicks
                 showGlow
               />
               <div className="flex flex-col justify-center gap-6 flex-1">
                 <div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Execution Health</h2>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">{t('common.executionHealth')}</h2>
                   <p className="text-sm text-zinc-500 mt-2 max-w-sm leading-relaxed">
-                    Your overall performance rating based on {completedItems} completed tasks and team roll-ups for
-                    this {periodType.toLowerCase()}.
+                    {t('common.performanceAggregated')} {periodType.toLowerCase()}.
                   </p>
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
-                      Trend
+                      {t('common.trend')}
                     </span>
                     <div className="flex items-center gap-1.5 text-emerald-400 mt-1">
                       <TrendingUp size={16} />
@@ -231,7 +247,7 @@ export function Dashboard() {
                   <div className="w-px h-8 bg-zinc-800" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
-                      Status
+                      {t('common.status')}
                     </span>
                     <span
                       className={cn(
@@ -239,7 +255,7 @@ export function Dashboard() {
                         combinedPct >= 80 ? 'text-emerald-400' : combinedPct >= 50 ? 'text-amber-400' : 'text-rose-400'
                       )}
                     >
-                      {combinedPct >= 80 ? 'EXCEPTIONAL' : combinedPct >= 50 ? 'STABLE' : 'CRITICAL'}
+                      {getStatusText(combinedPct)}
                     </span>
                   </div>
                 </div>
@@ -249,19 +265,19 @@ export function Dashboard() {
               <Card className="bg-[#141415] border-zinc-800 flex-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    Own Execution
+                    {t('common.ownExecution')}
                   </CardTitle>
                   <Target className="h-4 w-4 text-zinc-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold text-white tracking-tighter">{ownPct}%</div>
-                  <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
+                  <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">{totalItems} {t('common.assignedTasks')}</p>
                 </CardContent>
               </Card>
               <Card className="bg-[#141415] border-zinc-800 flex-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                    {teamData.length > 0 ? 'Team Roll-up' : 'Activity'}
+                    {teamData.length > 0 ? t('common.teamRollup') : t('common.activity')}
                   </CardTitle>
                   {teamData.length > 0 ? (
                     <Users className="h-4 w-4 text-zinc-500" />
@@ -274,7 +290,7 @@ export function Dashboard() {
                     {teamData.length > 0 ? `${Math.round(teamScore * 100)}%` : completedItems}
                   </div>
                   <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">
-                    {teamData.length > 0 ? 'Direct Reports Avg' : 'Items Completed'}
+                    {teamData.length > 0 ? t('common.directReportsAvg') : t('common.itemsCompleted')}
                   </p>
                 </CardContent>
               </Card>
@@ -285,9 +301,9 @@ export function Dashboard() {
             <Card className="bg-[#141415] border-zinc-800 mt-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base text-zinc-200">Execution by Group</CardTitle>
+                  <CardTitle className="text-base text-zinc-200">{t('common.executionByGroup')}</CardTitle>
                   <CardDescription className="text-xs">
-                    Performance aggregated for the selected {periodType.toLowerCase()}.
+                    {t('common.performanceAggregated')} {periodType.toLowerCase()}.
                   </CardDescription>
                 </div>
                 <Calendar className="h-4 w-4 text-zinc-600" />
@@ -330,9 +346,9 @@ export function Dashboard() {
           {analytics.length > 0 && periodType === 'Day' && (
             <Card className="bg-[#141415] border-zinc-800">
               <CardHeader>
-                <CardTitle className="text-base text-zinc-200">Organization-wide Failure Points</CardTitle>
+                <CardTitle className="text-base text-zinc-200">{t('common.failurePoints')}</CardTitle>
                 <CardDescription className="text-xs">
-                  Tasks that were missed most frequently across all branches.
+                  {t('common.tasksMissed')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4 mt-2">
@@ -347,7 +363,7 @@ export function Dashboard() {
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-sm font-bold text-rose-400">{item.misses}</span>
-                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Misses</span>
+                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('common.misses')}</span>
                     </div>
                   </div>
                 ))}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="48" fill="url(#grad)"/>
+  <g transform="translate(48, 48)" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Pulse heartbeat line -->
+    <polyline points="0,48 24,48 32,24 48,72 56,48 96,48"/>
+    <!-- Circle around it -->
+    <circle cx="48" cy="48" r="42" stroke-width="6"/>
+  </g>
+</svg>

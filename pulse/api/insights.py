@@ -13,6 +13,7 @@ from pulse.api.permissions import (
 	_get_subtree_employee_names,
 )
 from pulse.api.scores import _calculate_score_snapshot
+from pulse.cache import cache_result, cache_invalidate
 
 
 def _get_insight_employee_scope():
@@ -37,6 +38,7 @@ def _default_date_range(days: int = 30):
 
 
 @frappe.whitelist()
+@cache_result(ttl=600)
 def get_insight_departments():
 	"""Return list of PM Department names for filter dropdown."""
 	rows = frappe.get_all("Pulse Department", filters={"is_active": 1}, pluck="department_name")
@@ -44,6 +46,7 @@ def get_insight_departments():
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda: f"insights:branches:{frappe.session.user}")
 def get_insight_branches():
 	"""Return distinct branch values (within scope) for filter dropdown."""
 	scope, _ = _get_insight_employee_scope()
@@ -84,6 +87,7 @@ def _apply_filters(employee_names, department=None, branch=None, employee=None):
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda start_date=None, end_date=None, period_type="Day", department=None, branch=None, employee=None: f"insights:score_trends:{employee or department or branch or 'org'}:{period_type}:{hash(str(start_date))}:{hash(str(end_date))}")
 def get_score_trends(start_date=None, end_date=None, period_type="Day", department=None, branch=None, employee=None):
 	"""Time-series avg combined score. Returns [{date, avg_score, employee_count}]."""
 	scope, _ = _get_insight_employee_scope()
@@ -112,6 +116,7 @@ def get_score_trends(start_date=None, end_date=None, period_type="Day", departme
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda date=None, period_type="Day", department=None, branch=None, employee=None: f"insights:dept_comp:{hash(str(date))}:{period_type}:{hash(str(department))}:{hash(str(branch))}:{hash(str(employee))}")
 def get_department_comparison(date=None, period_type="Day", department=None, branch=None, employee=None):
 	"""Average scores per department. Returns [{department, avg_score, headcount}]."""
 	scope, _ = _get_insight_employee_scope()
@@ -138,6 +143,7 @@ def get_department_comparison(date=None, period_type="Day", department=None, bra
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda date=None, period_type="Day", department=None, branch=None, employee=None: f"insights:branch_comp:{hash(str(date))}:{period_type}:{hash(str(department))}:{hash(str(branch))}:{hash(str(employee))}")
 def get_branch_comparison(date=None, period_type="Day", department=None, branch=None, employee=None):
 	"""Average scores per branch. Returns [{branch, avg_score, headcount}]."""
 	scope, _ = _get_insight_employee_scope()
@@ -164,6 +170,7 @@ def get_branch_comparison(date=None, period_type="Day", department=None, branch=
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda date=None, period_type="Day", limit=5, department=None, branch=None, employee=None: f"insights:performers:{hash(str(date))}:{period_type}:{limit}:{hash(str(department))}:{hash(str(branch))}:{hash(str(employee))}")
 def get_top_bottom_performers(date=None, period_type="Day", limit=5, department=None, branch=None, employee=None):
 	"""Top N and bottom N employees. Returns {top: [...], bottom: [...]}."""
 	scope, _ = _get_insight_employee_scope()
@@ -191,6 +198,7 @@ def get_top_bottom_performers(date=None, period_type="Day", limit=5, department=
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda start_date=None, end_date=None, department=None, branch=None, employee=None: f"insights:template_perf:{hash(str(start_date))}:{hash(str(end_date))}:{hash(str(department))}:{hash(str(branch))}:{hash(str(employee))}")
 def get_template_performance(start_date=None, end_date=None, department=None, branch=None, employee=None):
 	"""Completion rates per SOP template. Returns [{template, title, department, avg_completion, run_count}]."""
 	scope, _ = _get_insight_employee_scope()

@@ -1,0 +1,154 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-26 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "template_name",
+  "description",
+  "is_active",
+  "column_break_1",
+  "doc_type",
+  "default_language",
+  "section_break_fields",
+  "fields",
+  "section_break_patterns",
+  "custom_patterns",
+  "section_break_config",
+  "auto_rotate",
+  "confidence_threshold",
+  "enhance_image"
+ ],
+ "fields": [
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "doc_type",
+   "fieldtype": "Link",
+   "label": "Target DocType",
+   "options": "DocType"
+  },
+  {
+   "default": "eng",
+   "fieldname": "default_language",
+   "fieldtype": "Select",
+   "label": "Default Language",
+   "options": "eng\nspa\nfra\ndeu\nchi_sim\nchi_tra\njpn\nkor\nara\npor\nita\nrus"
+  },
+  {
+   "fieldname": "section_break_fields",
+   "fieldtype": "Section Break",
+   "label": "Field Mappings"
+  },
+  {
+   "fieldname": "fields",
+   "fieldtype": "Table",
+   "label": "Fields",
+   "options": "OCR Template Field"
+  },
+  {
+   "fieldname": "section_break_patterns",
+   "fieldtype": "Section Break",
+   "label": "Custom Patterns"
+  },
+  {
+   "fieldname": "custom_patterns",
+   "fieldtype": "Table",
+   "label": "Custom Regex Patterns",
+   "options": "OCR Custom Pattern"
+  },
+  {
+   "fieldname": "section_break_config",
+   "fieldtype": "Section Break",
+   "label": "Processing Configuration"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_rotate",
+   "fieldtype": "Check",
+   "label": "Auto-rotate Document"
+  },
+  {
+   "default": "60",
+   "fieldname": "confidence_threshold",
+   "fieldtype": "Int",
+   "label": "Minimum Confidence Threshold (%)"
+  },
+  {
+   "default": "1",
+   "fieldname": "enhance_image",
+   "fieldtype": "Check",
+   "label": "Enhance Image Before OCR"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-26 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Pulse",
+ "name": "OCR Template",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Pulse Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

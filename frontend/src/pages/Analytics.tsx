@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from '@/hooks/useTranslation';
 import { useAuth } from '@/store/AuthContext';
 import { pulseQueryKeys } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -35,19 +36,19 @@ type Severity = 'high' | 'medium' | 'low';
 interface MockAnomaly {
   id: number;
   type: AnomalyType;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   timestamp: string;
   severity: Severity;
   runId: string;
 }
 
-const generateMockAnomalies = (): MockAnomaly[] => [
-  { id: 1, type: 'critical', title: 'Critical SOP Deviation', description: 'Kitchen closing checklist missed 3 times', timestamp: '2024-03-25T14:30:00', severity: 'high', runId: 'RUN-001' },
-  { id: 2, type: 'warning', title: 'Compliance Drop', description: 'Safety inspection scores dropped 15%', timestamp: '2024-03-24T09:15:00', severity: 'medium', runId: 'RUN-002' },
-  { id: 3, type: 'info', title: 'Unusual Pattern', description: 'Inventory checks happening off-schedule', timestamp: '2024-03-23T16:45:00', severity: 'low', runId: 'RUN-003' },
-  { id: 4, type: 'warning', title: 'Repeated Failure', description: 'Opening procedure failed 2 days in a row', timestamp: '2024-03-22T08:00:00', severity: 'medium', runId: 'RUN-004' },
-  { id: 5, type: 'critical', title: 'Quality Control Issue', description: 'Product quality checks below threshold', timestamp: '2024-03-21T11:20:00', severity: 'high', runId: 'RUN-005' },
+const generateMockAnomalies = (_t: (key: string) => string): MockAnomaly[] => [
+  { id: 1, type: 'critical', titleKey: 'analytics.criticalSOPDeviation', descriptionKey: 'analytics.criticalSOPDeviation', timestamp: '2024-03-25T14:30:00', severity: 'high', runId: 'RUN-001' },
+  { id: 2, type: 'warning', titleKey: 'analytics.complianceDrop', descriptionKey: 'analytics.complianceDrop', timestamp: '2024-03-24T09:15:00', severity: 'medium', runId: 'RUN-002' },
+  { id: 3, type: 'info', titleKey: 'analytics.unusualPattern', descriptionKey: 'analytics.unusualPattern', timestamp: '2024-03-23T16:45:00', severity: 'low', runId: 'RUN-003' },
+  { id: 4, type: 'warning', titleKey: 'analytics.repeatedFailure', descriptionKey: 'analytics.repeatedFailure', timestamp: '2024-03-22T08:00:00', severity: 'medium', runId: 'RUN-004' },
+  { id: 5, type: 'critical', titleKey: 'analytics.qualityControlIssue', descriptionKey: 'analytics.qualityControlIssue', timestamp: '2024-03-21T11:20:00', severity: 'high', runId: 'RUN-005' },
 ];
 
 const generateMockPredictions = (days: number) => {
@@ -136,6 +137,7 @@ const generateMockTrendData = () => {
 };
 
 export function Analytics() {
+  const { t } = useTranslation();
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
@@ -146,7 +148,7 @@ export function Analytics() {
 
   const anomalies = useQuery({
     queryKey: pulseQueryKeys.analytics.anomalies(),
-    queryFn: async () => generateMockAnomalies(),
+    queryFn: async () => generateMockAnomalies(t),
     enabled: showAnalytics,
     staleTime: 300_000,
   });
@@ -191,9 +193,9 @@ export function Analytics() {
     return (
       <div className="flex flex-col items-center justify-center p-12 mt-10 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
         <ChartLine size={48} className="text-zinc-600 mb-4" />
-        <h3 className="text-base font-medium text-zinc-300">Access Restricted</h3>
+        <h3 className="text-base font-medium text-zinc-300">{t('analytics.accessRestricted')}</h3>
         <p className="text-sm text-zinc-500 mt-1 text-center max-w-sm">
-          Advanced Analytics are reserved for Executive, Leader, and Manager roles.
+          {t('analytics.analyticsReserved')}
         </p>
       </div>
     );
@@ -209,10 +211,10 @@ export function Analytics() {
         <div>
           <div className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-indigo-400" />
-            <h1 className="text-3xl font-semibold tracking-tight text-white">AI-Powered Analytics</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-white">{t('analytics.aiPoweredAnalytics')}</h1>
           </div>
           <p className="text-zinc-400 text-sm mt-1">
-            Advanced insights, predictions, and intelligent recommendations
+            {t('analytics.advancedInsights')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -242,23 +244,23 @@ export function Analytics() {
         <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
             <BarChart3 className="h-4 w-4 mr-1.5" />
-            Overview
+            {t('analytics.overview')}
           </TabsTrigger>
           <TabsTrigger value="trends" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
             <TrendingUp className="h-4 w-4 mr-1.5" />
-            Trends
+            {t('analytics.trends')}
           </TabsTrigger>
           <TabsTrigger value="predictions" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
             <Brain className="h-4 w-4 mr-1.5" />
-            Predictions
+            {t('analytics.predictions')}
           </TabsTrigger>
           <TabsTrigger value="anomalies" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
             <AlertTriangle className="h-4 w-4 mr-1.5" />
-            Anomalies
+            {t('analytics.anomalies')}
           </TabsTrigger>
           <TabsTrigger value="benchmarks" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white text-zinc-400">
             <ChartLine className="h-4 w-4 mr-1.5" />
-            Benchmarks
+            {t('analytics.benchmarks')}
           </TabsTrigger>
         </TabsList>
 
@@ -276,12 +278,16 @@ export function Analytics() {
                 <div className="lg:col-span-2">
                   <TrendChart 
                     data={trendData.data || { actual: [], predicted: [] }} 
-                    title="Performance Trend with AI Forecast"
-                    description="Actual scores vs AI-predicted trajectory"
+                    title={t('analytics.performanceTrend')}
+                    description={t('analytics.actualVsPredicted')}
                   />
                 </div>
                 <div className="space-y-6">
-                  <AnomalyDetectionCard anomalies={anomalies.data || []} compact />
+                  <AnomalyDetectionCard anomalies={(anomalies.data || []).map(a => ({
+                    ...a,
+                    title: t(a.titleKey),
+                    description: t(a.descriptionKey),
+                  }))} compact />
                   <RecommendationsPanel recommendations={recommendations.data || []} compact />
                 </div>
               </div>
@@ -292,21 +298,21 @@ export function Analytics() {
             <TabsContent value="trends" className="mt-6 space-y-6">
               <TrendChart 
                 data={trendData.data || { actual: [], predicted: [] }} 
-                title="Detailed Trend Analysis"
-                description="Multi-period comparison with seasonality detection"
+                title={t('analytics.performanceTrend')}
+                description={t('analytics.advancedInsights')}
                 showExport
               />
               <div className="grid gap-6 md:grid-cols-2">
                 <Card className="bg-[#141415] border-zinc-800">
                   <CardHeader>
-                    <CardTitle className="text-sm text-zinc-200">Trend Indicators</CardTitle>
+                    <CardTitle className="text-sm text-zinc-200">{t('analytics.trendIndicators')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {[
-                      { label: 'Daily Average', value: '87.3%', trend: '+2.4%', up: true },
-                      { label: 'Weekly Growth', value: '5.1%', trend: '+0.8%', up: true },
-                      { label: 'Monthly Change', value: '12.7%', trend: '-1.2%', up: false },
-                      { label: 'Volatility', value: 'Low', trend: 'Stable', up: true },
+                      { label: t('analytics.dailyAverage'), value: '87.3%', trend: '+2.4%', up: true },
+                      { label: t('analytics.weeklyGrowth'), value: '5.1%', trend: '+0.8%', up: true },
+                      { label: t('analytics.monthlyChange'), value: '12.7%', trend: '-1.2%', up: false },
+                      { label: t('analytics.volatility'), value: 'Low', trend: 'Stable', up: true },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-lg">
                         <span className="text-sm text-zinc-400">{item.label}</span>
@@ -331,8 +337,8 @@ export function Analytics() {
             <TabsContent value="predictions" className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-medium text-white">Performance Forecasting</h3>
-                  <p className="text-sm text-zinc-400">AI-generated predictions with confidence intervals</p>
+                  <h3 className="text-lg font-medium text-white">{t('analytics.performanceForecasting')}</h3>
+                  <p className="text-sm text-zinc-400">{t('analytics.aiPredictions')}</p>
                 </div>
                 <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
                   {([7, 30, 90] as const).map((days) => (
@@ -346,7 +352,7 @@ export function Analytics() {
                         forecastDays === days ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
                       )}
                     >
-                      {days} Day{days > 1 ? 's' : ''}
+                      {t('analytics.dayCount', { count: days })}
                     </Button>
                   ))}
                 </div>
@@ -360,18 +366,22 @@ export function Analytics() {
 
             {/* Anomalies Tab */}
             <TabsContent value="anomalies" className="mt-6 space-y-6">
-              <AnomalyDetectionCard anomalies={anomalies.data || []} />
+              <AnomalyDetectionCard anomalies={(anomalies.data || []).map(a => ({
+                ...a,
+                title: t(a.titleKey),
+                description: t(a.descriptionKey),
+              }))} />
               <div className="grid gap-6 md:grid-cols-2">
                 <Card className="bg-[#141415] border-zinc-800">
                   <CardHeader>
-                    <CardTitle className="text-sm text-zinc-200">Anomaly Statistics</CardTitle>
+                    <CardTitle className="text-sm text-zinc-200">{t('analytics.anomalyStatistics')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {[
-                      { label: 'Total Detected', value: '23', change: '+5 this week' },
-                      { label: 'Critical', value: '3', change: '-2 from last week', color: 'text-rose-400' },
-                      { label: 'Medium', value: '8', change: '+3 from last week', color: 'text-amber-400' },
-                      { label: 'Resolved', value: '18', change: '78% resolution rate', color: 'text-emerald-400' },
+                      { label: t('analytics.totalDetected'), value: '23', change: `+5 ${t('analytics.thisWeek')}` },
+                      { label: t('analytics.critical'), value: '3', change: `-2 ${t('analytics.fromLastWeek')}`, color: 'text-rose-400' },
+                      { label: 'Medium', value: '8', change: `+3 ${t('analytics.fromLastWeek')}`, color: 'text-amber-400' },
+                      { label: t('analytics.resolved'), value: '18', change: `78% ${t('analytics.resolutionRate')}`, color: 'text-emerald-400' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-lg">
                         <span className="text-sm text-zinc-400">{item.label}</span>
@@ -385,14 +395,14 @@ export function Analytics() {
                 </Card>
                 <Card className="bg-[#141415] border-zinc-800">
                   <CardHeader>
-                    <CardTitle className="text-sm text-zinc-200">Detection Settings</CardTitle>
+                    <CardTitle className="text-sm text-zinc-200">{t('analytics.detectionSettings')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {[
-                      { label: 'Sensitivity Level', value: 'Medium' },
-                      { label: 'Detection Model', value: 'LSTM v2.4' },
-                      { label: 'Update Frequency', value: 'Real-time' },
-                      { label: 'Alert Threshold', value: '85% confidence' },
+                      { label: t('analytics.sensitivityLevel'), value: 'Medium' },
+                      { label: t('analytics.detectionModel'), value: 'LSTM v2.4' },
+                      { label: t('analytics.updateFrequency'), value: t('analytics.realTime') },
+                      { label: t('analytics.alertThreshold'), value: '85% confidence' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between py-2 border-b border-zinc-800/50 last:border-0">
                         <span className="text-sm text-zinc-400">{item.label}</span>
@@ -408,25 +418,25 @@ export function Analytics() {
             <TabsContent value="benchmarks" className="mt-6 space-y-6">
               <Card className="bg-[#141415] border-zinc-800">
                 <CardHeader>
-                  <CardTitle className="text-base text-zinc-200">Industry Benchmarks</CardTitle>
-                  <CardDescription className="text-xs">Compare your performance against industry standards</CardDescription>
+                  <CardTitle className="text-base text-zinc-200">{t('analytics.industryBenchmarks')}</CardTitle>
+                  <CardDescription className="text-xs">{t('analytics.comparePerformance')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     {[
-                      { metric: 'Overall Compliance', yours: 87, industry: 78, top: 95 },
-                      { metric: 'Task Completion Rate', yours: 92, industry: 85, top: 98 },
-                      { metric: 'SOP Adherence', yours: 84, industry: 80, top: 93 },
-                      { metric: 'Quality Score', yours: 89, industry: 82, top: 96 },
-                      { metric: 'Response Time', yours: 76, industry: 70, top: 88 },
+                      { metric: t('analytics.overallCompliance'), yours: 87, industry: 78, top: 95 },
+                      { metric: t('analytics.taskCompletionRate'), yours: 92, industry: 85, top: 98 },
+                      { metric: t('analytics.sopAdherence'), yours: 84, industry: 80, top: 93 },
+                      { metric: t('analytics.qualityScore'), yours: 89, industry: 82, top: 96 },
+                      { metric: t('analytics.responseTime'), yours: 76, industry: 70, top: 88 },
                     ].map((item) => (
                       <div key={item.metric} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-zinc-300">{item.metric}</span>
                           <div className="flex items-center gap-4 text-xs">
-                            <span className="text-indigo-400">You: {item.yours}%</span>
-                            <span className="text-zinc-500">Industry: {item.industry}%</span>
-                            <span className="text-emerald-400">Top 10%: {item.top}%</span>
+                            <span className="text-indigo-400">{t('analytics.you')}: {item.yours}%</span>
+                            <span className="text-zinc-500">{t('analytics.industry')}: {item.industry}%</span>
+                            <span className="text-emerald-400">{t('analytics.top10')}: {item.top}%</span>
                           </div>
                         </div>
                         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden flex">

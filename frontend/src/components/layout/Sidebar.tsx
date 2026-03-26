@@ -26,6 +26,7 @@ import {
     ChartLine
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 import { useAuth } from '../../store/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -40,6 +41,7 @@ interface NavItemConfig {
     icon: LucideIcon;
     showFor?: string[];
     hideFor?: string[];
+    translationKey: string;
 }
 
 interface SidebarProps {
@@ -49,33 +51,34 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarProps) {
+    const { t } = useTranslation();
     const { currentUser } = useAuth();
     const location = useLocation();
 
     const navItems: NavItemConfig[] = [
-        { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-        { name: 'My Tasks', path: '/tasks', icon: CheckSquare },
-        { name: 'Pulse Go', path: '/go', icon: Smartphone },
-        { name: 'Team', path: '/team', icon: Users, hideFor: ['Pulse User'] },
-        { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Analytics', path: '/analytics', icon: ChartLine, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'] },
-        { name: 'Corrective Actions', path: '/corrective-actions', icon: Flag, hideFor: ['Pulse User'] },
+        { name: 'Dashboard', path: '/', icon: LayoutDashboard, translationKey: 'common.dashboard' },
+        { name: 'My Tasks', path: '/tasks', icon: CheckSquare, translationKey: 'common.myTasks' },
+        { name: 'Pulse Go', path: '/go', icon: Smartphone, translationKey: 'common.pulseGo' },
+        { name: 'Team', path: '/team', icon: Users, hideFor: ['Pulse User'], translationKey: 'common.team' },
+        { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.operations' },
+        { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.insights' },
+        { name: 'Analytics', path: '/analytics', icon: ChartLine, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'analytics.performance' },
+        { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'], translationKey: 'common.sopTemplates' },
+        { name: 'Corrective Actions', path: '/corrective-actions', icon: Flag, hideFor: ['Pulse User'], translationKey: 'common.correctiveActions' },
     ];
 
     const adminItems: NavItemConfig[] = [
-        { name: 'Branches', path: '/admin/branches', icon: Building2, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Departments', path: '/admin/departments', icon: FolderTree, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Employees', path: '/admin/employees', icon: UserCog, hideFor: ['Pulse User'] },
-        { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Org Chart', path: '/admin/org-chart', icon: GitBranch, hideFor: ['Pulse User'] },
-        { name: 'Roles', path: '/admin/roles', icon: Shield, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
-        { name: 'Audit Log', path: '/admin/audit', icon: History, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Import/Export', path: '/admin/import-export', icon: Upload, hideFor: ['Pulse User'] },
-        { name: 'Scheduled Reports', path: '/admin/scheduled-reports', icon: Calendar, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Follow-up Rules', path: '/admin/follow-up-rules', icon: Workflow, hideFor: ['Pulse User', 'Pulse Manager'] },
-        { name: 'Settings', path: '/admin/settings', icon: SettingsIcon, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
+        { name: 'Branches', path: '/admin/branches', icon: Building2, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.branches' },
+        { name: 'Departments', path: '/admin/departments', icon: FolderTree, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.departments' },
+        { name: 'Employees', path: '/admin/employees', icon: UserCog, hideFor: ['Pulse User'], translationKey: 'common.employees' },
+        { name: 'Assignments', path: '/admin/assignments', icon: ClipboardList, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.assignments' },
+        { name: 'Org Chart', path: '/admin/org-chart', icon: GitBranch, hideFor: ['Pulse User'], translationKey: 'common.orgChart' },
+        { name: 'Roles', path: '/admin/roles', icon: Shield, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'], translationKey: 'common.roles' },
+        { name: 'Audit Log', path: '/admin/audit', icon: History, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.auditLog' },
+        { name: 'Import/Export', path: '/admin/import-export', icon: Upload, hideFor: ['Pulse User'], translationKey: 'common.importExport' },
+        { name: 'Scheduled Reports', path: '/admin/scheduled-reports', icon: Calendar, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.scheduledReports' },
+        { name: 'Follow-up Rules', path: '/admin/follow-up-rules', icon: Workflow, hideFor: ['Pulse User', 'Pulse Manager'], translationKey: 'common.followUpRules' },
+        { name: 'Settings', path: '/admin/settings', icon: SettingsIcon, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'], translationKey: 'common.settings' },
     ];
 
     return (
@@ -100,7 +103,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                         onClick={onOpenSearch}
                     >
                         <Search size={14} className="text-zinc-500" />
-                        <span>Search...</span>
+                        <span>{t('common.search')}</span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-60">
                             <kbd className="font-sans px-1 rounded bg-zinc-800 border border-zinc-700 text-[10px]">⌘</kbd>
                             <kbd className="font-sans px-1 rounded bg-zinc-800 border border-zinc-700 text-[10px]">K</kbd>
@@ -113,7 +116,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
             <div className={cn("flex-1 overflow-y-auto scrollbar-none", collapsed ? "px-2 space-y-0.5" : "px-3 space-y-0.5")}>
                 {!collapsed && (
                     <div className="px-2 mb-2 mt-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                        Workspace
+                        {t('common.workspace')}
                     </div>
                 )}
                 {navItems.map((item) => {
@@ -127,7 +130,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                         <NavLink
                             key={item.path}
                             to={item.path}
-                            title={item.name}
+                            title={t(item.translationKey)}
                             className={cn(
                                 "flex items-center rounded-md text-sm transition-all duration-200 group relative",
                                 collapsed ? "justify-center p-2" : "gap-2.5 px-2 py-1.5",
@@ -143,7 +146,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                                     isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
                                 )}
                             />
-                            {!collapsed && <span className="truncate">{item.name}</span>}
+                            {!collapsed && <span className="truncate">{t(item.translationKey)}</span>}
                         </NavLink>
                     );
                 })}
@@ -153,7 +156,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                     <>
                         {!collapsed && (
                             <div className="px-2 mb-2 mt-6 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                                Administration
+                                {t('common.administration')}
                             </div>
                         )}
                         {adminItems.map((item) => {
@@ -167,7 +170,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                                 <NavLink
                                     key={item.path}
                                     to={item.path}
-                                    title={item.name}
+                                    title={t(item.translationKey)}
                                     className={cn(
                                         "flex items-center rounded-md text-sm transition-all duration-200 group relative",
                                         collapsed ? "justify-center p-2" : "gap-2.5 px-2 py-1.5",
@@ -183,7 +186,7 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                                             isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
                                         )}
                                     />
-                                    {!collapsed && <span className="truncate">{item.name}</span>}
+                                    {!collapsed && <span className="truncate">{t(item.translationKey)}</span>}
                                 </NavLink>
                             );
                         })}
@@ -197,11 +200,11 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
                     type="button"
                     onClick={onToggleCollapse}
                     className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors flex items-center justify-center w-full"
-                    title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    title={collapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}
                 >
                     {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
                 </button>
-                <NavLink to="/go/alerts" className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors shrink-0" title="Alerts">
+                <NavLink to="/go/alerts" className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors shrink-0" title={t('common.alerts')}>
                     <Bell size={16} />
                 </NavLink>
             </div>

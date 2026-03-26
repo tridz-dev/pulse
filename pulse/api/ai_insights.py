@@ -21,6 +21,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate, today, add_days, now
 from frappe.utils.caching import redis_cache
+from pulse.cache import cache_result, cache_invalidate
 
 from pulse.api.permissions import (
     _get_employee_for_user,
@@ -56,6 +57,7 @@ from pulse.ai.nlp_query import (
 # =============================================================================
 
 @frappe.whitelist()
+@cache_result(ttl=3600, key_builder=lambda employee_id=None, date_range=None: f"ai:anomaly:{employee_id or 'org'}:{hash(str(date_range))}")
 def get_anomaly_detection(
     employee_id: Optional[str] = None,
     date_range: Optional[Dict] = None
@@ -151,6 +153,7 @@ def get_anomaly_detection(
 
 
 @frappe.whitelist()
+@cache_result(ttl=86400, key_builder=lambda employee_id, horizon_days=7: f"ai:prediction:{employee_id}:{horizon_days}")
 def get_performance_prediction(
     employee_id: str,
     horizon_days: int = 7
@@ -230,6 +233,7 @@ def get_performance_prediction(
 
 
 @frappe.whitelist()
+@cache_result(ttl=3600, key_builder=lambda employee_id=None: f"ai:recommendations:{employee_id or 'org'}")
 def get_recommendations(employee_id: Optional[str] = None) -> Dict[str, Any]:
     """Generate actionable AI recommendations based on performance patterns.
     
@@ -281,6 +285,7 @@ def get_recommendations(employee_id: Optional[str] = None) -> Dict[str, Any]:
 
 
 @frappe.whitelist()
+@cache_result(ttl=1800, key_builder=lambda metric="score", date_range=None, granularity="Day", employee_id=None: f"ai:trend:{metric}:{employee_id or 'org'}:{granularity}:{hash(str(date_range))}")
 def get_trend_analysis(
     metric: str = "score",
     date_range: Optional[Dict] = None,
@@ -390,6 +395,7 @@ def get_trend_analysis(
 
 
 @frappe.whitelist()
+@cache_result(ttl=7200, key_builder=lambda employee_id, peer_group="department": f"ai:benchmark:{employee_id}:{peer_group}")
 def get_benchmark_comparison(
     employee_id: str,
     peer_group: Optional[str] = "department"
@@ -485,6 +491,7 @@ def get_benchmark_comparison(
 
 
 @frappe.whitelist()
+@cache_result(ttl=1800, key_builder=lambda date_range=None, branch=None, department=None: f"ai:heatmap:{branch or 'all'}:{department or 'all'}:{hash(str(date_range))}")
 def get_compliance_heatmap(
     date_range: Optional[Dict] = None,
     branch: Optional[str] = None,
@@ -884,6 +891,7 @@ def _get_heatmap_status(rate: float) -> str:
 # =============================================================================
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda: f"ai:dashboard_summary:{frappe.session.user}")
 def get_ai_dashboard_summary() -> Dict[str, Any]:
     """Get comprehensive AI insights summary for dashboard.
     

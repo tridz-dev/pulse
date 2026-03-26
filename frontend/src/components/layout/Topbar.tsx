@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLocation } from 'react-router-dom';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 export function Topbar() {
   const { currentUser } = useAuth();
@@ -21,6 +22,9 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+        
         {/* Theme Toggle */}
         <ThemeToggle />
         

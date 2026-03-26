@@ -6,6 +6,8 @@ from frappe import _
 import random
 import string
 
+from pulse.cache import cache_result, cache_invalidate
+
 
 def has_employee_management_permission(user=None):
 	"""Check if user can manage employees."""
@@ -44,6 +46,7 @@ def generate_temp_password(length=10):
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda filters=None, limit_start=0, limit=50: f"employees:list:{hash(str(filters))}:{limit_start}:{limit}:{frappe.session.user}")
 def get_employees(filters=None, limit_start=0, limit=50):
 	"""Get employees with filters.
 	
@@ -119,6 +122,7 @@ def get_employees(filters=None, limit_start=0, limit=50):
 
 
 @frappe.whitelist()
+@cache_result(ttl=600, key_builder=lambda employee_name: f"employees:detail:{employee_name}")
 def get_employee_detail(employee_name):
 	"""Get detailed employee information."""
 	if not frappe.db.exists("Pulse Employee", employee_name):
@@ -186,6 +190,7 @@ def get_employee_detail(employee_name):
 
 
 @frappe.whitelist()
+@cache_invalidate(pattern='employees:*')
 def create_employee(values, create_user_account=True):
 	"""Create a new employee with optional user account.
 	
@@ -310,6 +315,7 @@ def add_pulse_roles_to_user(user_name):
 
 
 @frappe.whitelist()
+@cache_invalidate(pattern='employees:*')
 def update_employee(employee_name, values):
 	"""Update an existing employee."""
 	if not has_employee_management_permission():
@@ -351,6 +357,7 @@ def update_employee(employee_name, values):
 
 
 @frappe.whitelist()
+@cache_invalidate(pattern='employees:*')
 def deactivate_employee(employee_name):
 	"""Deactivate an employee (soft delete)."""
 	if not has_employee_management_permission():
@@ -404,6 +411,7 @@ def reset_user_password(employee_name):
 
 
 @frappe.whitelist()
+@cache_result(ttl=600, key_builder=lambda employee_name=None: f"employees:hierarchy:{employee_name or 'full'}:{frappe.session.user}")
 def get_employee_hierarchy(employee_name=None):
 	"""Get org hierarchy tree.
 	
@@ -457,6 +465,7 @@ def build_hierarchy_tree(employee):
 
 
 @frappe.whitelist()
+@cache_result(ttl=300, key_builder=lambda filters=None: f"employees:options:{hash(str(filters))}:{frappe.session.user}")
 def get_employee_options(filters=None):
 	"""Get employee options for dropdowns."""
 	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
