@@ -1,7 +1,8 @@
 import { useAuth } from '@/store/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Link, useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Topbar() {
   const { currentUser } = useAuth();
@@ -20,14 +21,12 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2 xl:gap-3 shrink-0">
-        <Link
-          to="/go/alerts"
-          className="p-2 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/80 transition-colors"
-          title="Alerts"
-          aria-label="Open alerts"
-        >
-          <Bell size={18} />
-        </Link>
+        {/* Theme Toggle */}
+        <ThemeToggle />
+        
+        {/* Notification Dropdown with Bell Icon */}
+        <NotificationDropdown />
+        
         <Avatar className="h-7 w-7 xl:h-8 xl:w-8 rounded-sm border border-zinc-700">
           <AvatarImage src={currentUser?.avatarUrl} />
           <AvatarFallback className="text-[10px] bg-indigo-900 text-indigo-100 rounded-sm">

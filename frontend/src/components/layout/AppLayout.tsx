@@ -6,12 +6,16 @@ import { useAuth } from '../../store/AuthContext';
 import { SearchModal } from '../search/SearchModal';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTheme } from '@/hooks/useTheme';
 
 export function AppLayout() {
     const { currentUser, authError, isLoading } = useAuth();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchOpen, setSearchOpen] = useState(false);
+
+    // Initialize theme on mount (also listens for system changes)
+    useTheme();
 
     // Keyboard shortcut for search (Cmd/Ctrl + K)
     useEffect(() => {

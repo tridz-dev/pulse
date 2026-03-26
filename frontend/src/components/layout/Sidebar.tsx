@@ -20,7 +20,9 @@ import {
     Settings as SettingsIcon,
     History,
     GitBranch,
-    Upload
+    Upload,
+    Calendar,
+    Workflow
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
@@ -69,6 +71,8 @@ export function Sidebar({ collapsed, onToggleCollapse, onOpenSearch }: SidebarPr
         { name: 'Roles', path: '/admin/roles', icon: Shield, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
         { name: 'Audit Log', path: '/admin/audit', icon: History, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Import/Export', path: '/admin/import-export', icon: Upload, hideFor: ['Pulse User'] },
+        { name: 'Scheduled Reports', path: '/admin/scheduled-reports', icon: Calendar, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Follow-up Rules', path: '/admin/follow-up-rules', icon: Workflow, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'Settings', path: '/admin/settings', icon: SettingsIcon, hideFor: ['Pulse User', 'Pulse Manager', 'Pulse Leader'] },
     ];
 

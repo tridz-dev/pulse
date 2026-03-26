@@ -27,6 +27,7 @@ import { Roles } from './pages/admin/Roles';
 import { AuditLog } from './pages/admin/AuditLog';
 import { OrgChart } from './pages/admin/OrgChart';
 import { ImportExport } from './pages/admin/ImportExport';
+import { ScheduledReports } from './pages/admin/ScheduledReports';
 import { GoHomePage } from './pages/go/GoHomePage';
 import { GoChecklistsPage } from './pages/go/GoChecklistsPage';
 import { GoAlertsPage } from './pages/go/GoAlertsPage';
@@ -74,7 +75,8 @@ export default function App() {
               <Route path="admin/audit" element={<AuditLog />} />
               <Route path="admin/org-chart" element={<OrgChart />} />
               <Route path="admin/import-export" element={<ImportExport />} />
-            </Route>
+              <Route path="admin/scheduled-reports" element={<ScheduledReports />} />
+                          </Route>
           </Routes>
         </BrowserRouter>
       </AuthProvider>
