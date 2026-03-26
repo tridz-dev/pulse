@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-26T08:45:00Z",
+  "skill_count": 8,
+  "skills": [
+    {
+      "name": "auth",
+      "description": "Authentication system linking Frappe Users to Pulse Employees. Handles session management, role resolution, and the get_current_employee() API that underlies all role-based visibility in Pulse.",
+      "category": "features",
+      "path": "skills/auth/SKILL.md",
+      "key_files": [
+        "pulse/api/auth.py",
+        "pulse/api/permissions.py",
+        "frontend/src/store/AuthContext.tsx",
+        "frontend/src/services/auth.ts"
+      ],
+      "depends_on": [],
+      "tags": ["auth", "session", "roles", "permissions", "employee"]
+    },
+    {
+      "name": "design-system",
+      "description": "UI component library, theming, and styling patterns for Pulse. Covers Tailwind CSS 4, shadcn/ui components, custom components like Gauge, and the overall visual language.",
+      "category": "design-system",
+      "path": "skills/design-system/SKILL.md",
+      "key_files": [
+        "frontend/src/index.css",
+        "frontend/tailwind.config.ts",
+        "frontend/src/components/ui/",
+        "frontend/src/components/shared/Gauge.tsx",
+        "frontend/src/components/layout/AppLayout.tsx"
+      ],
+      "depends_on": [],
+      "tags": ["ui", "css", "tailwind", "components", "theming"]
+    },
+    {
+      "name": "sop-execution",
+      "description": "Core SOP (Standard Operating Procedure) execution engine. Handles template definitions, run generation, checklist item completion, evidence capture, and status lifecycle. This is the heart of Pulse.",
+      "category": "features",
+      "path": "skills/sop-execution/SKILL.md",
+      "key_files": [
+        "pulse/pulse_core/doctype/sop_template/",
+        "pulse/pulse_core/doctype/sop_run/",
+        "pulse/pulse_core/doctype/sop_run_item/",
+        "pulse/api/tasks.py",
+        "frontend/src/components/tasks/ChecklistRunner.tsx"
+      ],
+      "depends_on": ["auth", "scheduler"],
+      "tags": ["sop", "checklist", "runs", "execution", "evidence"]
+    },
+    {
+      "name": "scoring",
+      "description": "Score calculation, aggregation, and propagation system. Converts individual SOP run performance into hierarchical KPIs that roll up from operators to executives.",
+      "category": "features",
+      "path": "skills/scoring/SKILL.md",
+      "key_files": [
+        "pulse/api/scores.py",
+        "pulse/pulse_core/doctype/score_snapshot/",
+        "frontend/src/components/shared/Gauge.tsx",
+        "pulse/tasks.py"
+      ],
+      "depends_on": ["sop-execution"],
+      "tags": ["scoring", "kpi", "metrics", "analytics", "hierarchy"]
+    },
+    {
+      "name": "insights",
+      "description": "Analytics and reporting module providing trends, comparisons, heatmaps, and performance distributions. Powers the Insights page with SQL-aggregated data from Score Snapshots.",
+      "category": "features",
+      "path": "skills/insights/SKILL.md",
+      "key_files": [
+        "pulse/api/insights.py",
+        "frontend/src/pages/Insights.tsx",
+        "frontend/src/components/insights/InsightsFilters.tsx"
+      ],
+      "depends_on": ["scoring", "permissions"],
+      "tags": ["analytics", "reports", "charts", "trends", "sql"]
+    },
+    {
+      "name": "notifications",
+      "description": "In-app notification system for alerting users about run deadlines, failed items, follow-up actions, and system events. Supports severity levels, read status, and source document linking.",
+      "category": "features",
+      "path": "skills/notifications/SKILL.md",
+      "key_files": [
+        "pulse/pulse_core/doctype/pulse_notification/",
+        "frontend/src/components/layout/Topbar.tsx"
+      ],
+      "depends_on": ["auth"],
+      "tags": ["notifications", "alerts", "messaging"]
+    },
+    {
+      "name": "permissions",
+      "description": "Role-based access control (RBAC) implementing row-level security. Maps business roles (Operator, Supervisor, Area Manager, Executive) to data visibility scopes.",
+      "category": "patterns",
+      "path": "skills/permissions/SKILL.md",
+      "key_files": [
+        "pulse/api/permissions.py",
+        "pulse/hooks.py",
+        "pulse/install.py",
+        "pulse/pulse_setup/doctype/pulse_role/"
+      ],
+      "depends_on": ["auth"],
+      "tags": ["permissions", "rbac", "security", "access-control"]
+    },
+    {
+      "name": "scheduler",
+      "description": "Background job scheduling using Frappe's scheduler. Handles run generation (daily, weekly, monthly, time-of-day, interval), overdue run locking, and score snapshot caching.",
+      "category": "patterns",
+      "path": "skills/scheduler/SKILL.md",
+      "key_files": [
+        "pulse/hooks.py",
+        "pulse/tasks.py",
+        "pulse/pulse_core/doctype/sop_template/sop_template.py"
+      ],
+      "depends_on": ["sop-execution", "scoring"],
+      "tags": ["scheduler", "cron", "background-jobs", "automation"]
+    }
+  ]
+}

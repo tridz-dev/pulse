@@ -70,7 +70,7 @@ Pulse does **not** replace Jira, Asana, or Camunda. It complements them by focus
 ## Features
 
 - **Dashboard** — Personal score (own + team), period selector (Day/Week/Month), team bar chart, most-missed tasks (for managers).
-- **My Tasks** — Today’s SOP runs and checklist items; complete, miss, or defer with notes.
+- **My Tasks** — Today’s SOP runs and checklist items; complete, miss, or defer with notes. On large screens, runs show in a responsive multi-column grid using the full content width.
 - **Team** — “My Team” (direct reports) and “All Teams” (org or subtree) with scores; links to user profiles.
 - **Operations** — Hierarchical tree of employees with scores; expand by level; navigate to profile and run breakdown.
 - **Insights** — Score trends, department/branch comparison, top/bottom performers, template performance, completion trend, corrective actions, day-of-week heatmap, score distribution, most-missed items. Filters: date range, department, branch; clickable department/branch bars for drill-down and filtered employee table.
@@ -97,8 +97,17 @@ Business titles (e.g. “Shift Manager”, “Cleaner”) are configured in **PM
 ## Tech Stack
 
 - **Backend:** [Frappe Framework](https://frappeframework.com/) (v16)
-- **Frontend:** React 19, Vite, Tailwind CSS 4, Shadcn UI, Recharts
+- **Frontend:** React 19, Vite, Tailwind CSS 4, Shadcn UI, Recharts, TanStack React Query
 - **API:** Frappe whitelisted methods; frontend uses `frappe-js-sdk`
+
+---
+
+## Performance and caching
+
+- **Server:** Selected heavy API paths use Frappe’s `@redis_cache` (Redis) with short TTLs for scores, failure analytics, employee run lists, and Pulse Go home counts. Saving a **SOP Run** or **SOP Run Item** clears those Redis entries via doc events so data does not stay stale after checklist work.
+- **Browser:** The SPA wraps routes in **TanStack React Query** with shared defaults (`staleTime`, `gcTime`, refetch on window focus). Dashboard, My Tasks, Go checklists, Go home, and Insights use structured query keys so repeat visits are instant while data is fresh, and closing a checklist invalidates task and dashboard queries.
+
+For a full method list, TTLs, and hook wiring, see [`AGENTS.md`](AGENTS.md).
 
 ---
 
@@ -167,6 +176,20 @@ Pre-commit runs: ruff, eslint, prettier, pyupgrade.
 **GNU Affero General Public License v3.0 (AGPL-3.0)**  
 
 You may use, modify, and distribute this software under the terms of the AGPL-3.0. See [LICENSE](LICENSE) or [license.txt](license.txt) in the repository for the full text. If you distribute a modified version over a network, you must make the source available to users under the same license.
+
+---
+
+## Skills
+
+This project includes a machine-readable skill directory at `skills/`
+that documents features, UI patterns, design system elements, and
+developer workflows in a structured format.
+
+See `skills/_index.json` for the full catalog, or browse individual
+skill folders for detailed documentation.
+
+Skills are designed to be consumed by both developers and AI agents
+working on this codebase.
 
 ---
 

@@ -44,6 +44,7 @@ failure visible at any level in real time.
 | Icons | Lucide React |
 | Fonts | Geist Variable (body), DM Mono (metrics) |
 | Frappe SDK | `frappe-js-sdk` |
+| Client data cache | TanStack React Query v5 (`src/lib/queryClient.ts`, `pulseQueryKeys`) |
 
 ---
 
@@ -52,23 +53,32 @@ failure visible at any level in real time.
 ```
 pulse/
 ├── AGENTS.md                   # ← this file
+├── FEATURES.md                 # Product features and semantics
+├── skills/                     # Structured skill documentation
+│   └── _index.json             # Skill catalog
 ├── frontend/                   # React SPA
 │   └── src/
 │       ├── pages/              # Top-level route pages
 │       ├── components/         # Shared UI components
 │       ├── services/           # Frappe API client wrappers
 │       ├── types/index.ts      # All TypeScript types
-│       └── lib/frappe-sdk.ts   # frappe-js-sdk singleton
+│       └── lib/
+│           ├── frappe-sdk.ts   # frappe-js-sdk singleton
+│           └── queryClient.ts   # TanStack Query + `pulseQueryKeys`
 └── pulse/                      # Frappe app
     ├── api/                    # Whitelisted Python methods
     │   ├── auth.py             # get_current_employee
     │   ├── permissions.py      # Row-level query conditions
     │   ├── tasks.py            # Run CRUD + item completion
-    │   ├── scores.py           # Score calculation
+    │   ├── scores.py           # Score calculation + Redis-cached helpers
     │   ├── operations.py       # Hierarchy tree + breakdown
     │   ├── insights.py         # Analytics (SQL aggregations)
     │   ├── templates.py        # SOP template catalog
-    │   └── demo.py             # Admin demo data API
+    │   ├── demo.py             # Admin demo data API
+    │   ├── go.py               # Pulse Go home summary
+    │   ├── notifications.py    # In-app notifications API
+    │   ├── pulse_cache.py      # Clear Redis API caches
+    │   └── pulse_cache_invalidate.py  # doc_events → clear caches
     ├── commands.py             # bench CLI commands
     ├── hooks.py                # Frappe hooks: scheduler, permissions, install
     ├── install.py              # after_install: roles, default records
@@ -149,6 +159,12 @@ Master definition of a repeating checklist.
 | `active_from` | Date | |
 | `active_to` | Date | Blank = open-ended |
 | `is_active` | Check | |
+| `schedule_kind` | Select | CalendarDay / TimeOfDay / Interval |
+| `schedule_time` | Time | For TimeOfDay scheduling |
+| `schedule_days_of_week` | Data | Comma-separated weekday indices (0=Monday) |
+| `interval_minutes` | Int | For Interval scheduling |
+| `open_run_policy` | Select | AllowMultiple / RequirePreviousClosed |
+| `grace_minutes` | Int | Default 30 minutes |
 | `checklist_items` | Table→SOP Checklist Item | Child rows |
 
 #### SOP Checklist Item _(child of SOP Template)_
@@ -159,7 +175,15 @@ Master definition of a repeating checklist.
 | `sequence` | Int | Ordering |
 | `weight` | Float | Score weight (default 1.0) |
 | `item_type` | Select | Checkbox / Numeric / Photo |
-| `evidence_required` | Select | None / Photo |
+| `evidence_required` | Select | None / Photo (deprecated, use proof fields) |
+| `instructions` | Small Text | Detailed instructions for operator |
+| `item_key` | Data | Unique key for rules and prerequisites |
+| `outcome_mode` | Select | SimpleCompletion / PassFail / Numeric / PhotoProof |
+| `proof_requirement` | Select | None / Optional / Required |
+| `proof_media_type` | Select | Image / File / Any |
+| `proof_capture_mode` | Select | Any / CameraOnly |
+| `prerequisite_item_key` | Data | Key of prerequisite item |
+| `prerequisite_trigger` | Select | None / AnyOutcome / OutcomeFail / OutcomePass |
 
 #### SOP Assignment
 Links a SOP Template to a specific Pulse Employee.
@@ -170,7 +194,7 @@ Links a SOP Template to a specific Pulse Employee.
 | `employee` | Link→Pulse Employee |
 | `is_active` | Check |
 
-The scheduler reads active assignments to generate daily/weekly/monthly runs.
+The scheduler reads active assignments to generate runs.
 
 #### SOP Run
 One execution instance of a template for one employee on one date.
@@ -180,10 +204,15 @@ One execution instance of a template for one employee on one date.
 | `template` | Link→SOP Template | |
 | `employee` | Link→Pulse Employee | |
 | `period_date` | Date | |
+| `period_datetime` | Datetime | For TimeOfDay/Interval runs |
 | `status` | Select | Open / Closed / Locked |
 | `total_items` | Int | Set by before_save hook |
 | `completed_items` | Int | Counted from run_items |
-| `progress` | Float | % 0–100 |
+| `passed_items` | Int | Items with Pass outcome |
+| `failed_items` | Int | Items with Fail outcome |
+| `missed_items` | Int | Items marked Missed |
+| `progress` | Percent | `(completed + missed) / total` |
+| `score` | Percent | `passed / (total - not_applicable)` |
 | `closed_at` | Datetime | Set when status→Closed |
 | `run_items` | Table→SOP Run Item | |
 
@@ -199,17 +228,28 @@ Open  ──[day passes, overdue]──→  Locked  (Pending items → Missed)
 | Field | Type | Notes |
 |---|---|---|
 | `checklist_item` | Data | Step description (denormalised) |
+| `item_key` | Data | Unique key from template |
+| `instructions` | Small Text | Instructions for operator |
 | `weight` | Float | Copied from template |
 | `item_type` | Select | Checkbox / Numeric / Photo |
-| `status` | Select | Pending / Completed / Missed |
+| `outcome_mode` | Select | SimpleCompletion / PassFail / Numeric / PhotoProof |
+| `status` | Select | Pending / Completed / Missed / NotApplicable |
+| `outcome` | Select | Pass / Fail / NotApplicable |
+| `failure_remark` | Small Text | Reason for failure |
 | `completed_at` | Datetime | |
 | `numeric_value` | Float | For Numeric items |
 | `notes` | Small Text | Free-text notes |
-| `evidence` | Attach | File upload (planned) |
-| `evidence_required` | Select | None / Photo |
+| `evidence` | Attach | File upload |
+| `evidence_required` | Select | None / Photo (deprecated) |
+| `proof_requirement` | Select | None / Optional / Required |
+| `proof_media_type` | Select | Image / File / Any |
+| `proof_capture_mode` | Select | Any / CameraOnly |
+| `proof_captured_at` | Datetime | When evidence was captured |
+| `prerequisite_item_key` | Data | Key of prerequisite |
+| `prerequisite_trigger` | Select | None / AnyOutcome / OutcomeFail / OutcomePass |
 
 #### Score Snapshot
-Cached per-employee score for a period. Written by the hourly scheduler and by the seed.
+Cached per-employee score for a period. Written by the hourly scheduler.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -237,6 +277,50 @@ Raised when a run has missed checklist items.
 | `priority` | Select | Critical / High / Medium / Low |
 | `resolution` | Small Text | |
 | `resolved_at` | Datetime | |
+
+#### SOP Follow-up Rule
+Automated rules that trigger actions when SOP items fail.
+
+| Field | Type | Notes |
+|---|---|---|
+| `source_template` | Link→SOP Template | Template to watch |
+| `trigger_on` | Select | ItemOutcomeFail |
+| `source_item_key` | Data | Specific item key to watch |
+| `action` | Select | CreateRun |
+| `target_template` | Link→SOP Template | Template to create run for |
+| `target_assignee` | Select | SameEmployee / EmployeesManager |
+| `is_active` | Check | |
+
+Auto-naming: `SOP-RULE-#####`
+
+#### SOP Rule Execution Log
+Tracks execution of follow-up rules to ensure idempotency.
+
+| Field | Type | Notes |
+|---|---|---|
+| `rule` | Link→SOP Follow-up Rule | |
+| `source_run_item` | Link→SOP Run Item | Item that triggered the rule |
+| `target_run` | Link→SOP Run | Run created by the rule |
+| `executed_at` | Datetime | |
+| `status` | Select | Success / Failed |
+
+#### Pulse Notification
+In-app notification system for alerts and updates.
+
+| Field | Type | Notes |
+|---|---|---|
+| `recipient` | Link→Pulse Employee | |
+| `title` | Data | |
+| `body` | Small Text | |
+| `notification_type` | Select | RunAlert / ItemFail / FollowUpCreated / System / Custom |
+| `severity` | Select | Info / Warning / Critical |
+| `priority` | Select | Low / Normal / High / Urgent |
+| `source_doctype` | Data | Originating DocType |
+| `source_name` | Data | Originating document name |
+| `is_read` | Check | |
+| `read_at` | Datetime | |
+
+Auto-naming: `PNOT-#####`
 
 ---
 
@@ -284,9 +368,10 @@ Row-level conditions are registered in `hooks.py → permission_query_conditions
 
 ```python
 permission_query_conditions = {
-    "SOP Run":          "pulse.api.permissions.sop_run_conditions",
-    "Score Snapshot":   "pulse.api.permissions.score_snapshot_conditions",
-    "Corrective Action":"pulse.api.permissions.corrective_action_conditions",
+    "SOP Run": "pulse.api.permissions.sop_run_conditions",
+    "Score Snapshot": "pulse.api.permissions.score_snapshot_conditions",
+    "Corrective Action": "pulse.api.permissions.corrective_action_conditions",
+    "Pulse Notification": "pulse.api.permissions.pulse_notification_conditions",
 }
 ```
 
@@ -310,7 +395,8 @@ All callable as `/api/method/pulse.api.<module>.<method>` with a valid Frappe se
 | `get_my_runs(date?)` | Today's SOP Runs for the current user |
 | `get_runs_for_employee(employee, date?)` | Runs for a specific employee (manager access) |
 | `get_run_details(run_name)` | Full run + all items for checklist runner |
-| `update_run_item(run_item_name, status, notes?, numeric_value?)` | Toggle item Pending↔Completed. Validates ownership |
+| `update_run_item(run_item_name, status, notes?, numeric_value?, outcome?, failure_remark?)` | Toggle item Pending↔Completed. Validates ownership |
+| `upload_run_item_evidence(run_item_name, file)` | Upload evidence file for a run item |
 | `complete_run(run_name)` | Mark run Closed |
 
 ### `scores.py`
@@ -354,6 +440,18 @@ All accept `department`, `branch`, `employee` filters. Scope is enforced by role
 | `get_all_templates()` | List all active SOP Templates |
 | `get_template_items(template_name)` | Ordered checklist items for a template |
 
+### `go.py`
+| Method | Purpose |
+|---|---|
+| `get_home_summary()` | Pulse Go home: open runs today, overdue open runs, team open (Redis-cached per employee + date key) |
+
+### `notifications.py`
+| Method | Purpose |
+|---|---|
+| `get_my_notifications(limit?, unread_only?)` | Notifications for the current employee |
+| `mark_notification_read(name)` | Mark one notification read |
+| `mark_all_read()` | Mark all read |
+
 ### `demo.py`
 | Method | Purpose |
 |---|---|
@@ -363,25 +461,55 @@ All accept `department`, `branch`, `employee` filters. Scope is enforced by role
 
 ---
 
+## Caching (Redis + browser)
+
+### Server (`@redis_cache`)
+
+Repeated reads hit Redis for the TTL. Cleared via `pulse.api.pulse_cache.clear_pulse_api_redis_caches()`.
+
+| Symbol | Module | TTL | Role |
+|---|---:|---|---|
+| `_calculate_score_snapshot` | `scores.py` | 120s | Per-employee score snapshot computation |
+| `_failure_analytics_cached` | `scores.py` | 240s | Failure analytics payload |
+| `_fetch_runs_for_employee_raw` | `tasks.py` | 60s | Runs for employee + date |
+| `_pulse_home_summary_cached` | `go.py` | 90s | Go home headline counts |
+
+**Doc events:** `hooks.py` registers `pulse.api.pulse_cache_invalidate.on_sop_run_saved` and `on_sop_run_item_saved` on **SOP Run** and **SOP Run Item** `on_update` to clear these caches after checklist edits.
+
+**Insights** methods take complex filters; they rely on DB/`Score Snapshot` and client-side React Query bundling (`staleTime` 120s), not `@redis_cache` on each endpoint.
+
+### Client (TanStack React Query)
+
+`QueryClientProvider` in `App.tsx` uses defaults from `src/lib/queryClient.ts` (`staleTime` 60s, `gcTime` 10m, refetch on window focus). Keys live in `pulseQueryKeys`. Closing **ChecklistRunner** invalidates `myRuns`, dashboard queries, and Go home summary.
+
+---
+
 ## Scheduler Tasks
 
 Registered in `hooks.py → scheduler_events`:
 
 | Frequency | Function | What it does |
 |---|---|---|
-| `daily` | `pulse.tasks.daily` | `generate_daily_runs()` + `lock_overdue_runs()` |
+| `all_15_minutes` | `pulse.tasks.every_quarter_hour` | TimeOfDay + Interval run generation (15-min window) |
+| `daily` | `pulse.tasks.daily` | CalendarDay runs + `lock_overdue_runs()` |
 | `hourly` | `pulse.tasks.hourly` | `cache_score_snapshots()` — upsert today's Score Snapshot for all employees |
 | `weekly` | `pulse.tasks.weekly` | `generate_weekly_runs()` — creates runs on Mondays only |
 | `monthly` | `pulse.tasks.monthly` | `generate_monthly_runs()` — creates runs on the 1st only |
 
 **generate_*_runs:** reads all active `SOP Assignment` records where the linked template
 matches the frequency. For each assignment, creates one `SOP Run` if none exists yet for
-that (template, employee, date) triple.
+that (template, employee, date/period) triple.
 
-**lock_overdue_runs:** finds all `Open` runs with `period_date < today`, sets all `Pending`
-items to `Missed`, sets run status to `Locked`.
+**TimeOfDay runs:** Match window `(schedule_time, schedule_time + 15m]`. Uses `schedule_days_of_week`
+to determine which days to generate. Unique key: `(template, employee, period_datetime)`.
 
-**cache_score_snapshots:** calls `_calculate_score_snapshot()` for every active employee
+**Interval runs:** Creates runs every N minutes based on `interval_minutes`.
+
+**lock_overdue_runs:** Finds all `Open` runs where `period_datetime + grace_minutes < now`
+(or calendar-day rule if no period_datetime). Sets all `Pending` items to `Missed`, sets
+run status to `Locked`.
+
+**cache_score_snapshots:** Calls `_calculate_score_snapshot()` for every active employee
 and upserts the `Score Snapshot` DocType. Live calculation is still used for API calls
 (snapshots are a read-optimisation for Insights SQL queries).
 
@@ -395,6 +523,11 @@ Base path: `/pulse` (configured via `website_route_rules` in `hooks.py`)
 |---|---|---|---|
 | `/` | `Dashboard.tsx` | All | Own score gauge, today's run summary, failure analytics |
 | `/tasks` | `MyTasks.tsx` | All | Today's SOP Runs; tap to open checklist runner |
+| `/operator` | — | — | Redirects to `/go/checklists` |
+| `/go` | `GoHomePage.tsx` | All | Pulse Go: snapshot counts (cached API + React Query) |
+| `/go/checklists` | `GoChecklistsPage.tsx` | All | Today’s runs; shares `myRuns` query key with desk **My Tasks** |
+| `/go/alerts` | `GoAlertsPage.tsx` | All | In-app notifications |
+| `/go/me` | `GoMePage.tsx` | All | Operator profile stub |
 | `/team` | `Team.tsx` | Manager+ | Direct reports with scores and status |
 | `/operations` | `Operations.tsx` | Leader+ | Full org tree; date/period picker; drill by node |
 | `/operations/:userId` | `UserProfile.tsx` | Leader+ | Per-employee detail: runs, scores, charts |
@@ -406,10 +539,15 @@ Base path: `/pulse` (configured via `website_route_rules` in `hooks.py`)
 | Component | Location | Purpose |
 |---|---|---|
 | `AppLayout` | `components/layout/` | Sidebar + topbar shell, theme toggle |
+| `OperatorLayout` | `components/layout/` | Simplified layout for operator mode |
+| `PulseGoLayout` | `components/layout/` | Pulse Go routes: tab bar + outlet |
+| `GoTabBar` | `components/layout/` | Bottom navigation for Go |
 | `Sidebar` | `components/layout/` | Role-aware nav links |
 | `Gauge` | `components/shared/` | SVG needle gauge, `requestAnimationFrame` animation |
 | `ScoreBreakdown` | `components/shared/` | Slide-over sheet showing run breakdown by template |
 | `InsightsFilters` | `components/insights/` | Department / branch / employee / date filter bar |
+| `RunCard` | `components/tasks/` | Shows progress (indigo) and score (green/amber/red) |
+| `ChecklistRunner` | `components/tasks/` | Handles proof capture and Pass/Fail outcomes |
 
 ### Data flow
 
@@ -417,6 +555,8 @@ Base path: `/pulse` (configured via `website_route_rules` in `hooks.py`)
 frappe-js-sdk (lib/frappe-sdk.ts)
     ↓
 services/*.ts  →  pulse.api.*  (whitelisted Frappe methods)
+    ↓
+TanStack Query (lib/queryClient.ts, pulseQueryKeys) — staleTime / invalidation
     ↓
 React pages / components
 ```
@@ -431,8 +571,8 @@ Unauthenticated users are redirected to the Frappe login page.
 ```
                     ┌─────────────────────────────────┐
                     │        Frappe Scheduler          │
-                    │  daily / hourly / weekly /       │
-                    │  monthly                         │
+                    │  all_15_min / daily / hourly /   │
+                    │  weekly / monthly                │
                     └──────────────┬──────────────────┘
                                    │ generates
                     ┌──────────────▼──────────────────┐
@@ -444,6 +584,7 @@ Unauthenticated users are redirected to the Frappe login page.
                     ┌──────────────▼──────────────────┐
                     │         SOP Run Item             │
                     │  Pending → Completed / Missed    │
+                    │  → NotApplicable                 │
                     └──────────────┬──────────────────┘
                                    │ aggregated by
                     ┌──────────────▼──────────────────┐
@@ -461,6 +602,7 @@ Unauthenticated users are redirected to the Frappe login page.
                     │        React SPA                 │
                     │  Dashboard / Operations /        │
                     │  Insights / MyTasks / Team       │
+                    │  / Operator                      │
                     └─────────────────────────────────┘
 ```
 
@@ -503,8 +645,8 @@ See `pulse/demo/README.md` for the full account table.
 | DocType | Count | Notes |
 |---|---|---|
 | User | 19 | All with `Demo@123` |
-| Pulse Role | 4 | Operator / Supervisor / Area Manager / Executive |
-| Pulse Department | 7 | Kitchen, Front-of-House, Procurement, Finance, Operations, Management, Security |
+| Pulse Role | 4 | Operator · Supervisor · Area Manager · Executive |
+| Pulse Department | 7 | Kitchen · Front-of-House · Procurement · Finance · Operations · Management · Security |
 | Pulse Employee | 19 | Full 4-level hierarchy across 3 branches + HQ |
 | SOP Template | 6 | 5 daily + 1 weekly |
 | SOP Checklist Item | 22 | Embedded in templates |
@@ -550,9 +692,26 @@ Ramesh Agarwal (Chairman · Executive · HQ)
 
 ---
 
+## Skills Directory
+
+This repository includes a `skills/` directory containing structured
+knowledge about features, UI patterns, design system elements, and
+developer workflows.
+
+Before working on any area of the codebase, check if a relevant skill
+exists:
+
+1. Read `skills/_index.json` for the full catalog
+2. Open the relevant `skills/<name>/SKILL.md` for detailed context
+3. Check `references/` subdirectories for supplementary detail
+
+Skills help you understand *how* things work here, *where* the code
+lives, and *what to watch out for* — consult them before making changes.
+
+---
+
 ## Open Items
 
-- [ ] Evidence / file upload for Photo checklist items
 - [ ] Real-time run updates (WebSocket / Server-Sent Events)
 - [ ] AI failure prediction from historical trends
 - [ ] Offline PWA with sync on reconnect
