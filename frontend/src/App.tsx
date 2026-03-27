@@ -32,6 +32,8 @@ import { AuditLog } from './pages/admin/AuditLog';
 import { OrgChart } from './pages/admin/OrgChart';
 import { ImportExport } from './pages/admin/ImportExport';
 import { ScheduledReports } from './pages/admin/ScheduledReports';
+import { CacheAdmin } from './pages/admin/CacheAdmin';
+import { DocumentImport } from './pages/DocumentImport';
 import { GoHomePage } from './pages/go/GoHomePage';
 import { GoChecklistsPage } from './pages/go/GoChecklistsPage';
 import { GoAlertsPage } from './pages/go/GoAlertsPage';
@@ -84,6 +86,8 @@ export default function App() {
                     <Route path="admin/org-chart" element={<OrgChart />} />
                     <Route path="admin/import-export" element={<ImportExport />} />
                     <Route path="admin/scheduled-reports" element={<ScheduledReports />} />
+                    <Route path="admin/cache" element={<CacheAdmin />} />
+                    <Route path="import-document" element={<DocumentImport />} />
                   </Route>
                 </Routes>
               </BrowserRouter>
