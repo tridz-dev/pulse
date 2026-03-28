@@ -179,7 +179,7 @@ export function Insights() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">Insights</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Insights</h1>
             <p className="text-zinc-400 text-sm mt-1">Organizational analytics and performance trends.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -219,13 +219,13 @@ export function Insights() {
               Clear
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-zinc-800">
                   <TableHead className="text-zinc-400">Name</TableHead>
-                  <TableHead className="text-zinc-400">Role</TableHead>
-                  <TableHead className="text-zinc-400">Branch</TableHead>
+                  <TableHead className="text-zinc-400 hidden sm:table-cell">Role</TableHead>
+                  <TableHead className="text-zinc-400 hidden sm:table-cell">Branch</TableHead>
                   <TableHead className="text-zinc-400 text-right">Own</TableHead>
                   <TableHead className="text-zinc-400 text-right">Team</TableHead>
                   <TableHead className="text-zinc-400 text-right">Combined</TableHead>
@@ -239,8 +239,8 @@ export function Insights() {
                     onClick={() => navigate(`/operations/${row.userId}`)}
                   >
                     <TableCell className="text-zinc-200 font-medium">{row.user?.name}</TableCell>
-                    <TableCell className="text-zinc-400">{row.user?.role ?? '—'}</TableCell>
-                    <TableCell className="text-zinc-400">{row.user?.branch ?? '—'}</TableCell>
+                    <TableCell className="text-zinc-400 hidden sm:table-cell">{row.user?.role ?? '—'}</TableCell>
+                    <TableCell className="text-zinc-400 hidden sm:table-cell">{row.user?.branch ?? '—'}</TableCell>
                     <TableCell className="text-right text-zinc-300">{Math.round((row.own_score ?? 0) * 100)}%</TableCell>
                     <TableCell className="text-right text-zinc-300">{Math.round((row.team_score ?? 0) * 100)}%</TableCell>
                     <TableCell className="text-right font-medium text-white">{Math.round((row.combined_score ?? 0) * 100)}%</TableCell>
@@ -303,7 +303,7 @@ export function Insights() {
             </Card>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             <Card className="bg-[#141415] border-zinc-800">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-zinc-500 uppercase">Dept Avg</CardTitle>
@@ -513,8 +513,8 @@ export function Insights() {
                 <TableHeader>
                   <TableRow className="border-zinc-800">
                     <TableHead className="text-zinc-400">Item</TableHead>
-                    <TableHead className="text-zinc-400">Template</TableHead>
-                    <TableHead className="text-zinc-400">Department</TableHead>
+                    <TableHead className="text-zinc-400 hidden sm:table-cell">Template</TableHead>
+                    <TableHead className="text-zinc-400 hidden md:table-cell">Department</TableHead>
                     <TableHead className="text-zinc-400 text-right">Misses</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -522,8 +522,8 @@ export function Insights() {
                   {mostMissed.map((m) => (
                     <TableRow key={m.checklist_item + m.template_title} className="border-zinc-800">
                       <TableCell className="text-zinc-200">{m.checklist_item}</TableCell>
-                      <TableCell className="text-zinc-400">{m.template_title}</TableCell>
-                      <TableCell className="text-zinc-400">{m.department}</TableCell>
+                      <TableCell className="text-zinc-400 hidden sm:table-cell">{m.template_title}</TableCell>
+                      <TableCell className="text-zinc-400 hidden md:table-cell">{m.department}</TableCell>
                       <TableCell className="text-right font-bold text-rose-400">{m.misses}</TableCell>
                     </TableRow>
                   ))}

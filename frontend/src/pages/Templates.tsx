@@ -53,9 +53,9 @@ export function Templates() {
 
   return (
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
           <p className="text-zinc-400 text-sm mt-1">Master definitions of all operational checklists.</p>
         </div>
         <Button
@@ -119,10 +119,10 @@ export function Templates() {
       )}
 
       <Sheet open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
-        <SheetContent className="bg-[#09090b] border-zinc-800 w-[500px] sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
+        <SheetContent className="bg-[#09090b] border-zinc-800 w-full sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
           {selectedTemplate && (
             <>
-              <SheetHeader className="p-8 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0 print:bg-white print:border-black">
+              <SheetHeader className="p-4 sm:p-8 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0 print:bg-white print:border-black">
                 <div className="flex justify-between items-start print:hidden">
                   <div className="flex items-center gap-3 text-indigo-400 mb-4 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20 w-fit">
                     <ClipboardCheck size={18} />
@@ -152,7 +152,7 @@ export function Templates() {
                   Official Operational Standard • Department: {selectedTemplate.department ?? 'General'}
                 </div>
               </SheetHeader>
-              <div className="flex-1 overflow-y-auto p-8 print:p-0">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-8 print:p-0">
                 {isSheetLoading ? (
                   <div className="space-y-4 animate-pulse">
                     {[1, 2, 3, 4, 5].map((i) => (
@@ -198,7 +198,7 @@ export function Templates() {
                       ))}
                     </div>
                     <div className="mt-8 pt-8 border-t border-zinc-800/50 print:mt-12 print:border-black/10">
-                      <div className="grid grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                         <div className="flex flex-col gap-2">
                           <span className="text-[10px] text-zinc-600 uppercase tracking-widest">
                             Authorized By

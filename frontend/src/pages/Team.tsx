@@ -82,14 +82,14 @@ export function Team() {
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Team</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Team</h1>
           <p className="text-zinc-400 text-sm mt-1">
             {showAllTeamsTab
               ? 'Your direct reports and organization-wide team view.'
               : 'Operational performance for your direct reports.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showAllTeamsTab && (
             <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
               <Button
@@ -153,7 +153,47 @@ export function Team() {
               <p className="text-sm text-zinc-500 mt-1">You don&apos;t have any active direct reports.</p>
             </div>
           ) : (
-            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden">
+            {/* Mobile card view */}
+            <div className="mt-4 flex flex-col gap-3 md:hidden">
+              {teamScores.map((member) => (
+                <div
+                  key={member.employee}
+                  className="p-4 rounded-lg border border-zinc-800 bg-[#18181b] hover:bg-zinc-800/30 transition-colors cursor-pointer active:bg-zinc-800/50"
+                  onClick={() => navigate(`/operations/${member.employee}`)}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-9 w-9 rounded-md border border-zinc-700 bg-zinc-800 flex items-center justify-center text-xs text-zinc-300 shrink-0">
+                      {member.user?.name?.charAt(0) ?? '?'}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium text-zinc-200 text-sm truncate">
+                        {member.user?.name ?? member.employee}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        {member.user?.role ?? '—'} • {member.completed_items}/{member.total_items} items
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {member.combined_score < 0.5 && <TrendingDown size={14} className="text-rose-500" />}
+                      {member.combined_score >= 0.8 && <Target size={14} className="text-emerald-500" />}
+                      <ScoreDisplay score={member.combined_score} highlight />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-zinc-500 uppercase">Own</span>
+                      <ScoreDisplay score={member.own_score} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-zinc-500 uppercase">Team</span>
+                      <ScoreDisplay score={member.team_score} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table view */}
+            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden hidden md:block">
               <Table>
                 <TableHeader className="bg-zinc-900/50">
                   <TableRow className="border-zinc-800 hover:bg-transparent">
@@ -230,7 +270,50 @@ export function Team() {
               <p className="text-sm text-zinc-500 mt-1">No employees in scope for this period.</p>
             </div>
           ) : (
-            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden">
+            {/* Mobile card view */}
+            <div className="mt-4 flex flex-col gap-3 md:hidden">
+              {allTeamScores.map((member) => (
+                <div
+                  key={member.employee}
+                  className="p-4 rounded-lg border border-zinc-800 bg-[#18181b] hover:bg-zinc-800/30 transition-colors cursor-pointer active:bg-zinc-800/50"
+                  onClick={() => navigate(`/operations/${member.employee}`)}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-9 w-9 rounded-md border border-zinc-700 bg-zinc-800 flex items-center justify-center text-xs text-zinc-300 shrink-0">
+                      {member.user?.name?.charAt(0) ?? '?'}
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-medium text-zinc-200 text-sm truncate">
+                        {member.user?.name ?? member.employee}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        {member.user?.role ?? '—'} • {member.department ?? '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {member.combined_score < 0.5 && <TrendingDown size={14} className="text-rose-500" />}
+                      {member.combined_score >= 0.8 && <Target size={14} className="text-emerald-500" />}
+                      <ScoreDisplay score={member.combined_score} highlight />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-zinc-500 uppercase">Own</span>
+                      <ScoreDisplay score={member.own_score} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-zinc-500 uppercase">Team</span>
+                      <ScoreDisplay score={member.team_score} />
+                    </div>
+                    {member.user?.branch && (
+                      <span className="text-[10px] text-zinc-500 ml-auto">{member.user.branch}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table view */}
+            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden hidden md:block">
               <Table>
                 <TableHeader className="bg-zinc-900/50">
                   <TableRow className="border-zinc-800 hover:bg-transparent">

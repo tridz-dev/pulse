@@ -124,18 +124,20 @@ export function UserProfile() {
           <ArrowLeft size={16} className="mr-2" />
           Back to Operations
         </Button>
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 rounded-xl border border-zinc-800">
-            <AvatarImage src={user.avatarUrl} />
-            <AvatarFallback className="bg-indigo-900 text-indigo-100">{user.name?.charAt(0) ?? '?'}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-semibold tracking-tight text-white">{user.name}</h1>
-            <p className="text-zinc-400 font-mono text-sm uppercase tracking-wider">
-              {user.role} {user.branch ? `• ${user.branch}` : ''}
-            </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl border border-zinc-800 shrink-0">
+              <AvatarImage src={user.avatarUrl} />
+              <AvatarFallback className="bg-indigo-900 text-indigo-100">{user.name?.charAt(0) ?? '?'}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white truncate">{user.name}</h1>
+              <p className="text-zinc-400 font-mono text-xs sm:text-sm uppercase tracking-wider truncate">
+                {user.role} {user.branch ? `• ${user.branch}` : ''}
+              </p>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
+          <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shrink-0 self-start sm:self-center">
             {(['Day', 'Week', 'Month'] as const).map((p) => (
               <Button
                 key={p}
@@ -156,27 +158,27 @@ export function UserProfile() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card
-          className="bg-[#141415] border-zinc-800 md:col-span-2 p-8 relative overflow-hidden flex items-center gap-12 group hover:border-zinc-700/50 transition-all cursor-pointer"
+          className="bg-[#141415] border-zinc-800 md:col-span-2 p-5 sm:p-8 relative overflow-hidden flex flex-col items-center md:flex-row md:items-center gap-6 md:gap-12 group hover:border-zinc-700/50 transition-all cursor-pointer"
           onClick={() => setIsBreakdownOpen(true)}
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
           <Gauge
             value={combinedPct}
-            size={220}
+            size={typeof window !== 'undefined' && window.innerWidth < 768 ? 160 : 220}
             label={`${periodType} KPI`}
             mode="gradient"
             showTicks
             showGlow
           />
-          <div className="flex flex-col justify-center gap-6 flex-1">
-            <div>
-              <h2 className="text-2xl font-bold text-white tracking-tight">Performance Profile</h2>
-              <p className="text-sm text-zinc-500 mt-2 max-w-sm leading-relaxed">
+          <div className="flex flex-col justify-center gap-4 sm:gap-6 flex-1 w-full">
+            <div className="text-center md:text-left">
+              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Performance Profile</h2>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-2 max-w-sm leading-relaxed mx-auto md:mx-0">
                 Holistic view of {user.name}&apos;s operational execution, factoring in both own tasks and team
                 responsibilities.
               </p>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center justify-center md:justify-start gap-6">
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
                   Execution Trend
