@@ -4,6 +4,7 @@
 import frappe
 from frappe.utils import getdate
 
+from pulse.api.permissions import get_scope_for_user
 from pulse.api.scores import _calculate_score_snapshot, _period_range
 
 
@@ -183,3 +184,84 @@ def get_hierarchy_breakdown(top_employee: str, date: str | None = None, period_t
 		}
 
 	return build_node(top_employee)
+
+
+@frappe.whitelist()
+def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: int = 20) -> dict:
+	"""Return failed SOP runs in the caller's scope, for the "what's broken" drill-down.
+
+	Runs are selected by their frozen ``due_at`` falling within [start_date, end_date]
+	(inclusive), per the domain contract's convention of filtering on due_at rather
+	than period_date. Only runs for employees in the caller's visible scope
+	(``get_scope_for_user``) are considered; pagination is applied after that scope
+	filter so a page never leaks or drops out-of-scope rows.
+
+	Overdue duration is not computed here; the response returns ``due_at`` and
+	leaves the "how overdue" calculation to the frontend, which has the current time.
+
+	Response contract:
+	    {
+	        "items": [
+	            {
+	                "run": <run name>,
+	                "person": {"employee": <id>, "name": <employee_name_snapshot>},
+	                "template_title": <template_title_snapshot>,
+	                "due_at": <datetime>,
+	                "status": <SOP Run status>,
+	                "compliance_result": "Failed",
+	            },
+	            ...
+	        ],
+	        "page": <int>,
+	        "page_size": <int>,
+	        "total": <int>,
+	    }
+	"""
+	page = int(page) or 1
+	page_size = int(page_size) or 20
+
+	visible_scope = list(get_scope_for_user())
+	if not visible_scope:
+		return {"items": [], "page": page, "page_size": page_size, "total": 0}
+
+	filters = {
+		"compliance_result": "Failed",
+		"employee": ["in", visible_scope],
+		"due_at": ["between", [start_date, end_date]],
+	}
+
+	total = frappe.db.count("SOP Run", filters=filters)
+
+	rows = frappe.get_all(
+		"SOP Run",
+		filters=filters,
+		fields=[
+			"name",
+			"employee",
+			"employee_name_snapshot",
+			"template_title_snapshot",
+			"due_at",
+			"status",
+			"compliance_result",
+		],
+		order_by="due_at desc, name asc",
+		limit_start=(page - 1) * page_size,
+		limit_page_length=page_size,
+	)
+
+	items = [
+		{
+			"run": row["name"],
+			"person": {
+				"employee": row["employee"],
+				"name": row["employee_name_snapshot"],
+			},
+			"template_title": row["template_title_snapshot"],
+			"due_at": row["due_at"],
+			"status": row["status"],
+			"compliance_result": row["compliance_result"],
+		}
+		for row in rows
+	]
+
+	return {"items": items, "page": page, "page_size": page_size, "total": total}
