@@ -3,7 +3,6 @@
 
 """Scheduler tasks: generate runs, lock overdue, cache scores."""
 
-import datetime
 import json
 from zoneinfo import ZoneInfo
 
@@ -171,15 +170,17 @@ def _generate_runs_for_frequency(frequency_type: str, evaluation_instant=None) -
 	Only creates the currently-actionable window and skips duplicates by
 	``run_key``. Future windows are never pre-generated.
 	"""
-	if evaluation_instant is None:
-		evaluation_instant = now_datetime()
-
 	site_tz = get_system_timezone()
-	# ``now_datetime()`` returns a naive datetime in the system time zone.
-	# Convert it to a proper UTC-aware instant before resolving schedules.
-	if isinstance(evaluation_instant, datetime.datetime) and evaluation_instant.tzinfo is None:
+	if evaluation_instant is None:
+		# ``now_datetime()`` returns a naive datetime in the system time zone.
+		# Convert it to a proper UTC-aware instant before resolving schedules.
+		# Only the defaulted (real scheduler) path is reinterpreted this way —
+		# an explicitly-supplied evaluation_instant (e.g. a test's fixed
+		# instant) is trusted as-is, whether naive-UTC or timezone-aware, so
+		# callers get deterministic behavior regardless of system time zone.
 		evaluation_instant = (
-			evaluation_instant.replace(tzinfo=ZoneInfo(site_tz))
+			now_datetime()
+			.replace(tzinfo=ZoneInfo(site_tz))
 			.astimezone(ZoneInfo("UTC"))
 		)
 
@@ -227,7 +228,20 @@ def finalize_overdue_runs(evaluation_instant=None):
 	never touched, so retries are safe.
 	"""
 	if evaluation_instant is None:
-		evaluation_instant = now_datetime()
+		# ``now_datetime()`` returns a naive datetime in the system time zone,
+		# but ``due_at`` is stored as naive UTC (see
+		# _generate_runs_for_frequency). Convert before comparing, or the
+		# finalizer fires early/late by the site's UTC offset. Only the
+		# defaulted (real scheduler) path is reinterpreted this way — an
+		# explicitly-supplied evaluation_instant (e.g. a test's fixed
+		# instant) is trusted as literal naive-UTC, matching how ``due_at``
+		# values are constructed in tests.
+		evaluation_instant = (
+			now_datetime()
+			.replace(tzinfo=ZoneInfo(get_system_timezone()))
+			.astimezone(ZoneInfo("UTC"))
+			.replace(tzinfo=None)
+		)
 
 	runs = frappe.get_all(
 		"SOP Run",
