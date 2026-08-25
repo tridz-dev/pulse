@@ -9,11 +9,13 @@ Worker pool (2026-08-26 resume): Kimi CLI, Antigravity (Gemini), Claude
 (dispatch + dispatcher-reviewer subagents, and execution fallback). Codex is
 out of quota for this session (hit its usage limit; retry after ~03:02) and is
 **not currently in rotation**. Cursor CLI is unauthenticated in this
-environment and is **excluded from rotation**. OpenCode is under diagnosis —
-`opencode run` (with and without `--auto`) produces a plan but performs zero
-actual file writes in this environment; a subagent is investigating a working
-invocation before it re-enters rotation. MiniMax M2.7 remains disabled after
-earlier stale runs. Fallback order when a lane's primary CLI fails: Claude
+environment and is **excluded from rotation**. OpenCode is **excluded from rotation** for this session: diagnosed root
+cause is this machine's `~/.config/opencode/opencode.jsonc`, whose default
+agent (`oc-router`) has no `write`/`edit` tool available at all regardless of
+`--auto`/model choice; the one subagent with write access (`oc-qwen-coder`)
+is only reachable via unreliable two-hop `task`-tool delegation, not a
+scriptable one-shot dispatch. MiniMax M2.7 remains disabled after earlier
+stale runs. Fallback order when a lane's primary CLI fails: Claude
 Haiku → Antigravity → Kimi → (further down the ladder as needed).
 
 Orchestration pattern in this resume: the integration owner (top-level agent)
