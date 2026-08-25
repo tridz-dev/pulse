@@ -155,6 +155,24 @@ class TestFailureList(FrappeTestCase):
         self.assertEqual(matching["person"]["employee"], op)
         self.assertEqual(matching["compliance_result"], "Failed")
 
+    def test_failed_run_due_at_end_of_range_end_date_is_included(self):
+        """A run due late on end_date itself is still included (due_at is a datetime,
+        not a plain date, so the range must cover the full last day, not just its
+        midnight instant)."""
+        mgr_user = self._create_user("failure.boundary.mgr@example.com", roles=["Pulse Manager"])
+        mgr = self._create_employee("Boundary Manager", mgr_user, pulse_role="Supervisor")
+
+        op_user = self._create_user("failure.boundary.op@example.com", roles=["Pulse User"])
+        op = self._create_employee("Boundary Operator", op_user, reports_to=mgr)
+
+        run_name = self._create_run(op, "Failed", f"{self.END_DATE} 23:59:59")
+
+        frappe.set_user(mgr_user)
+        result = get_failure_list(self.START_DATE, self.END_DATE)
+
+        run_names = [item["run"] for item in result["items"]]
+        self.assertIn(run_name, run_names)
+
     def test_out_of_scope_failed_run_does_not_appear(self):
         """A Failed run for a sibling manager's subtree is excluded from this manager's list."""
         mgr_user = self._create_user("failure.mgr2@example.com", roles=["Pulse Manager"])

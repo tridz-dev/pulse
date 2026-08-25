@@ -224,10 +224,16 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 	if not visible_scope:
 		return {"items": [], "page": page, "page_size": page_size, "total": 0}
 
+	# due_at is a datetime field; a plain date string for end_date would be
+	# implicitly compared as that day's midnight, silently excluding runs due
+	# later that same day. Pin the range to the full calendar days requested.
+	range_start = f"{getdate(start_date)} 00:00:00"
+	range_end = f"{getdate(end_date)} 23:59:59"
+
 	filters = {
 		"compliance_result": "Failed",
 		"employee": ["in", visible_scope],
-		"due_at": ["between", [start_date, end_date]],
+		"due_at": ["between", [range_start, range_end]],
 	}
 
 	total = frappe.db.count("SOP Run", filters=filters)
