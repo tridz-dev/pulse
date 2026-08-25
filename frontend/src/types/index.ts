@@ -161,3 +161,41 @@ export interface HierarchyBreakdownNode {
   score: ScoreSnapshot;
   children: HierarchyBreakdownNode[];
 }
+
+export interface FailurePerson {
+  employee: string;
+  name: string;
+}
+
+export interface FailureItem {
+  run: string;
+  person: FailurePerson;
+  template_title: string;
+  due_at: string;
+  status: string;
+  compliance_result: string;
+}
+
+export interface FailureListResponse {
+  items: FailureItem[];
+  page: number;
+  page_size: number;
+  total: number;
+}
+
+export interface ComplianceScoreResponse {
+  scope: 'personal' | 'inherited';
+  subject: string;
+  score: number | null;
+  passed_runs: number;
+  failed_runs: number;
+  eligible_runs: number;
+  period: {
+    type: 'Day' | 'Week' | 'Month';
+    start: string;
+    end: string;
+    timezone: string;
+  };
+}
+
+

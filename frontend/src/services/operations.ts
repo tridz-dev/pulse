@@ -1,5 +1,5 @@
 import { call } from '@/lib/frappe-sdk';
-import type { HierarchyBreakdownNode, UserRunBreakdown } from '@/types';
+import type { HierarchyBreakdownNode, UserRunBreakdown, FailureListResponse, ComplianceScoreResponse } from '@/types';
 
 export interface TreeNode {
   user: { id: string; name: string; role: string; systemRole?: string; branch?: string; avatarUrl?: string };
@@ -69,3 +69,35 @@ export async function getHierarchyBreakdown(
   });
   return res.message as HierarchyBreakdownNode | null;
 }
+
+export async function getFailureList(
+  startDate: string,
+  endDate: string,
+  page: number = 1,
+  pageSize: number = 20
+): Promise<FailureListResponse> {
+  const res = await call.get('pulse.api.operations.get_failure_list', {
+    start_date: startDate,
+    end_date: endDate,
+    page,
+    page_size: pageSize,
+  });
+  return res.message as FailureListResponse;
+}
+
+export async function getComplianceScore(
+  employee: string,
+  scope: 'personal' | 'inherited' = 'personal',
+  date?: string,
+  periodType: 'Day' | 'Week' | 'Month' = 'Day'
+): Promise<ComplianceScoreResponse> {
+  const res = await call.get('pulse.api.scores.get_compliance_score', {
+    employee,
+    scope,
+    date,
+    period_type: periodType,
+  });
+  return res.message as ComplianceScoreResponse;
+}
+
+

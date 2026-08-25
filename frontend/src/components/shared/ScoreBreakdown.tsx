@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { getUserRunBreakdown } from '@/services/operations';
-import type { UserRunBreakdown } from '@/types';
+import { getUserRunBreakdown, getComplianceScore } from '@/services/operations';
+import type { UserRunBreakdown, ComplianceScoreResponse } from '@/types';
 import {
   Sheet,
   SheetContent,
@@ -38,6 +38,8 @@ interface ScoreBreakdownProps {
 
 export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }: ScoreBreakdownProps) {
   const [breakdown, setBreakdown] = useState<UserRunBreakdown | null>(null);
+  const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
+  const [inheritedScore, setInheritedScore] = useState<ComplianceScoreResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
@@ -51,8 +53,14 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
     if (!userId) return;
     setIsLoading(true);
     try {
-      const data = await getUserRunBreakdown(userId, date, periodType);
+      const [data, personal, inherited] = await Promise.all([
+        getUserRunBreakdown(userId, date, periodType),
+        getComplianceScore(userId, 'personal', date, periodType).catch(() => null),
+        getComplianceScore(userId, 'inherited', date, periodType).catch(() => null),
+      ]);
       setBreakdown(data);
+      setPersonalScore(personal);
+      setInheritedScore(inherited);
       setExpandedGroups(
         data.templateGroups.filter((g) => g.missedItems > 0).map((g) => g.templateId)
       );
@@ -129,6 +137,56 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
                     Missed
                   </span>
                   <span className="text-xl font-bold text-rose-400">{breakdown.missedItems}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                      Personal Compliance
+                    </span>
+                    <Badge variant="outline" className="text-[9px] uppercase tracking-wider h-4 border-zinc-700 text-zinc-400">
+                      {personalScore?.scope ?? 'personal'}
+                    </Badge>
+                  </div>
+                  <span className={cn(
+                    "text-xl font-bold font-mono tracking-tighter leading-none mt-1",
+                    personalScore?.score !== null && personalScore?.score !== undefined
+                      ? (personalScore.score >= 0.8 ? 'text-emerald-400' : personalScore.score >= 0.5 ? 'text-amber-400' : 'text-rose-400')
+                      : 'text-zinc-500'
+                  )}>
+                    {personalScore?.score !== null && personalScore?.score !== undefined
+                      ? `${Math.round(personalScore.score * 100)}%`
+                      : '—'}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                    {personalScore ? `${personalScore.passed_runs}/${personalScore.eligible_runs} runs passed` : '—'}
+                  </span>
+                </div>
+
+                <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                      Inherited Compliance
+                    </span>
+                    <Badge variant="outline" className="text-[9px] uppercase tracking-wider h-4 border-zinc-700 text-zinc-400">
+                      {inheritedScore?.scope ?? 'inherited'}
+                    </Badge>
+                  </div>
+                  <span className={cn(
+                    "text-xl font-bold font-mono tracking-tighter leading-none mt-1",
+                    inheritedScore?.score !== null && inheritedScore?.score !== undefined
+                      ? (inheritedScore.score >= 0.8 ? 'text-emerald-400' : inheritedScore.score >= 0.5 ? 'text-amber-400' : 'text-rose-400')
+                      : 'text-zinc-500'
+                  )}>
+                    {inheritedScore?.score !== null && inheritedScore?.score !== undefined
+                      ? `${Math.round(inheritedScore.score * 100)}%`
+                      : '—'}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-mono mt-1">
+                    {inheritedScore && inheritedScore.eligible_runs > 0 ? `${inheritedScore.passed_runs}/${inheritedScore.eligible_runs} runs passed` : 'No team runs'}
+                  </span>
                 </div>
               </div>
 

@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
-import type { ScoreSnapshot } from '@/types';
+import type { ScoreSnapshot, FailureItem } from '@/types';
 import { useAuth } from '@/store/AuthContext';
 import { getScoreForUser, getTeamScores, getFailureAnalytics } from '@/services/scores';
 import type { TeamScoreItem } from '@/services/scores';
 import { getDemoStatus, installDemoData } from '@/services/demo';
+import { getFailureList } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2 } from 'lucide-react';
+import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2, AlertTriangle, Clock, XCircle, ChevronRight } from 'lucide-react';
 import { Gauge } from '@/components/shared/Gauge';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import {
   BarChart,
   Bar,
@@ -28,12 +37,53 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; end: string } {
+  const today = new Date();
+  const formatStr = (d: Date) => d.toISOString().slice(0, 10);
+  
+  if (periodType === 'Day') {
+    const s = formatStr(today);
+    return { start: s, end: s };
+  }
+  if (periodType === 'Week') {
+    const day = today.getDay();
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(today.setDate(diff));
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start: formatStr(start), end: formatStr(end) };
+  }
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return { start: formatStr(start), end: formatStr(end) };
+}
+
+export function getOverdueDuration(dueAtString: string): string {
+  if (!dueAtString) return 'Overdue';
+  // Standardize timestamp separator to avoid safari parse issues
+  const sanitized = dueAtString.includes('T') ? dueAtString : dueAtString.replace(' ', 'T');
+  const dueAt = new Date(sanitized);
+  const now = new Date();
+  const diffMs = now.getTime() - dueAt.getTime();
+  if (diffMs <= 0) return 'Due soon';
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 60) return `Overdue by ${diffMins}m`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `Overdue by ${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Overdue by ${diffDays}d`;
+}
+
 export function Dashboard() {
   const { currentUser, refetch } = useAuth();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
   const [teamData, setTeamData] = useState<TeamScoreItem[]>([]);
   const [analytics, setAnalytics] = useState<{ id: string; taskName: string; templateName: string; misses: number }[]>([]);
+  const [failures, setFailures] = useState<FailureItem[]>([]);
+  const [isFailuresLoading, setIsFailuresLoading] = useState(false);
+  const [isFailuresSheetOpen, setIsFailuresSheetOpen] = useState(false);
+  const [selectedFailure, setSelectedFailure] = useState<FailureItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [demoStatus, setDemoStatus] = useState<{ can_load_demo: boolean; can_clear_demo: boolean; has_demo_data: boolean } | null>(null);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -56,9 +106,16 @@ export function Dashboard() {
           setTeamData(team);
           const analyticsData = await getFailureAnalytics(currentUser.id, today);
           setAnalytics(analyticsData.mostMissedTasks ?? []);
+
+          setIsFailuresLoading(true);
+          const range = getPeriodRange(periodType);
+          const failData = await getFailureList(range.start, range.end, 1, 50);
+          setFailures(failData.items ?? []);
+          setIsFailuresLoading(false);
         } else {
           setTeamData([]);
           setAnalytics([]);
+          setFailures([]);
         }
       } catch (error) {
         console.error('Failed to load dashboard stats', error);
@@ -188,7 +245,19 @@ export function Dashboard() {
       ) : (
         <>
           <div className="grid gap-6 md:grid-cols-3">
-            <Card className="bg-[#141415] border-zinc-800 md:col-span-2 p-8 relative overflow-hidden flex items-center gap-12 group hover:border-zinc-700/50 transition-all">
+            <Card
+              className={cn(
+                "bg-[#141415] border-zinc-800 md:col-span-2 p-8 relative overflow-hidden flex items-center gap-12 group transition-all",
+                currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole)
+                  ? "cursor-pointer hover:border-zinc-700/80 hover:bg-zinc-900/10"
+                  : "hover:border-zinc-700/50"
+              )}
+              onClick={() => {
+                if (currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole)) {
+                  setIsFailuresSheetOpen(true);
+                }
+              }}
+            >
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
               <Gauge
                 value={combinedPct}
@@ -205,6 +274,11 @@ export function Dashboard() {
                     Your overall performance rating based on {completedItems} completed tasks and team roll-ups for
                     this {periodType.toLowerCase()}.
                   </p>
+                  {currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole) && (
+                    <span className="text-xs text-indigo-400 font-medium inline-flex items-center gap-1 mt-3 group-hover:text-indigo-300 transition-colors">
+                      View failing runs in scope ({failures.length}) <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex flex-col">
@@ -343,6 +417,138 @@ export function Dashboard() {
             </Card>
           )}
         </>
+      )}
+
+      <Sheet open={isFailuresSheetOpen} onOpenChange={setIsFailuresSheetOpen}>
+        <SheetContent className="bg-[#09090b] border-zinc-800 w-full sm:max-w-xl p-0 flex flex-col transition-all duration-300">
+          <SheetHeader className="p-6 border-b border-zinc-800/80 bg-zinc-900/30">
+            <div className="flex items-center gap-4">
+              <AlertTriangle className="text-rose-400" size={24} />
+              <div className="flex flex-col">
+                <SheetTitle className="text-xl text-white font-bold tracking-tight">
+                  Active Failure Points
+                </SheetTitle>
+                <SheetDescription className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-0.5">
+                  Failed SOP runs in visible scope • {periodType}
+                </SheetDescription>
+              </div>
+              <Badge variant="outline" className="ml-auto text-rose-400 bg-rose-400/10 border-rose-400/20 font-mono">
+                {failures.length} Failed
+              </Badge>
+            </div>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-4">
+            {isFailuresLoading ? (
+              <div className="flex flex-col gap-4 animate-pulse">
+                <div className="h-16 bg-zinc-900 rounded-xl" />
+                <div className="h-16 bg-zinc-900 rounded-xl" />
+                <div className="h-16 bg-zinc-900 rounded-xl" />
+              </div>
+            ) : failures.length === 0 ? (
+              <div className="p-12 text-center border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
+                <p className="text-zinc-500 text-sm">No failing SOP runs found in your scope for this period.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {failures.map((f) => (
+                  <div
+                    key={f.run}
+                    className="flex items-center justify-between p-4 rounded-xl border border-zinc-800 bg-zinc-900/40 hover:bg-zinc-800/30 transition-all cursor-pointer group"
+                    onClick={() => setSelectedFailure(f)}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-bold text-zinc-100 group-hover:text-indigo-300 transition-colors">
+                        {f.template_title}
+                      </span>
+                      <span className="text-xs text-zinc-400">
+                        Assigned to: <span className="font-medium text-zinc-300">{f.person.name}</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                        Due: {new Date(f.due_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <Badge variant="outline" className="text-[10px] uppercase font-mono bg-rose-500/10 text-rose-400 border-rose-500/20">
+                        {getOverdueDuration(f.due_at)}
+                      </Badge>
+                      <ChevronRight size={16} className="text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {selectedFailure && (
+        <Sheet open={!!selectedFailure} onOpenChange={(open) => { if (!open) setSelectedFailure(null); }}>
+          <SheetContent className="bg-[#18181b] border-zinc-800 sm:max-w-md w-full p-6 flex flex-col h-full text-zinc-100">
+            <SheetHeader className="text-left border-b border-zinc-800 pb-4">
+              <div className="flex items-center justify-between">
+                <Badge variant="outline" className="text-rose-400 border-rose-400/20 bg-rose-500/10">
+                  Failed Run
+                </Badge>
+                <Badge variant="secondary" className="bg-zinc-800 text-zinc-400">
+                  Read Only
+                </Badge>
+              </div>
+              <SheetTitle className="text-xl text-zinc-100 mt-2">{selectedFailure.template_title}</SheetTitle>
+              <SheetDescription className="text-zinc-500">
+                Run: {selectedFailure.run}
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-6">
+              <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-xl p-4 flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                    Assigned Person
+                  </span>
+                  <span className="text-sm font-medium text-zinc-200">
+                    {selectedFailure.person.name}
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-mono">
+                    ID: {selectedFailure.person.employee}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                    Due Date & Time
+                  </span>
+                  <span className="text-sm font-medium text-zinc-200">
+                    {new Date(selectedFailure.due_at).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                    Current Status
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-rose-400 border-rose-400/20 bg-rose-500/10 uppercase text-[10px]">
+                      {selectedFailure.status}
+                    </Badge>
+                    <span className="text-xs text-rose-400 font-mono">
+                      ({getOverdueDuration(selectedFailure.due_at)})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-zinc-800 pt-6 mt-auto">
+              <Button
+                className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                onClick={() => setSelectedFailure(null)}
+              >
+                Close Details
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       )}
     </div>
   );
