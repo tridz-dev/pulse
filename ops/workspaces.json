@@ -1,0 +1,21 @@
+{
+  "pulse": {
+    "reference_bench": "pulse-reference",
+    "apps": [
+      {
+        "name": "frappe",
+        "role": "dependency",
+        "branch": "version-16"
+      },
+      {
+        "name": "pulse",
+        "role": "primary",
+        "branch": "main",
+        "source_repo": "https://github.com/tridz-dev/pulse"
+      }
+    ],
+    "post_install_commands": [
+      "cd apps/pulse/frontend && yarn install --frozen-lockfile && yarn build"
+    ]
+  }
+}

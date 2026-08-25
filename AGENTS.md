@@ -1,33 +1,76 @@
 # Pulse — Agent Reference
 
+This is the canonical agent guide for the Pulse repository. Read it before
+editing code or touching the Frappe bench. `CLAUDE.md` is the Claude-compatible
+entry point and should stay aligned with this file.
+
 Frappe app + React SPA that tracks SOP execution across a multi-branch organisation
 and converts daily operational activity into measurable, hierarchical performance signals.
 
-**Bench root:** `/workspace/development/edge16`
-**Site:** `pulse.localhost`
+**Bench root:** `/workspace/benches`
+**Reference bench:** `/workspace/benches/pulse-reference`
+**Site:** `pulse-reference.local`
 **App path:** `apps/pulse/`
 **Frontend:** `apps/pulse/frontend/`
+
+Bench commands run inside `frappe_docker_devcontainer-frappe-1`, using the
+shared MariaDB (`mariadb`) and Redis services. Do not hand-roll bench
+provisioning; use the installed `mh` scripts and the Pulse workspace manifest.
+The reference bench is persistent and must not be torn down. Create disposable
+feature benches through `mh new pulse-<name> --workspace pulse ...`.
+The canonical executable is `/workspace/development/mh-tools/mh` with
+`BENCH_ROOT=/workspace/benches`; `/workspace/development/mh-scripts` is only the
+companion-script symlink.
+
+Useful paths:
+
+- Host repository: `/Users/safwan/Code/Experiments/Pulse/pulse`
+- Host bench root: `/Users/safwan/Code/Docker/frappe_docker/benches`
+- Container bench root: `/workspace/benches`
+- Workspace manifest: `/workspace/benches/workspaces.json`
+- Shared registry: `/workspace/benches/registry.json`
+- Bench identity: `/workspace/benches/pulse-reference/BENCH_IDENTITY.md`
+
+Typical commands:
+
+```bash
+docker exec frappe_docker_devcontainer-frappe-1 bash -lc \
+  'cd /workspace/benches/pulse-reference && bench start'
+docker exec frappe_docker_devcontainer-frappe-1 bash -lc \
+  'BENCH_ROOT=/workspace/benches /workspace/development/mh-tools/mh list'
+docker exec frappe_docker_devcontainer-frappe-1 bash -lc \
+  'cd /workspace/benches/<assigned-feature-bench> && bench --site <assigned-feature-site> migrate'
+```
+
+The migration example is only for an assigned disposable feature bench. Never
+substitute `pulse-reference` into it.
 
 ---
 
 ## Concept
 
+The target behavior is defined by `CONTEXT.md`, `docs/PRODUCT_PLAN.md`, and
+`docs/execution/06-domain-contracts.md`. Some sections below deliberately
+describe the current prototype so agents can navigate it; item-level scoring,
+recursive `combined_score`, and date-only locking are migration inputs, not the
+target product contract.
+
 Pulse closes the "accountability gap" between ground-level task execution and C-Suite KPIs.
 
 ```
-Operator completes checklist items
+Operator completes an SOP Run on time
         ↓
-SOP Run is scored (own_score)
+Generated run is classified Passed or Failed
         ↓
-Supervisor inherits team average (team_score)
+Supervisor sees run-weighted descendant compliance
         ↓
-Area Manager inherits their subtree average
+Area Manager sees the same explicit inherited scope
         ↓
 Executive sees org-wide health
 ```
 
-Every missed step degrades the combined score of every manager in the reporting line — making
-failure visible at any level in real time.
+Every failed generated run reduces the explicit inherited score of managers in
+its reporting line, while personal score remains separate.
 
 ---
 
@@ -240,7 +283,7 @@ Raised when a run has missed checklist items.
 
 ---
 
-## Scoring Logic
+## Current Prototype Scoring Logic (Legacy)
 
 ```
 own_score = completed_items / total_items   (for period)
@@ -253,8 +296,9 @@ combined_score:
   else:                                        own_score
 ```
 
-Scores propagate **bottom-up**: leaf employees have `team_score = 0`, combined = own.
-Each level's combined_score feeds its manager's team_score.
+This is what `pulse/api/scores.py` does today and is expected to be replaced by
+the run-level compliance interface in the execution pack. Do not reproduce this
+formula in new endpoints.
 
 Score brackets used in insights distribution histogram:
 
