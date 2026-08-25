@@ -30,3 +30,7 @@ class SOPRun(Document):
 
 	# Schedule identity is intentionally not derived here yet.
 	# S1-T03 will populate assignment/schedule_key/run_key/opens_at/due_at at generation time.
+
+	# Run snapshot fields are intentionally not derived here.
+	# S1-T03 will freeze template/employee/manager-path context into the
+	# *_snapshot fields and set snapshot_is_complete = 1 at generation time.

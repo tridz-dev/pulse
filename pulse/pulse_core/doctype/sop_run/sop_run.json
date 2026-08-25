@@ -19,6 +19,15 @@
   "due_at",
   "effective_timezone",
   "schedule_backfill_incomplete",
+  "template_title_snapshot",
+  "template_modified_snapshot",
+  "employee_name_snapshot",
+  "manager_path_snapshot",
+  "department_snapshot",
+  "branch_snapshot",
+  "frequency_snapshot",
+  "completion_window_minutes_snapshot",
+  "snapshot_is_complete",
   "run_items",
   "total_items",
   "completed_items",
@@ -117,6 +126,60 @@
    "label": "Schedule Backfill Incomplete"
   },
   {
+   "fieldname": "template_title_snapshot",
+   "fieldtype": "Data",
+   "label": "Template Title Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "template_modified_snapshot",
+   "fieldtype": "Datetime",
+   "label": "Template Modified Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_name_snapshot",
+   "fieldtype": "Data",
+   "label": "Employee Name Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "manager_path_snapshot",
+   "fieldtype": "JSON",
+   "label": "Manager Path Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department_snapshot",
+   "fieldtype": "Data",
+   "label": "Department Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "branch_snapshot",
+   "fieldtype": "Data",
+   "label": "Branch Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "frequency_snapshot",
+   "fieldtype": "Data",
+   "label": "Frequency Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completion_window_minutes_snapshot",
+   "fieldtype": "Int",
+   "label": "Completion Window Minutes Snapshot",
+   "read_only": 1
+  },
+  {
+   "fieldname": "snapshot_is_complete",
+   "fieldtype": "Check",
+   "label": "Snapshot Is Complete",
+   "read_only": 1
+  },
+  {
    "fieldname": "run_items",
    "fieldtype": "Table",
    "label": "Run Items",
@@ -144,7 +207,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-12 00:00:00.000000",
+ "modified": "2026-08-25 19:49:52.000000",
  "modified_by": "Administrator",
  "module": "Pulse Core",
  "name": "SOP Run",
