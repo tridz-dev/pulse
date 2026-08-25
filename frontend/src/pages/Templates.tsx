@@ -8,6 +8,13 @@ import {
 } from '@/services/templates';
 import type { FullSOPTemplate } from '@/services/templates';
 import type { SOPChecklistItem } from '@/types';
+import {
+  listAssignments,
+  listEligibleEmployees,
+  createAssignment,
+  deactivateAssignment,
+} from '@/services/assignments';
+import type { SOPAssignment, PulseEmployee } from '@/services/assignments';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,6 +49,17 @@ export function Templates() {
   const [selectedTemplate, setSelectedTemplate] = useState<Partial<FullSOPTemplate> | null>(null);
   const [templateItems, setTemplateItems] = useState<SOPChecklistItem[]>([]);
   const [isSheetLoading, setIsSheetLoading] = useState(false);
+
+  // Assignment states
+  const [assignments, setAssignments] = useState<SOPAssignment[]>([]);
+  const [eligibleEmployees, setEligibleEmployees] = useState<PulseEmployee[]>([]);
+  const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(false);
+  const [selectedEmployeeName, setSelectedEmployeeName] = useState('');
+  const [assignTimezoneOverride, setAssignTimezoneOverride] = useState('');
+  const [assignStartTimeOverride, setAssignStartTimeOverride] = useState('');
+  const [assignWindowOverride, setAssignWindowOverride] = useState<string>('');
+  const [showAdvancedAssign, setShowAdvancedAssign] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Editor states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -81,9 +99,72 @@ export function Templates() {
     setSelectedTemplate(template);
     if (!template.name) return;
     setIsSheetLoading(true);
-    const items = await getTemplateItems(template.name);
-    setTemplateItems(items);
-    setIsSheetLoading(false);
+    setIsAssignmentsLoading(true);
+
+    setSelectedEmployeeName('');
+    setAssignTimezoneOverride('');
+    setAssignStartTimeOverride('');
+    setAssignWindowOverride('');
+    setShowAdvancedAssign(false);
+
+    try {
+      const [items, allAssignments, employees] = await Promise.all([
+        getTemplateItems(template.name),
+        listAssignments(),
+        canEdit ? listEligibleEmployees() : Promise.resolve([]),
+      ]);
+      setTemplateItems(items);
+      setAssignments(allAssignments.filter((a) => a.template === template.name));
+      setEligibleEmployees(employees);
+    } catch (err: any) {
+      console.error('Failed to load template data', err);
+    } finally {
+      setIsSheetLoading(false);
+      setIsAssignmentsLoading(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedTemplate || !selectedTemplate.name || !selectedEmployeeName) return;
+    setIsAssigning(true);
+    try {
+      const windowVal = assignWindowOverride.trim() ? Number(assignWindowOverride) : undefined;
+      await createAssignment({
+        template: selectedTemplate.name,
+        employee: selectedEmployeeName,
+        schedule_timezone_override: assignTimezoneOverride.trim() || undefined,
+        local_start_time_override: assignStartTimeOverride.trim() || undefined,
+        completion_window_minutes_override: windowVal,
+      });
+
+      const allAssignments = await listAssignments();
+      setAssignments(allAssignments.filter((a) => a.template === selectedTemplate.name));
+
+      setSelectedEmployeeName('');
+      setAssignTimezoneOverride('');
+      setAssignStartTimeOverride('');
+      setAssignWindowOverride('');
+      setShowAdvancedAssign(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to create assignment');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleDeactivate = async (assignmentName: string) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to deactivate this assignment? This will only stop future runs from being generated. Already-generated historical runs will remain untouched.'
+    );
+    if (!confirmed) return;
+
+    try {
+      await deactivateAssignment(assignmentName);
+      const allAssignments = await listAssignments();
+      setAssignments(allAssignments.filter((a) => a.template === selectedTemplate?.name));
+    } catch (err: any) {
+      alert(err.message || 'Failed to deactivate assignment');
+    }
   };
 
   const handlePrint = () => {
@@ -432,6 +513,167 @@ export function Templates() {
                           <div className="h-10 border-b border-zinc-800/80 print:border-black/20"></div>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Assignments Section */}
+                    <div className="mt-8 pt-8 border-t border-zinc-800/50 print:hidden space-y-6">
+                      <div>
+                        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                          Active Assignments
+                        </h4>
+                        <p className="text-zinc-500 text-xs mt-1">
+                          Employees currently assigned to run this checklist.
+                        </p>
+                      </div>
+
+                      {/* Assignment list */}
+                      <div className="space-y-2">
+                        {isAssignmentsLoading ? (
+                          <div className="h-12 bg-zinc-900 rounded-lg animate-pulse" />
+                        ) : assignments.length === 0 ? (
+                          <div className="p-4 bg-zinc-950/20 border border-zinc-800/50 rounded-xl text-center text-zinc-500 text-xs">
+                            No active assignments for this template.
+                          </div>
+                        ) : (
+                          assignments.map((assignment) => (
+                            <div
+                              key={assignment.name}
+                              className="flex items-center justify-between p-3 bg-zinc-950/40 border border-zinc-800/60 rounded-xl gap-4 text-xs"
+                            >
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <span className="font-medium text-zinc-200 truncate">
+                                  {assignment.employee}
+                                </span>
+                                {(assignment.schedule_timezone_override ||
+                                  assignment.local_start_time_override ||
+                                  (assignment.completion_window_minutes_override !== undefined &&
+                                    assignment.completion_window_minutes_override > 0)) && (
+                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-zinc-500">
+                                    {assignment.schedule_timezone_override && (
+                                      <span>TZ: {assignment.schedule_timezone_override}</span>
+                                    )}
+                                    {assignment.local_start_time_override && (
+                                      <span>Start: {assignment.local_start_time_override}</span>
+                                    )}
+                                    {assignment.completion_window_minutes_override !== undefined &&
+                                      assignment.completion_window_minutes_override > 0 && (
+                                        <span>Window: {assignment.completion_window_minutes_override}m</span>
+                                      )}
+                                  </div>
+                                )}
+                              </div>
+                              {canEdit && assignment.is_active === 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeactivate(assignment.name)}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-950/20 px-2.5 py-1 h-auto rounded-lg text-xs"
+                                >
+                                  Deactivate
+                                </Button>
+                              )}
+                              {assignment.is_active !== 1 && (
+                                <Badge variant="outline" className="border-zinc-800 text-zinc-500 text-[10px]">
+                                  Inactive
+                                </Badge>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Assign form */}
+                      {canEdit && (
+                        <div className="p-4 bg-zinc-900/20 border border-zinc-800/80 rounded-xl space-y-4">
+                          <h5 className="text-xs font-semibold text-zinc-400">
+                            Assign to Employee
+                          </h5>
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                Select Employee
+                              </label>
+                              <select
+                                value={selectedEmployeeName}
+                                onChange={(e) => setSelectedEmployeeName(e.target.value)}
+                                className="w-full h-9 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-2 outline-none focus:border-zinc-700"
+                              >
+                                <option value="">-- Choose Employee --</option>
+                                {eligibleEmployees
+                                  .filter(
+                                    (emp) =>
+                                      !assignments.some(
+                                        (asgn) => asgn.employee === emp.name && asgn.is_active === 1
+                                      )
+                                  )
+                                  .map((emp) => (
+                                    <option key={emp.name} value={emp.name}>
+                                      {emp.employee_name} ({emp.name})
+                                    </option>
+                                  ))}
+                              </select>
+                            </div>
+
+                            {/* Advanced Collapse section */}
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => setShowAdvancedAssign(!showAdvancedAssign)}
+                                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 focus:outline-none"
+                              >
+                                {showAdvancedAssign ? 'Hide advanced overrides' : 'Show advanced overrides'}
+                              </button>
+
+                              {showAdvancedAssign && (
+                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-zinc-950/40 border border-zinc-800/50 rounded-lg animate-in fade-in duration-200">
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                      Timezone Override
+                                    </label>
+                                    <Input
+                                      value={assignTimezoneOverride}
+                                      onChange={(e) => setAssignTimezoneOverride(e.target.value)}
+                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs placeholder:text-zinc-600"
+                                      placeholder="e.g. Asia/Kolkata"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                      Start Time Override
+                                    </label>
+                                    <Input
+                                      type="time"
+                                      value={assignStartTimeOverride}
+                                      onChange={(e) => setAssignStartTimeOverride(e.target.value)}
+                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                      Window (mins)
+                                    </label>
+                                    <Input
+                                      type="number"
+                                      value={assignWindowOverride}
+                                      onChange={(e) => setAssignWindowOverride(e.target.value)}
+                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                                      placeholder="e.g. 60"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <Button
+                              onClick={handleAssign}
+                              disabled={isAssigning || !selectedEmployeeName}
+                              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-1.5 h-auto rounded-lg"
+                            >
+                              {isAssigning ? 'Assigning...' : 'Assign'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
