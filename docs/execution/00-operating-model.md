@@ -54,14 +54,22 @@ integration review, or bench-safety constraint blocks another safe dispatch.
 ## Branch and bench posture
 
 Use the persistent `pulse-reference` bench for read-only inspection and baseline
-comparison only. Any task that writes data, changes a DocType, runs a migration,
-starts a scheduler/worker, or performs submission testing must use its own
-disposable feature bench and track-owned worktree created through `mh new`.
+comparison only. Development happens in host Git worktrees under the owning
+track. Independent agents may use separate task worktrees and do not need a
+live bench. Merge reviewed commits into the integration branch before syncing
+them into any bench.
+
+Any task that writes site data, runs a migration, starts a scheduler/worker, or
+performs submission/runtime testing must use a disposable feature bench created
+through `mh new`. Schema files may be authored and statically reviewed in host
+worktrees first; their migration gate remains blocked until that disposable
+bench is ready.
 
 The coding worktree and the bench's `apps/pulse` checkout are separate. Sync
-tested commits through Git; never copy or symlink a development worktree into a
-bench. Do not run schedulers/workers in several disposable benches concurrently
-unless their queue isolation has been explicitly verified.
+reviewed commits through Git; never copy or symlink a development worktree into
+a bench. Prefer one integrated disposable bench at runtime gates rather than a
+bench per worker. Do not run schedulers/workers in several disposable benches
+concurrently unless their queue isolation has been explicitly verified.
 
 Never tear down `pulse-reference`.
 Never flush shared Redis.

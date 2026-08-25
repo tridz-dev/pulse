@@ -17,6 +17,7 @@ Read these before taking a task:
 
 ## Execution docs
 
+- [Start here / resume ledger](START-HERE.md): exact paused state and next steps.
 - [Operating model](00-operating-model.md): how to split and run work safely.
 - [Dependency map](01-dependency-map.md): task graph and parallel lanes.
 - [Parallel workstreams](02-parallel-workstreams.md): what can run together.

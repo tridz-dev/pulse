@@ -7,9 +7,14 @@ important example.
 
 ## Planning gate
 
-`P0` is complete when S0-T00 and S0-T02 are complete and the frozen [domain
-contracts](06-domain-contracts.md) have been acknowledged. No S1-S4
-implementation starts before P0.
+`P0-code` is complete when S0-T02 is complete, the current host worktree is
+clean and usable, and the frozen [domain contracts](06-domain-contracts.md)
+have been acknowledged. It permits code and static checks in host worktrees.
+
+`P0-runtime` is complete when S0-T00 (including S0-T04 if activated) and S0-T01
+are verified. No migration, site-writing test, scheduler/worker run, or runtime
+acceptance may start before `P0-runtime`. This split keeps independent coding
+parallel without weakening bench safety.
 
 ## Task graph
 
@@ -20,8 +25,8 @@ implementation starts before P0.
 | S0-T01 | Baseline verification | verified S0-T00; S0-T04 if activated | S0-T02 |
 | S0-T02 | Current model inventory | none | S0-T00/S0-T01 |
 | S0-T03 | Acceptance fixture specification | S0-T01, S0-T02 | none |
-| S1-T00 | Domain package and test scaffold | P0 | S1-T01, S2-T01 |
-| S1-T01 | Lifecycle schema and migration | P0 | S1-T00, S2-T01 |
+| S1-T00 | Domain package and test scaffold | P0-code | S1-T01, S2-T01 |
+| S1-T01 | Lifecycle schema and migration | P0-code | S1-T00, S2-T01 |
 | S1-T02 | Schedule schema and migration | S1-T01 | S1-T04, S2-T00, S2-T01 |
 | S4-T01 | Run snapshot schema | S1-T02 | S1-T04, S2-T00, S2-T01 |
 | S1-T03 | Scheduling policy and idempotent generation | S1-T00, S4-T01 | S1-T04, S2-T00, S2-T01 |
@@ -37,7 +42,7 @@ implementation starts before P0.
 | S2-T06 | Hierarchy setup UI | S2-T05 | S1-T10, manager UI tasks |
 | S1-T11 | Assignment UI | S1-T09, S1-T10, S2-T06 | none |
 | S2-T00 | Hierarchy scope resolver | S1-T00 | S1 tasks, S2-T01 |
-| S2-T01 | Gauge orientation | P0 | backend tasks |
+| S2-T01 | Gauge orientation | P0-code | backend tasks |
 | S2-T02 | Personal and inherited score endpoints | S1-T04, S2-T00 | S1-T05/S4-T03/S1-T06 |
 | S2-T03 | Hierarchy roll-up correctness | S2-T02 | S3-T01, S3-T02 |
 | S3-T01 | Scoped failure list API | S1-T04, S2-T00 | S2-T03, S3-T02 |

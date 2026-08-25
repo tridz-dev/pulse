@@ -2,6 +2,9 @@
 
 Status: integration-owner maintained
 
+Paused handoff: read [START-HERE.md](START-HERE.md) before resuming any worker,
+merge, or bench action.
+
 Worker pool: GPT-5.4 medium, Kimi CLI, Antigravity Gemini Flash Low, and
 OpenCode Go MiniMax M3 (`opencode-go/minimax-m3`). MiniMax M2.7 is disabled
 after two stale runs. Claude Haiku is the
@@ -21,7 +24,8 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 | S0-T01 | blocked | integration owner | - | pulse-reference (read-only) | partial evidence: Frappe 16.31.0, Pulse main, ping 200, JS/CSS bundles 200; waits for S0-T04 and verified S0-T00 rerun |
 | S0-T02 | verified | integration owner | main working tree | none | `model-inventory.md`; four-lane read-only inventory; all ten core DocTypes mapped; `git diff --check` passed |
 | S0-T03 | blocked | unassigned | - | none | waits for S0-T01/T02 |
-| P0 | blocked | integration owner | - | none | waits for S0-T00, S0-T02, contract acknowledgement |
+| P0-code | verified | integration owner | `track/pulse-first-milestone` | none | S0-T02 verified; contracts acknowledged; independent host worktrees active |
+| P0-runtime | blocked | integration owner | - | none | waits for S0-T00/S0-T04 and S0-T01 before migration/runtime work |
 
 ## First-milestone waves
 
