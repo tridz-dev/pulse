@@ -55,20 +55,37 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 
 | Wave | Tasks | State | Integration evidence |
 | --- | --- | --- | --- |
-| W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **merged (code); not runtime-verified** | all four merged to `track/pulse-first-milestone`; static self-review + dispatcher-reviewer diff-check only — no migration/test run on a live bench yet |
-| W2 Domain | S1-T03 (not started), S1-T04 ✅, S1-T07 (not started), S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | partial | 4/6 merged; S1-T03 (idempotent generation) and S1-T07 (deadline finalization) remain, both non-trivial domain logic — dispatch next |
-| W3 Execution/setup | S1-T05 (not started), S4-T03 (not started), S2-T02 (not started), S2-T05 ✅, S1-T09 ✅ | partial | 2/5 merged; S1-T05/S4-T03/S2-T02 all depend on S1-T07, still blocked |
-| W4 Explainability | S1-T06 (not started), S2-T03 (not started), S3-T01 (not started), S3-T02 (not started) | blocked | none merged; all depend on S1-T04/S2-T00 (both now done) or S1-T05/S4-T03 (not yet done) |
-| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 (not started), S2-T04 (not started), S3-T03 (not started), S3-T04 (not started) | partial | 2/6 merged; S1-T11 now dependency-ready (needs S1-T09 ✅ + S1-T10 ✅ + S2-T06 ✅) |
+| W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **complete (code); not runtime-verified** | all four merged; static + dispatcher-reviewer diff-check only |
+| W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete (code); not runtime-verified** | all six merged — idempotent generation, compliance scoring, and deadline finalization now form a closed loop |
+| W3 Execution/setup | S1-T05 ✅, S4-T03 (not started), S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | partial | 4/5 merged; only S4-T03 (Immutable finalized runs) remains, now dependency-ready (needs S1-T05 ✅ + S4-T01 ✅) |
+| W4 Explainability | S1-T06 (not started), S2-T03 (not started), S3-T01 (not started), S3-T02 (not started) | ready to start | none merged yet; S2-T03/S3-T01/S3-T02 all now dependency-ready (need S1-T04 ✅/S2-T00 ✅/S2-T02 ✅); S1-T06 needs S4-T03 first |
+| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 (not started), S3-T03 (not started), S3-T04 (not started) | partial | 3/6 merged; S2-T04/S3-T03/S3-T04 blocked on W4 analytics tasks |
 
-13 of ~35 backlog tasks merged into `track/pulse-first-milestone` as of this
-resume session (2026-08-26, same day as the original handoff). All merges are
-code-complete and statically self-reviewed (by the dispatching CLI, a
-dedicated Claude dispatcher-reviewer subagent, and/or the integration owner
-directly) — **none have run on a live Frappe bench yet**. The first migration
-gate (provisioning a disposable Frappe 16 bench and running
-`bench migrate` + focused tests) is still the next hard verification step
-before any of this can be called done, per the original resume plan.
+**19 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
+this resume session (2026-08-26, same day as the original handoff). W1 and W2
+are fully code-complete — the core lifecycle loop (idempotent scheduled
+generation → run-level compliance scoring → deadline finalization →
+concurrency-safe user completion) is closed. All merges are code-complete and
+statically self-reviewed (by the dispatching CLI, a dedicated Claude
+dispatcher-reviewer subagent, and/or the integration owner directly) —
+**none have run on a live Frappe bench yet**. The first migration gate
+(provisioning a disposable Frappe 16 bench and running `bench migrate` +
+focused tests) is still the next hard verification step before any of this
+can be called done, per the original resume plan — nothing here should be
+read as "working," only as "written and reviewed."
+
+Two real bugs were caught and fixed during this session's review passes (not
+just style nits), both worth noting for anyone auditing the process:
+- S1-T02: two field names in the schedule schema diverged from the frozen
+  contract table (`docs/execution/06-domain-contracts.md` §7) and were
+  corrected before merge.
+- `pulse.tasks`: `now_datetime()` returns a naive datetime in the Frappe
+  *site* time zone, not UTC; both `_generate_runs_for_frequency` (S1-T03) and
+  `finalize_overdue_runs` (S1-T07) needed an explicit conversion before
+  comparing against UTC-stored `due_at` values, or scheduling would silently
+  drift by the site's UTC offset. Caught in `2afabf9`'s follow-on `8a033bc`/
+  `6df2d19`, not in the original review pass — a reminder that this class of
+  bug is easy to miss on first read.
 
 ## Worker handoffs awaiting integration
 
@@ -87,6 +104,12 @@ before any of this can be called done, per the original resume plan.
 | S1-T04 | `158f71b` | integration owner direct review | none | merged |
 | S1-T10 | `f97f0cb` + `da6e406` follow-up | dispatcher-reviewer (agy output), removed one unused import | none | merged |
 | S4-T01 | `fabad5d` | integration owner direct review | none | merged |
+| S1-T11 | `2afabf9` | integration owner direct review | none | merged |
+| S1-T03 | `dbc8153` + `8a033bc` follow-up fix | dispatcher-reviewer, ran the pure unit tests directly, caught and fixed a real timezone bug | none | merged |
+| S1-T07 | `a062a1b` | integration owner direct review | none | merged |
+| tasks.py fix | `6df2d19` | integration owner, found the same timezone bug in `finalize_overdue_runs` while verifying S1-T07 against S1-T03's fix | none | merged (unscheduled fix, not a backlog task) |
+| S2-T02 | `4e3b7c6` | dispatcher-reviewer (Kimi output), audit-only task, no fixes needed | none | merged |
+| S1-T05 | `4dc2267` | integration owner direct review | none | merged |
 
 ## Status update rules
 
