@@ -228,3 +228,73 @@ COMPLETION_RATE = {
     "finance@pm.local":    0.95,
     "driver@pm.local":     0.75,
 }
+
+# ── Acceptance fixture (S1-T06) ───────────────────────────────────────────────
+# Deterministic, fixed-date fixture separate from the relative-date QSR demo.
+# All values are literal per docs/execution/acceptance-fixture.md.
+
+ACCEPTANCE_TIMEZONE = "Asia/Kolkata"
+ACCEPTANCE_BRANCH = "North Branch"
+ACCEPTANCE_DEPARTMENT = ("Operations", "Acceptance fixture department")
+
+# (email, full_name, pulse_role)
+ACCEPTANCE_USERS = [
+    ("maya.iyer@pulse.test",      "Maya Iyer",       "Executive"),
+    ("dev.shah@pulse.test",       "Dev Shah",        "Area Manager"),
+    ("lina.fernandez@pulse.test", "Lina Fernandez",  "Supervisor"),
+    ("owen.patel@pulse.test",     "Owen Patel",      "Operator"),
+    ("nora.singh@pulse.test",     "Nora Singh",      "Operator"),
+]
+
+# (employee_name, reports_to_employee_name) — top-down so parents exist first
+ACCEPTANCE_HIERARCHY = [
+    ("Maya Iyer",       None),
+    ("Dev Shah",        "Maya Iyer"),
+    ("Lina Fernandez",  "Dev Shah"),
+    ("Owen Patel",      "Lina Fernandez"),
+    ("Nora Singh",      None),
+]
+
+# (title, local_start_time, completion_window_minutes, checklist_items)
+# checklist_items: [(description, sequence, weight, item_type, evidence_required)]
+ACCEPTANCE_TEMPLATES = [
+    (
+        "Opening Hygiene Round",
+        "08:30",
+        45,
+        [
+            ("Sanitise entry door handles", 10, 1.0, "Checkbox", "None"),
+            ("Check soap dispensers",       20, 1.0, "Checkbox", "None"),
+            ("Log floor mop status",        30, 1.0, "Checkbox", "None"),
+        ],
+    ),
+    (
+        "Closeout Audit",
+        "18:00",
+        60,
+        [
+            ("Count register cash",              10, 1.0, "Checkbox", "None"),
+            ("Lock storage cabinets",            20, 1.0, "Checkbox", "None"),
+            ("Switch off non-essential lights",  30, 1.0, "Checkbox", "None"),
+        ],
+    ),
+]
+
+# (assignment_name, template_title, employee_email,
+#  local_start_time_override, completion_window_minutes_override)
+ACCEPTANCE_ASSIGNMENTS = [
+    ("A1", "Opening Hygiene Round", "owen.patel@pulse.test", "08:30", 45),
+    ("A2", "Closeout Audit",        "owen.patel@pulse.test", "18:00", 60),
+]
+
+# Fixed dates for the generated windows.
+ACCEPTANCE_FIXTURE_DATE = date(2026, 8, 24)
+ACCEPTANCE_PENDING_DATE = date(2026, 8, 25)
+
+# Run cases: (assignment_name, template_title, local_start_time,
+#             completion_window_minutes, window_date, compliance_result)
+ACCEPTANCE_RUN_CASES = [
+    ("A1", "Opening Hygiene Round", "08:30", 45, ACCEPTANCE_FIXTURE_DATE, "Passed"),
+    ("A2", "Closeout Audit",        "18:00", 60, ACCEPTANCE_FIXTURE_DATE, "Failed"),
+    ("A1", "Opening Hygiene Round", "08:30", 45, ACCEPTANCE_PENDING_DATE, "Pending"),
+]

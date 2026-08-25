@@ -34,4 +34,30 @@ def clear_demo(context: CliCtxObj):
     click.echo("Pulse demo data cleared.")
 
 
-commands = [load_demo, clear_demo]
+@click.command("pulse-load-acceptance-fixture")
+@pass_context
+def load_acceptance_fixture(context: CliCtxObj):
+    """Load the deterministic S1-T06 acceptance fixture."""
+    site = get_site(context)
+    with frappe.init_site(site):
+        frappe.connect()
+        from pulse.demo.seed import seed_acceptance_fixture
+        seed_acceptance_fixture()
+        frappe.db.commit()
+    click.echo("Acceptance fixture loaded.")
+
+
+@click.command("pulse-clear-acceptance-fixture")
+@pass_context
+def clear_acceptance_fixture_command(context: CliCtxObj):
+    """Remove the deterministic S1-T06 acceptance fixture."""
+    site = get_site(context)
+    with frappe.init_site(site):
+        frappe.connect()
+        from pulse.demo.seed import clear_acceptance_fixture
+        clear_acceptance_fixture()
+        frappe.db.commit()
+    click.echo("Acceptance fixture cleared.")
+
+
+commands = [load_demo, clear_demo, load_acceptance_fixture, clear_acceptance_fixture_command]
