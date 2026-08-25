@@ -76,7 +76,7 @@ const CHART_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#8b5cf6'];
 export function Insights() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
+  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month' | 'Custom'>('Day');
   const [isLoading, setIsLoading] = useState(true);
   const [scoreTrends, setScoreTrends] = useState<ScoreTrendPoint[]>([]);
   const [deptComparison, setDeptComparison] = useState<DeptBranchItem[]>([]);
@@ -105,17 +105,19 @@ export function Insights() {
       const { start, end } = dateRange;
       // Use range end for single-date widgets so "Demo data" preset shows data
       const refDate = end || todayISO();
+      // Legacy snapshot-based charts do not support Custom; fall back to Day for those.
+      const legacyPeriodType = periodType === 'Custom' ? 'Day' : periodType;
       try {
         const [trends, dept, branch, perf, tmpl, compl, ca, heat, dist, missed] = await Promise.all([
           getScoreTrends(start, end, periodType, filters),
-          getDepartmentComparison(refDate, periodType, filters),
-          getBranchComparison(refDate, periodType, filters),
-          getTopBottomPerformers(refDate, periodType, 5, filters),
+          getDepartmentComparison(refDate, legacyPeriodType, filters),
+          getBranchComparison(refDate, legacyPeriodType, filters),
+          getTopBottomPerformers(refDate, legacyPeriodType, 5, filters),
           getTemplatePerformance(start, end, filters),
           getCompletionTrend(start, end, filters),
           getCorrectiveActionSummary(filters),
           getDayOfWeekHeatmap(start, end, filters),
-          getScoreDistribution(refDate, periodType, filters),
+          getScoreDistribution(refDate, legacyPeriodType, filters),
           getMostMissedItems(start, end, 10, filters),
         ]);
         setScoreTrends(trends);
@@ -136,18 +138,20 @@ export function Insights() {
     load();
   }, [showInsights, periodType, filters, dateRange.start, dateRange.end]);
 
+  const legacyPeriodType = periodType === 'Custom' ? 'Day' : periodType;
+
   const handleDeptBarClick = (dept: string) => {
     setFilters((f) => ({ ...f, department: dept }));
     setDrillLabel(`Department: ${dept}`);
     const refDate = dateRange.end || todayISO();
-    getEmployeesByDepartment(dept, refDate, periodType as 'Day' | 'Week' | 'Month').then(setFilteredEmployees);
+    getEmployeesByDepartment(dept, refDate, legacyPeriodType).then(setFilteredEmployees);
   };
 
   const handleBranchBarClick = (branch: string) => {
     setFilters((f) => ({ ...f, branch }));
     setDrillLabel(`Branch: ${branch}`);
     const refDate = dateRange.end || todayISO();
-    getEmployeesByBranch(branch, refDate, periodType as 'Day' | 'Week' | 'Month').then(setFilteredEmployees);
+    getEmployeesByBranch(branch, refDate, legacyPeriodType).then(setFilteredEmployees);
   };
 
   const clearDrill = () => {
@@ -174,6 +178,38 @@ export function Insights() {
   const openCount = caSummary?.by_status?.find((s) => s.status === 'Open')?.count ?? 0;
   const inProgressCount = caSummary?.by_status?.find((s) => s.status === 'In Progress')?.count ?? 0;
 
+  const trendData = scoreTrends.map((t) => ({
+    ...t,
+    pct: t.avg_score != null ? Math.round(t.avg_score * 100) : null,
+  }));
+
+  const trendTotals = trendData.reduce(
+    (acc, t) => ({
+      eligible: acc.eligible + (t.eligible_runs ?? 0),
+      passed: acc.passed + (t.passed_runs ?? 0),
+      failed: acc.failed + (t.failed_runs ?? 0),
+    }),
+    { eligible: 0, passed: 0, failed: 0 }
+  );
+
+  function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: typeof trendData[number] }>; label?: string }) {
+    if (active && payload && payload.length) {
+      const p = payload[0].payload;
+      return (
+        <div className="bg-[#18181b] border border-zinc-700 p-3 rounded-lg shadow-lg">
+          <p className="text-xs text-zinc-400 mb-1">{label}</p>
+          <p className="text-lg font-bold font-mono text-white">
+            {p.avg_score != null ? `${Math.round(p.avg_score * 100)}%` : '—'}
+          </p>
+          <p className="text-[10px] text-zinc-500 mt-1 font-mono">
+            {p.eligible_runs} eligible • {p.passed_runs} passed • {p.failed_runs} failed
+          </p>
+        </div>
+      );
+    }
+    return null;
+  }
+
   return (
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex flex-col gap-4">
@@ -184,7 +220,7 @@ export function Insights() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
-              {(['Day', 'Week', 'Month'] as const).map((p) => (
+              {(['Day', 'Week', 'Month', 'Custom'] as const).map((p) => (
                 <Button
                   key={p}
                   variant="ghost"
@@ -264,18 +300,25 @@ export function Insights() {
             <Card className="bg-[#141415] border-zinc-800">
               <CardHeader>
                 <CardTitle className="text-sm text-zinc-200">Org Score Trend</CardTitle>
-                <CardDescription className="text-xs">Avg combined score over last 30 days</CardDescription>
+                <CardDescription className="text-xs">Run-level compliance score over selected range</CardDescription>
               </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={scoreTrends.map((t) => ({ ...t, pct: Math.round(t.avg_score * 100) }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                    <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: 8 }} />
-                    <Line type="monotone" dataKey="pct" stroke="#6366f1" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[220px] flex flex-col gap-2">
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#71717a', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip content={<TrendTooltip />} />
+                      <Line type="monotone" dataKey="pct" stroke="#6366f1" strokeWidth={2} dot={false} connectNulls={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-zinc-500 shrink-0">
+                  <span>Eligible {trendTotals.eligible}</span>
+                  <span className="text-emerald-400">Passed {trendTotals.passed}</span>
+                  <span className="text-rose-400">Failed {trendTotals.failed}</span>
+                </div>
               </CardContent>
             </Card>
             <Card className="bg-[#141415] border-zinc-800">

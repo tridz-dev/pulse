@@ -2,8 +2,11 @@ import { call } from '@/lib/frappe-sdk';
 
 export interface ScoreTrendPoint {
   date: string;
-  avg_score: number;
+  avg_score: number | null;
   employee_count: number;
+  eligible_runs: number;
+  passed_runs: number;
+  failed_runs: number;
 }
 
 export interface DeptBranchItem {
@@ -112,7 +115,7 @@ function filtersParams(f?: InsightFilters): Record<string, unknown> {
 export async function getScoreTrends(
   startDate?: string,
   endDate?: string,
-  periodType: 'Day' | 'Week' | 'Month' = 'Day',
+  periodType: 'Day' | 'Week' | 'Month' | 'Custom' = 'Day',
   filters?: InsightFilters
 ): Promise<ScoreTrendPoint[]> {
   const res = await call.get('pulse.api.insights.get_score_trends', {
