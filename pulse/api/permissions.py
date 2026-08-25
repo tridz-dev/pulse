@@ -5,6 +5,14 @@
 
 import frappe
 
+from pulse.domain.hierarchy import (
+	HierarchyCycleError,
+	get_descendants_scope,
+	get_manager_plus_descendants_scope,
+	get_organisation_scope,
+	get_personal_scope,
+)
+
 
 def has_app_permission():
 	"""Check if user has permission to access the Pulse app."""
@@ -51,6 +59,33 @@ def _get_subtree_employee_names(manager_employee: str) -> list[str]:
 		for sub in _get_subordinate_employee_names(emp):
 			stack.append(sub)
 	return result
+
+
+def get_scope_for_user(user: str | None = None) -> list[str]:
+	"""Resolve the Pulse Employee names visible to the given user based on role.
+
+	Administrator / Pulse Admin / Pulse Executive  →  organisation scope
+	Pulse Leader                                   →  descendants-only inherited scope
+	Pulse Manager                                  →  manager plus descendants
+	Pulse User                                     →  personal scope only
+	"""
+	user = user or frappe.session.user
+	roles = frappe.get_roles(user)
+
+	if user == "Administrator" or "Pulse Admin" in roles:
+		return get_organisation_scope()
+
+	emp = _get_employee_for_user(user)
+	if not emp:
+		return []
+
+	if "Pulse Executive" in roles:
+		return get_organisation_scope()
+	if "Pulse Leader" in roles:
+		return get_descendants_scope(emp)
+	if "Pulse Manager" in roles:
+		return get_manager_plus_descendants_scope(emp)
+	return get_personal_scope(emp)
 
 
 def sop_run_conditions(user: str | None = None, doctype: str | None = None) -> str:
