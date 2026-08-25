@@ -10,6 +10,7 @@ export interface RunListItem {
   total_items?: number;
   completed_items?: number;
   progress: number;
+  compliance_result?: string;
 }
 
 export interface RunDetailsResponse {
@@ -57,6 +58,12 @@ export async function updateRunItem(
   });
 }
 
-export async function completeRun(runName: string): Promise<void> {
-  await call.post('pulse.api.tasks.complete_run', { run_name: runName });
+export async function completeRun(runName: string): Promise<{
+  status: string;
+  compliance_result: string;
+  completed_at: string | null;
+  due_at: string | null;
+}> {
+  const res = await call.post('pulse.api.tasks.complete_run', { run_name: runName });
+  return res.message;
 }

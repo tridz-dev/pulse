@@ -20,12 +20,12 @@ export function MyTasks() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (silent = false) => {
     if (!currentUser) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     const data = await getMyRuns(todayISO());
     setRuns(data);
-    setIsLoading(false);
+    if (!silent) setIsLoading(false);
   };
 
   useEffect(() => {
@@ -70,8 +70,17 @@ export function MyTasks() {
           onOpenChange={(open) => {
             if (!open) {
               setSelectedRunId(null);
-              fetchTasks();
+              fetchTasks(true);
             }
+          }}
+          onComplete={(runName, newStatus, complianceResult) => {
+            setRuns((prev) =>
+              prev.map((r) =>
+                r.name === runName
+                  ? { ...r, status: newStatus, compliance_result: complianceResult }
+                  : r
+              )
+            );
           }}
         />
       )}
@@ -80,26 +89,26 @@ export function MyTasks() {
 }
 
 function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
-  const isClosed = run.status === 'Closed';
+  const isCompleted = run.status === 'Completed';
   const isLocked = run.status === 'Locked';
   const template = (typeof run.template === 'object' && run.template !== null ? run.template : null) as { title?: string; frequency_type?: string } | null;
 
   return (
     <Card
       onClick={onClick}
-      className={`p-4 bg-[#18181b] border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/30 transition-all cursor-pointer group flex items-center justify-between gap-4 ${isClosed ? 'opacity-70' : ''}`}
+      className={`p-4 bg-[#18181b] border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/30 transition-all cursor-pointer group flex items-center justify-between gap-4 ${isCompleted ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center gap-4">
         <div
           className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-            isClosed
+            isCompleted
               ? 'bg-emerald-500/10 text-emerald-500'
               : isLocked
                 ? 'bg-zinc-800 text-zinc-500'
                 : 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20'
           }`}
         >
-          {isClosed ? <CheckCircle2 size={20} /> : <CheckSquare size={20} />}
+          {isCompleted ? <CheckCircle2 size={20} /> : <CheckSquare size={20} />}
         </div>
         <div>
           <h3 className="text-sm font-medium text-zinc-200">
@@ -115,7 +124,7 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
       <div className="flex items-center gap-3">
         <div className="w-24 h-1.5 bg-zinc-900 rounded-full overflow-hidden hidden sm:block">
           <div
-            className={`h-full transition-all duration-500 ${isClosed ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
             style={{ width: `${run.progress ?? 0}%` }}
           />
         </div>
@@ -123,7 +132,8 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
           variant="outline"
           className={`
           ${run.status === 'Open' ? 'text-indigo-400 border-indigo-400/20 bg-indigo-400/10' : ''}
-          ${run.status === 'Closed' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : ''}
+          ${run.status === 'In Progress' ? 'text-amber-500 border-amber-500/20 bg-amber-500/10' : ''}
+          ${run.status === 'Completed' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : ''}
           ${run.status === 'Locked' ? 'text-zinc-500 border-zinc-700 bg-zinc-800' : ''}
         `}
         >
@@ -140,10 +150,12 @@ function ChecklistRunner({
   runId,
   open,
   onOpenChange,
+  onComplete,
 }: {
   runId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onComplete?: (runName: string, newStatus: string, complianceResult: string) => void;
 }) {
   const [details, setDetails] = useState<{
     run: { name: string; status: string; period_date: string };
@@ -158,12 +170,14 @@ function ChecklistRunner({
   }, [runId, open]);
 
   const toggleItem = async (itemId: string, currentStatus: string) => {
-    if (details?.run.status !== 'Open') return;
+    if (details?.run.status !== 'Open' && details?.run.status !== 'In Progress') return;
     const newStatus = currentStatus === 'Completed' ? 'Pending' : 'Completed';
     setDetails((prev) => {
       if (!prev) return prev;
+      const nextStatus = prev.run.status === 'Open' ? 'In Progress' : prev.run.status;
       return {
         ...prev,
+        run: { ...prev.run, status: nextStatus },
         items: prev.items.map((i) => (i.name === itemId ? { ...i, status: newStatus } : i)),
       };
     });
@@ -172,8 +186,15 @@ function ChecklistRunner({
 
   const completeRunHandler = async () => {
     if (!details) return;
-    await completeRun(details.run.name ?? runId);
-    onOpenChange(false);
+    try {
+      const res = await completeRun(details.run.name ?? runId);
+      if (onComplete) {
+        onComplete(details.run.name ?? runId, res.status, res.compliance_result);
+      }
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   if (!details) return null;
@@ -182,7 +203,7 @@ function ChecklistRunner({
     details.items.length > 0
       ? (details.items.filter((i) => i.status === 'Completed').length / details.items.length) * 100
       : 0;
-  const isReadOnly = details.run?.status !== 'Open';
+  const isReadOnly = details.run?.status !== 'Open' && details.run?.status !== 'In Progress';
   const template = details.template ?? {};
   const run = details.run ?? {};
 

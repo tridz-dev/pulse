@@ -58,10 +58,13 @@ export interface SOPRun {
   template: string;
   employee: string;
   period_date: string;
-  status: 'Open' | 'Closed' | 'Locked';
+  status: 'Open' | 'In Progress' | 'Completed' | 'Locked';
   total_items?: number;
   completed_items?: number;
   progress?: number;
+  completed_at?: string;
+  due_at?: string;
+  compliance_result?: 'Pending' | 'Passed' | 'Failed';
   closed_at?: string;
 }
 
