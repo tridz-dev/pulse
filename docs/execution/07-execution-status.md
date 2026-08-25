@@ -59,20 +59,21 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 | W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete (code); not runtime-verified** | all six merged — idempotent generation, compliance scoring, and deadline finalization now form a closed loop |
 | W3 Execution/setup | S1-T05 ✅, S4-T03 ✅, S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | **complete (code); not runtime-verified** | all five merged — finalized-run mutation is now blocked at the DocType level as a backstop to the API-layer checks |
 | W4 Explainability | S1-T06 ✅, S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | **complete (code); not runtime-verified** | all four merged; the deterministic acceptance fixture from S0-T03's spec is now real seeder code |
-| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 ✅, S3-T03 (not started), S3-T04 (not started) | 4/6 merged | S3-T03 (Mission Control first view) is now dependency-ready (needs S2-T04 ✅ + S3-T01 ✅); S3-T04 follows once S3-T03 lands |
+| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 ✅, S3-T03 ✅, S3-T04 ✅ | **complete (code); not runtime-verified** | all six merged — Mission Control and Insights both now consume the real run-level compliance/failure/trend backend |
 
-**25 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
-this resume session (2026-08-26, same day as the original handoff). W1
-through W4 are fully code-complete: the core lifecycle loop (idempotent
-scheduled generation → run-level compliance scoring → deadline finalization
-→ concurrency-safe user completion → immutability backstop), the analytics
-layer (hierarchy roll-up, scoped failure list, timezone-aware score trends,
-manager drill-down from gauge to failing run), and the deterministic
-acceptance fixture are all in place. Only S3-T03/S3-T04 (connecting the
-existing analytics backend to the Insights/Mission Control frontend pages)
-remain from the actively-planned W1-W5 scope. S4-T02/S4-T04 are lightweight
-design-doc-only tasks (no code); S5/S6 remain explicitly out of scope for
-this milestone per the frozen product decisions in `CONTEXT.md`.
+**27 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
+this resume session (2026-08-26, same day as the original handoff). **W1
+through W5 — the entire actively-planned first-milestone scope — is fully
+code-complete.** The core lifecycle loop (idempotent scheduled generation →
+run-level compliance scoring → deadline finalization → concurrency-safe user
+completion → immutability backstop), the analytics layer (hierarchy roll-up,
+scoped failure list, timezone-aware score trends, manager drill-down from
+gauge to failing run, Mission Control's exact attention-ordering rule,
+null-vs-zero-safe trend charting), and the deterministic acceptance fixture
+are all in place. What remains in the full backlog is S4-T02/S4-T04
+(lightweight design-doc-only tasks, no code) and S5/S6, which stay explicitly
+out of scope for this milestone per the frozen product decisions in
+`CONTEXT.md`.
 
 All merges are code-complete and statically self-reviewed (by the
 dispatching CLI, a dedicated Claude dispatcher-reviewer subagent, and/or the
@@ -127,6 +128,19 @@ just style nits), both worth noting for anyone auditing the process:
 | S2-T04 | `7b4972b` | integration owner direct review | none | merged |
 | S1-T06 | `f2db57d` | integration owner direct review; verified `manager_path_snapshot` reuses the real `_build_manager_path` (not hand-rolled) after a mid-flight concern about a confused reasoning trace | none | merged |
 | S3-T01 fix | `fea8cea` | dispatcher-reviewer, found a real `due_at` date-boundary bug (bare date string silently excluded a run due later that same day) after `594584f` was already merged; regression test added | none | merged (unscheduled fix) |
+| S3-T03 | `b42333e` | integration owner direct review; verified the exact Mission Control ordering rule by tracing the comparator, removed a duplicate/dead `getComplianceScore` the agent had also added to `services/scores.ts` | none | merged |
+| S3-T04 | `db04555` | integration owner direct review; verified `avg_score` never coerces null to 0 and `connectNulls={false}` renders a genuine gap, not a 0% point | none | merged |
+
+## First milestone: actively-planned scope complete
+
+As of `db04555`, every task in W1-W5 (the full first-milestone execution
+plan) is merged. **This is a code-completeness milestone, not a
+"working software" milestone** — see the runtime-verification gate above.
+The literal next step, unchanged from the original resume plan: provision a
+disposable Frappe 16 bench, run `bench migrate`, run every merged test file,
+then `bench --site <site> pulse-load-acceptance-fixture` and confirm the
+acceptance-fixture.md 1.0/0.0/0.5/null score cases through the real
+`get_compliance_score` endpoint before any Sonnet/Codex final review.
 
 ## Status update rules
 
