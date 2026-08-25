@@ -3,7 +3,9 @@
 
 """Scheduler tasks: generate runs, lock overdue, cache scores."""
 
+import datetime
 import json
+from zoneinfo import ZoneInfo
 
 import frappe
 from frappe.utils import get_system_timezone, getdate, now, now_datetime
@@ -173,6 +175,14 @@ def _generate_runs_for_frequency(frequency_type: str, evaluation_instant=None) -
 		evaluation_instant = now_datetime()
 
 	site_tz = get_system_timezone()
+	# ``now_datetime()`` returns a naive datetime in the system time zone.
+	# Convert it to a proper UTC-aware instant before resolving schedules.
+	if isinstance(evaluation_instant, datetime.datetime) and evaluation_instant.tzinfo is None:
+		evaluation_instant = (
+			evaluation_instant.replace(tzinfo=ZoneInfo(site_tz))
+			.astimezone(ZoneInfo("UTC"))
+		)
+
 	created = 0
 	for assignment, template in _active_assignments_for_frequency(frequency_type):
 		try:

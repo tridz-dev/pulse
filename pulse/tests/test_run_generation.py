@@ -3,6 +3,7 @@
 
 import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -13,7 +14,7 @@ from pulse.tasks import generate_daily_runs
 class TestRunGeneration(FrappeTestCase):
 	"""Integration tests for idempotent scheduled SOP Run generation."""
 
-	FIXED_NOW = datetime.datetime(2026, 1, 15, 8, 0, 0)
+	FIXED_NOW = datetime.datetime(2026, 1, 15, 8, 0, 0, tzinfo=ZoneInfo("UTC"))
 
 	def setUp(self):
 		from pulse.install import create_default_pulse_role_records, create_pulse_roles
