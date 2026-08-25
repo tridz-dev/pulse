@@ -27,3 +27,6 @@ class SOPRun(Document):
 		self.total_items = total
 		self.completed_items = completed
 		self.progress = (completed / total * 100) if total else 0
+
+	# Schedule identity is intentionally not derived here yet.
+	# S1-T03 will populate assignment/schedule_key/run_key/opens_at/due_at at generation time.

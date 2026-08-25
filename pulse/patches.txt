@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 pulse.pulse_core.patches.v1_1.migrate_roles
 pulse.pulse_core.patches.v1_2.migrate_run_lifecycle
+pulse.pulse_core.patches.v1_2.migrate_run_schedule

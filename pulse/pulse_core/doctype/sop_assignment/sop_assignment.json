@@ -7,6 +7,9 @@
  "field_order": [
   "template",
   "employee",
+  "schedule_timezone_override",
+  "local_start_time_override",
+  "completion_window_minutes_override",
   "is_active"
  ],
  "fields": [
@@ -25,6 +28,22 @@
    "label": "Employee",
    "options": "Pulse Employee",
    "reqd": 1
+  },
+  {
+   "description": "Optional valid IANA time-zone name; blank means use template/site default.",
+   "fieldname": "schedule_timezone_override",
+   "fieldtype": "Data",
+   "label": "Schedule Timezone Override"
+  },
+  {
+   "fieldname": "local_start_time_override",
+   "fieldtype": "Time",
+   "label": "Local Start Time Override"
+  },
+  {
+   "fieldname": "completion_window_minutes_override",
+   "fieldtype": "Int",
+   "label": "Completion Window Minutes Override"
   },
   {
    "default": "1",

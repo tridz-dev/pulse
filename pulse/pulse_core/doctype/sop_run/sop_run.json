@@ -11,11 +11,18 @@
   "status",
   "compliance_result",
   "completed_at",
+  "closed_at",
+  "assignment",
+  "schedule_key",
+  "run_key",
+  "opens_at",
+  "due_at",
+  "effective_timezone",
+  "schedule_backfill_incomplete",
   "run_items",
   "total_items",
   "completed_items",
-  "progress",
-  "closed_at"
+  "progress"
  ],
  "fields": [
   {
@@ -65,6 +72,51 @@
    "read_only": 1
   },
   {
+   "description": "Deprecated in favor of completed_at + status=Completed, kept for backward compatibility.",
+   "fieldname": "closed_at",
+   "fieldtype": "Datetime",
+   "label": "Closed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "assignment",
+   "fieldtype": "Link",
+   "label": "Assignment",
+   "options": "SOP Assignment"
+  },
+  {
+   "fieldname": "schedule_key",
+   "fieldtype": "Data",
+   "label": "Schedule Key"
+  },
+  {
+   "fieldname": "run_key",
+   "fieldtype": "Data",
+   "label": "Run Key",
+   "unique": 1
+  },
+  {
+   "fieldname": "opens_at",
+   "fieldtype": "Datetime",
+   "label": "Opens At"
+  },
+  {
+   "fieldname": "due_at",
+   "fieldtype": "Datetime",
+   "label": "Due At"
+  },
+  {
+   "fieldname": "effective_timezone",
+   "fieldtype": "Data",
+   "label": "Effective Timezone"
+  },
+  {
+   "default": "0",
+   "fieldname": "schedule_backfill_incomplete",
+   "fieldtype": "Check",
+   "label": "Schedule Backfill Incomplete"
+  },
+  {
    "fieldname": "run_items",
    "fieldtype": "Table",
    "label": "Run Items",
@@ -87,13 +139,6 @@
    "fieldname": "progress",
    "fieldtype": "Percent",
    "label": "Progress",
-   "read_only": 1
-  },
-  {
-   "description": "Deprecated in favor of completed_at + status=Completed, kept for backward compatibility.",
-   "fieldname": "closed_at",
-   "fieldtype": "Datetime",
-   "label": "Closed At",
    "read_only": 1
   }
  ],

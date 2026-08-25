@@ -8,6 +8,9 @@
   "title",
   "department",
   "frequency_type",
+  "schedule_timezone",
+  "local_start_time",
+  "completion_window_minutes",
   "owner_role",
   "active_from",
   "active_to",
@@ -35,6 +38,22 @@
    "label": "Frequency Type",
    "options": "Daily\nWeekly\nMonthly\nCustom",
    "reqd": 1
+  },
+  {
+   "description": "Valid IANA time-zone name.",
+   "fieldname": "schedule_timezone",
+   "fieldtype": "Data",
+   "label": "Schedule Timezone"
+  },
+  {
+   "fieldname": "local_start_time",
+   "fieldtype": "Time",
+   "label": "Local Start Time"
+  },
+  {
+   "fieldname": "completion_window_minutes",
+   "fieldtype": "Int",
+   "label": "Completion Window Minutes"
   },
   {
    "fieldname": "owner_role",
