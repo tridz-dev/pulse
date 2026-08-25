@@ -6,13 +6,15 @@
 from datetime import timedelta
 
 import frappe
-from frappe.utils import getdate
+from frappe.utils import get_system_timezone, getdate
 
 from pulse.api.permissions import (
 	_get_employee_for_user,
 	_get_subtree_employee_names,
 )
 from pulse.api.scores import _calculate_score_snapshot
+from pulse.domain.compliance import classify_runs
+from pulse.domain.periods import build_buckets, bucket_utc_bounds
 
 
 def _get_insight_employee_scope():
@@ -85,7 +87,19 @@ def _apply_filters(employee_names, department=None, branch=None, employee=None):
 
 @frappe.whitelist()
 def get_score_trends(start_date=None, end_date=None, period_type="Day", department=None, branch=None, employee=None):
-	"""Time-series avg combined score. Returns [{date, avg_score, employee_count}]."""
+	"""Time-series run-level compliance score, bucketed by ``due_at``.
+
+	Replaces the legacy Score-Snapshot-average approach: each bucket's score
+	is derived from ``pulse.domain.compliance.classify_runs()`` over the
+	``SOP Run`` rows whose ``due_at`` falls within that bucket's UTC range,
+	not from averaging per-employee item percentages.
+
+	Returns [{date, avg_score, employee_count, eligible_runs, passed_runs,
+	failed_runs}] per bucket. ``avg_score`` is kept as the field name for
+	frontend compatibility, but it is now the run-level compliance score
+	(passed / eligible) for the bucket, not an average of per-employee
+	averages; it is ``None`` when the bucket has no eligible runs.
+	"""
 	scope, _ = _get_insight_employee_scope()
 	employees = _apply_filters(scope, department=department, branch=branch, employee=employee)
 	if not employees:
@@ -95,20 +109,37 @@ def get_score_trends(start_date=None, end_date=None, period_type="Day", departme
 		start = getdate(start_date).strftime("%Y-%m-%d")
 	if end_date:
 		end = getdate(end_date).strftime("%Y-%m-%d")
+
+	buckets = build_buckets(period_type or "Day", getdate(start), getdate(end))
+	site_tz = get_system_timezone()
 	placeholders = ", ".join(["%s"] * len(employees))
-	rows = frappe.db.sql(
-		f"""
-		SELECT s.period_key AS date, AVG(s.combined_score) AS avg_score, COUNT(DISTINCT s.employee) AS employee_count
-		FROM `tabScore Snapshot` s
-		WHERE s.period_type = %s AND s.employee IN ({placeholders})
-		  AND s.period_key BETWEEN %s AND %s
-		GROUP BY s.period_key
-		ORDER BY s.period_key
-		""",
-		[period_type or "Day"] + employees + [start, end],
-		as_dict=True,
-	)
-	return [{"date": r["date"], "avg_score": round(float(r["avg_score"] or 0), 4), "employee_count": r["employee_count"]} for r in rows]
+
+	out = []
+	for bucket in buckets:
+		start_utc, end_utc = bucket_utc_bounds(bucket, site_tz)
+		rows = frappe.db.sql(
+			f"""
+			SELECT r.compliance_result, r.employee
+			FROM `tabSOP Run` r
+			WHERE r.employee IN ({placeholders})
+			  AND r.due_at >= %s AND r.due_at < %s
+			""",
+			employees + [start_utc, end_utc],
+			as_dict=True,
+		)
+		result = classify_runs(rows)
+		employee_count = len({r["employee"] for r in rows})
+		out.append(
+			{
+				"date": bucket["label"],
+				"avg_score": round(result["score"], 4) if result["score"] is not None else None,
+				"employee_count": employee_count,
+				"eligible_runs": result["eligible_runs"],
+				"passed_runs": result["passed_runs"],
+				"failed_runs": result["failed_runs"],
+			}
+		)
+	return out
 
 
 @frappe.whitelist()
