@@ -3,96 +3,208 @@
 
 """Scheduler tasks: generate runs, lock overdue, cache scores."""
 
+import json
+
 import frappe
-from frappe.utils import getdate, now
+from frappe.utils import get_system_timezone, getdate, now, now_datetime
+
+from pulse.domain.scheduling import make_run_key, resolve_schedule
 
 
-def _assignments_for_frequency(frequency_type: str, period_date):
-	"""Return list of (assignment, template) for assignments whose template matches frequency and is active on period_date."""
-	period_str = period_date.strftime("%Y-%m-%d") if hasattr(period_date, "strftime") else str(period_date)
+def _active_assignments_for_frequency(frequency_type: str):
+	"""Return active assignments whose template matches ``frequency_type`` and is active."""
 	assignments = frappe.get_all(
 		"SOP Assignment",
 		filters={"is_active": 1},
-		fields=["name", "template", "employee"],
+		fields=[
+			"name",
+			"template",
+			"employee",
+			"schedule_timezone_override",
+			"local_start_time_override",
+			"completion_window_minutes_override",
+		],
 	)
 	out = []
 	for a in assignments:
 		template = frappe.db.get_value(
 			"SOP Template",
-			a["template"],
-			["name", "frequency_type", "active_from", "active_to", "is_active"],
+			a.template,
+			[
+				"name",
+				"title",
+				"department",
+				"frequency_type",
+				"active_from",
+				"active_to",
+				"is_active",
+				"schedule_timezone",
+				"local_start_time",
+				"completion_window_minutes",
+				"modified",
+			],
 			as_dict=True,
 		)
-		if not template or template["frequency_type"] != frequency_type or not template.get("is_active"):
-			continue
-		active_from = getdate(template.get("active_from")) if template.get("active_from") else None
-		active_to = getdate(template.get("active_to")) if template.get("active_to") else None
-		if active_from and period_date < active_from:
-			continue
-		if active_to and period_date > active_to:
+		if not template or template.frequency_type != frequency_type or not template.get("is_active"):
 			continue
 		out.append((a, template))
 	return out
 
 
-def _create_run_for_assignment(assignment, template_name: str, period_date):
-	"""Create one SOP Run for the assignment on the given period date, with run_items from template."""
-	period_str = period_date.strftime("%Y-%m-%d") if hasattr(period_date, "strftime") else str(period_date)
-	existing = frappe.db.exists(
-		"SOP Run",
-		{"template": template_name, "employee": assignment["employee"], "period_date": period_str},
+def _build_manager_path(employee_name: str) -> str:
+	"""Walk Pulse Employee.reports_to upward and return JSON [{id, label}, ...].
+
+	Guards against cycles so malformed reporting lines cannot loop forever.
+	Mirrors the approach used by the snapshot backfill patch.
+	"""
+	path = []
+	current = employee_name
+	visited = set()
+
+	while current:
+		if current in visited:
+			break
+		visited.add(current)
+
+		manager = frappe.db.get_value(
+			"Pulse Employee",
+			current,
+			["reports_to", "employee_name"],
+			as_dict=True,
+		)
+		if not manager or not manager.reports_to:
+			break
+
+		current = manager.reports_to
+		label = frappe.db.get_value("Pulse Employee", current, "employee_name") or current
+		path.append({"id": current, "label": label})
+
+	return json.dumps(path, default=str)
+
+
+def _create_run_for_assignment_window(assignment, template, schedule) -> int:
+	"""Create one SOP Run for the resolved window, or skip if the run_key exists.
+
+	Returns 1 when a run is created, 0 otherwise.
+	"""
+	window_date = schedule["window_date"]
+	active_from = getdate(template.active_from) if template.active_from else None
+	active_to = getdate(template.active_to) if template.active_to else None
+	if active_from and window_date < active_from:
+		return 0
+	if active_to and window_date > active_to:
+		return 0
+
+	run_key = make_run_key(assignment.name, schedule["schedule_key"])
+	if frappe.db.exists("SOP Run", {"run_key": run_key}):
+		return 0
+
+	template_doc = frappe.get_doc("SOP Template", template.name)
+
+	employee = frappe.db.get_value(
+		"Pulse Employee",
+		assignment.employee,
+		["employee_name", "branch", "department", "reports_to"],
+		as_dict=True,
 	)
-	if existing:
-		return
-	template = frappe.get_doc("SOP Template", template_name)
-	run = frappe.get_doc(
-		{
-			"doctype": "SOP Run",
-			"template": template_name,
-			"employee": assignment["employee"],
-			"period_date": period_str,
-			"status": "Open",
-		}
-	)
-	for item in template.checklist_items or []:
-		run.append(
-			"run_items",
+	if not employee:
+		return 0
+
+	department_name = None
+	if employee.department:
+		department_name = (
+			frappe.db.get_value("Pulse Department", employee.department, "department_name")
+			or employee.department
+		)
+
+	run_items = []
+	for item in template_doc.checklist_items or []:
+		run_items.append(
 			{
 				"checklist_item": item.description,
 				"weight": item.weight,
 				"item_type": item.item_type,
 				"status": "Pending",
 				"evidence_required": item.evidence_required or "None",
-			},
+			}
 		)
-	run.insert()
+
+	run = frappe.get_doc(
+		{
+			"doctype": "SOP Run",
+			"template": assignment.template,
+			"employee": assignment.employee,
+			"period_date": window_date,
+			"status": "Open",
+			"compliance_result": "Pending",
+			"assignment": assignment.name,
+			"schedule_key": schedule["schedule_key"],
+			"run_key": run_key,
+			"opens_at": schedule["opens_at"],
+			"due_at": schedule["due_at"],
+			"effective_timezone": schedule["effective_timezone"],
+			"template_title_snapshot": template.title,
+			"template_modified_snapshot": template.modified,
+			"employee_name_snapshot": employee.employee_name,
+			"manager_path_snapshot": _build_manager_path(assignment.employee),
+			"department_snapshot": department_name,
+			"branch_snapshot": employee.branch,
+			"frequency_snapshot": template.frequency_type,
+			"completion_window_minutes_snapshot": schedule["completion_window_minutes"],
+			"snapshot_is_complete": 1,
+			"run_items": run_items,
+			"total_items": len(run_items),
+			"completed_items": 0,
+			"progress": 0,
+		}
+	)
+	run.insert(ignore_permissions=True)
 	frappe.db.commit()
+	return 1
+
+
+def _generate_runs_for_frequency(frequency_type: str, evaluation_instant=None) -> int:
+	"""Generate runs for all active assignments of the given frequency.
+
+	Only creates the currently-actionable window and skips duplicates by
+	``run_key``. Future windows are never pre-generated.
+	"""
+	if evaluation_instant is None:
+		evaluation_instant = now_datetime()
+
+	site_tz = get_system_timezone()
+	created = 0
+	for assignment, template in _active_assignments_for_frequency(frequency_type):
+		try:
+			schedule = resolve_schedule(template, assignment, evaluation_instant, site_tz)
+		except ValueError as e:
+			frappe.logger("scheduler").warning(f"Skipping assignment {assignment.name}: {e}")
+			continue
+		if not schedule:
+			continue
+		created += _create_run_for_assignment_window(assignment, template, schedule)
+	return created
 
 
 def generate_daily_runs():
-	"""Create SOP Runs for today for all Daily assignments."""
-	today = getdate()
-	for assignment, _ in _assignments_for_frequency("Daily", today):
-		_create_run_for_assignment(assignment, assignment["template"], today)
+	"""Create SOP Runs for today's actionable window for all Daily assignments."""
+	_generate_runs_for_frequency("Daily")
 
 
 def generate_weekly_runs():
-	"""Create SOP Runs for the current week (Monday) for all Weekly assignments."""
+	"""Create SOP Runs for the current week's actionable window on Mondays only."""
 	today = getdate()
-	# Run on Monday: create runs for this week's Monday
 	if today.weekday() != 0:  # 0 = Monday
 		return
-	for assignment, _ in _assignments_for_frequency("Weekly", today):
-		_create_run_for_assignment(assignment, assignment["template"], today)
+	_generate_runs_for_frequency("Weekly")
 
 
 def generate_monthly_runs():
-	"""Create SOP Runs for the 1st of current month for all Monthly assignments."""
+	"""Create SOP Runs for the current month's actionable window on the 1st only."""
 	today = getdate()
 	if today.day != 1:
 		return
-	for assignment, _ in _assignments_for_frequency("Monthly", today):
-		_create_run_for_assignment(assignment, assignment["template"], today)
+	_generate_runs_for_frequency("Monthly")
 
 
 def lock_overdue_runs():
