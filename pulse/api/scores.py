@@ -4,9 +4,11 @@
 from datetime import timedelta
 
 import frappe
-from frappe.utils import getdate, get_first_day, get_last_day
+from frappe.utils import getdate, get_first_day, get_last_day, get_time_zone
 
-from pulse.api.permissions import _get_system_role_for_employee
+from pulse.api.permissions import _get_system_role_for_employee, get_scope_for_user
+from pulse.domain.compliance import classify_runs
+from pulse.domain.hierarchy import get_descendants_scope, get_personal_scope
 
 
 def _period_range(date_str: str, period_type: str):
@@ -26,6 +28,12 @@ def _period_range(date_str: str, period_type: str):
 	end = get_last_day(dt)
 	return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
+
+# LEGACY: _calculate_score_snapshot and the own_score/team_score/combined_score helpers
+# below are superseded by the run-level compliance scoring in pulse.domain.compliance
+# and the get_compliance_score endpoint. They are retained temporarily for prototype
+# compatibility and must not be used by new callers. Removal is pending migration of
+# Insights, Operations and the Score Snapshot cache.
 
 def _calculate_score_snapshot(employee: str, date_str: str, period_type: str) -> dict:
 	"""Compute own_score, team_score, combined_score for one employee in the period."""
@@ -257,3 +265,97 @@ def _get_subtree_employees(manager_employee: str) -> list:
 		for sub in frappe.get_all("Pulse Employee", filters={"reports_to": emp, "is_active": 1}, pluck="name"):
 			stack.append(sub)
 	return result
+
+
+def _compliance_period_meta(date_str: str, period_type: str) -> dict:
+	"""Build the period block for the compliance score response contract."""
+	start_d, end_d = _period_range(date_str, period_type)
+	try:
+		tz = get_time_zone()
+	except Exception:
+		tz = "UTC"
+	return {
+		"type": period_type,
+		"start": start_d,
+		"end": end_d,
+		"timezone": tz or "UTC",
+	}
+
+
+def _empty_compliance_response(subject: str, scope: str, period_meta: dict) -> dict:
+	"""Return the no-data shape of the compliance score response."""
+	return {
+		"scope": scope,
+		"subject": subject,
+		"score": None,
+		"passed_runs": 0,
+		"failed_runs": 0,
+		"eligible_runs": 0,
+		"period": period_meta,
+	}
+
+
+@frappe.whitelist()
+def get_compliance_score(
+	employee: str,
+	scope: str = "personal",
+	date: str | None = None,
+	period_type: str = "Day",
+) -> dict:
+	"""Return the run-level compliance score for a personal or inherited scope.
+
+	The caller's visible employee set is resolved through
+	``pulse.api.permissions.get_scope_for_user``. The requested scope is then
+	restricted to that visible set before any aggregation happens.
+
+	Response contract:
+	    {
+	        "scope": "personal" | "inherited",
+	        "subject": <employee id>,
+	        "score": <0.0..1.0 | null>,
+	        "passed_runs": <int>,
+	        "failed_runs": <int>,
+	        "eligible_runs": <int>,
+	        "period": {"type": "Day|Week|Month", "start": ..., "end": ..., "timezone": ...}
+	    }
+	"""
+	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
+	period_type = period_type or "Day"
+	period_meta = _compliance_period_meta(date_str, period_type)
+
+	visible_scope = set(get_scope_for_user())
+	if not visible_scope:
+		return _empty_compliance_response(employee, scope, period_meta)
+
+	if scope == "personal":
+		target_employees = set(get_personal_scope(employee))
+	elif scope == "inherited":
+		target_employees = set(get_descendants_scope(employee))
+	else:
+		frappe.throw(f"Invalid scope '{scope}'. Use 'personal' or 'inherited'.")
+
+	# Apply hierarchy scope before aggregation (fail closed for out-of-scope rows).
+	target_employees &= visible_scope
+	if not target_employees:
+		return _empty_compliance_response(employee, scope, period_meta)
+
+	start_d, end_d = _period_range(date_str, period_type)
+	runs = frappe.get_all(
+		"SOP Run",
+		filters={
+			"employee": ["in", list(target_employees)],
+			"period_date": ["between", [start_d, end_d]],
+		},
+		fields=["compliance_result"],
+	)
+
+	result = classify_runs(runs)
+	return {
+		"scope": scope,
+		"subject": employee,
+		"score": result["score"],
+		"passed_runs": result["passed_runs"],
+		"failed_runs": result["failed_runs"],
+		"eligible_runs": result["eligible_runs"],
+		"period": period_meta,
+	}
