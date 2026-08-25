@@ -58,23 +58,31 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 | W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **complete (code); not runtime-verified** | all four merged; static + dispatcher-reviewer diff-check only |
 | W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete (code); not runtime-verified** | all six merged — idempotent generation, compliance scoring, and deadline finalization now form a closed loop |
 | W3 Execution/setup | S1-T05 ✅, S4-T03 ✅, S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | **complete (code); not runtime-verified** | all five merged — finalized-run mutation is now blocked at the DocType level as a backstop to the API-layer checks |
-| W4 Explainability | S1-T06 (not started), S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | 3/4 merged | only S1-T06 (Implement acceptance fixtures) remains, now dependency-ready (needs S1-T05 ✅ + S4-T03 ✅ + S0-T03 ✅) |
-| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 (not started), S3-T03 (not started), S3-T04 (not started) | partial | 3/6 merged; S2-T04 now dependency-ready (needs S2-T03 ✅ + S3-T01 ✅); S3-T03/S3-T04 follow once S2-T04 lands |
+| W4 Explainability | S1-T06 ✅, S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | **complete (code); not runtime-verified** | all four merged; the deterministic acceptance fixture from S0-T03's spec is now real seeder code |
+| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 ✅, S3-T03 (not started), S3-T04 (not started) | 4/6 merged | S3-T03 (Mission Control first view) is now dependency-ready (needs S2-T04 ✅ + S3-T01 ✅); S3-T04 follows once S3-T03 lands |
 
-**23 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
-this resume session (2026-08-26, same day as the original handoff). W1, W2,
-and W3 are fully code-complete — the core lifecycle loop (idempotent
+**25 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
+this resume session (2026-08-26, same day as the original handoff). W1
+through W4 are fully code-complete: the core lifecycle loop (idempotent
 scheduled generation → run-level compliance scoring → deadline finalization
-→ concurrency-safe user completion → immutability backstop) is closed, and
-the analytics layer (hierarchy roll-up, scoped failure list, timezone-aware
-score trends) is mostly in place too. All merges are code-complete and
-statically self-reviewed (by the dispatching CLI, a dedicated Claude
-dispatcher-reviewer subagent, and/or the integration owner directly) —
-**none have run on a live Frappe bench yet**. The first migration gate
-(provisioning a disposable Frappe 16 bench and running `bench migrate` +
-focused tests) is still the next hard verification step before any of this
-can be called done, per the original resume plan — nothing here should be
-read as "working," only as "written and reviewed."
+→ concurrency-safe user completion → immutability backstop), the analytics
+layer (hierarchy roll-up, scoped failure list, timezone-aware score trends,
+manager drill-down from gauge to failing run), and the deterministic
+acceptance fixture are all in place. Only S3-T03/S3-T04 (connecting the
+existing analytics backend to the Insights/Mission Control frontend pages)
+remain from the actively-planned W1-W5 scope. S4-T02/S4-T04 are lightweight
+design-doc-only tasks (no code); S5/S6 remain explicitly out of scope for
+this milestone per the frozen product decisions in `CONTEXT.md`.
+
+All merges are code-complete and statically self-reviewed (by the
+dispatching CLI, a dedicated Claude dispatcher-reviewer subagent, and/or the
+integration owner directly) — **none have run on a live Frappe bench yet**.
+The first migration gate (provisioning a disposable Frappe 16 bench and
+running `bench migrate` + focused tests, then `pulse-load-acceptance-fixture`
++ confirming the 1.0/0.0/0.5/null score cases through the real
+`get_compliance_score` endpoint) is still the next hard verification step
+before any of this can be called done, per the original resume plan —
+nothing here should be read as "working," only as "written and reviewed."
 
 Two real bugs were caught and fixed during this session's review passes (not
 just style nits), both worth noting for anyone auditing the process:
@@ -116,6 +124,9 @@ just style nits), both worth noting for anyone auditing the process:
 | S4-T03 | `18f64e0` | integration owner direct review | none | merged |
 | S2-T03 | `4067b62` | dispatcher-reviewer (Antigravity output), audit-only task, fixed one float-precision test assertion | none | merged |
 | S3-T02 | `58245d3` | integration owner direct review; verified only `get_score_trends` changed in a large shared file | none | merged |
+| S2-T04 | `7b4972b` | integration owner direct review | none | merged |
+| S1-T06 | `f2db57d` | integration owner direct review; verified `manager_path_snapshot` reuses the real `_build_manager_path` (not hand-rolled) after a mid-flight concern about a confused reasoning trace | none | merged |
+| S3-T01 fix | `fea8cea` | dispatcher-reviewer, found a real `due_at` date-boundary bug (bare date string silently excluded a run due later that same day) after `594584f` was already merged; regression test added | none | merged (unscheduled fix) |
 
 ## Status update rules
 
