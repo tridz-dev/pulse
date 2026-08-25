@@ -9,6 +9,8 @@
   "employee",
   "period_date",
   "status",
+  "compliance_result",
+  "completed_at",
   "run_items",
   "total_items",
   "completed_items",
@@ -45,8 +47,22 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nClosed\nLocked",
+   "options": "Open\nIn Progress\nCompleted\nLocked",
    "reqd": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "compliance_result",
+   "fieldtype": "Select",
+   "label": "Compliance Result",
+   "options": "Pending\nPassed\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Completed At",
+   "read_only": 1
   },
   {
    "fieldname": "run_items",
@@ -74,6 +90,7 @@
    "read_only": 1
   },
   {
+   "description": "Deprecated in favor of completed_at + status=Completed, kept for backward compatibility.",
    "fieldname": "closed_at",
    "fieldtype": "Datetime",
    "label": "Closed At",

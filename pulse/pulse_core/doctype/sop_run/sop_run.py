@@ -11,8 +11,11 @@ class SOPRun(Document):
 
 	def before_save(self):
 		self._recompute_totals()
-		if self.has_value_changed("status") and self.status == "Closed":
-			self.closed_at = now()
+		if not self.compliance_result:
+			self.compliance_result = "Pending"
+		if self.has_value_changed("status") and self.status == "Completed":
+			self.completed_at = now()
+			self.closed_at = now() # Deprecated backward-compatibility field
 
 	def _recompute_totals(self):
 		total = len(self.run_items) if self.run_items else 0
