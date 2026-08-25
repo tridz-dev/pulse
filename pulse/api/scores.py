@@ -98,16 +98,27 @@ def _calculate_score_snapshot(employee: str, date_str: str, period_type: str) ->
 	}
 
 
+# LEGACY: compatibility-only wrapper around _calculate_score_snapshot.
+# Returns the ambiguous combined_score shape and must not be used as a default
+# manager view. Slated for removal once Insights / Operations migrate to
+# get_compliance_score.
+
+
 @frappe.whitelist()
 def get_score_for_user(employee: str, date: str | None = None, period_type: str = "Day"):
-	"""Calculate or return cached score snapshot for one employee."""
+	"""Calculate or return cached score snapshot for one employee (legacy)."""
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 	return _calculate_score_snapshot(employee, date_str, period_type or "Day")
 
 
+# LEGACY: compatibility-only; exposes combined_score for direct reports.
+# New callers should use get_compliance_score(scope="inherited") instead.
+# Slated for removal once Team and Insights pages consume the explicit contract.
+
+
 @frappe.whitelist()
 def get_team_scores(manager_employee: str, date: str | None = None, period_type: str = "Day"):
-	"""Scores for all direct reports of a manager."""
+	"""Scores for all direct reports of a manager (legacy)."""
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 	subs = frappe.get_all(
 		"Pulse Employee",
@@ -133,9 +144,14 @@ def get_team_scores(manager_employee: str, date: str | None = None, period_type:
 	return out
 
 
+# LEGACY: compatibility-only bulk wrapper; returns combined_score per employee.
+# New callers should use get_compliance_score(scope="inherited") instead.
+# Slated for removal once Operations / Insights migrate to the explicit contract.
+
+
 @frappe.whitelist()
 def get_all_team_scores(employee: str, date: str | None = None, period_type: str = "Day"):
-	"""Scores for all employees: org-wide for Executive, subtree for Area Manager."""
+	"""Scores for all employees: org-wide for Executive, subtree for Area Manager (legacy)."""
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 	emp_doc = frappe.db.get_value(
 		"Pulse Employee",
@@ -303,6 +319,10 @@ def get_compliance_score(
 	period_type: str = "Day",
 ) -> dict:
 	"""Return the run-level compliance score for a personal or inherited scope.
+
+	The default ``scope="personal"`` is kept for backward compatibility.
+	Manager-facing callers that want the default "inherited health" view
+	should explicitly pass ``scope="inherited"``.
 
 	The caller's visible employee set is resolved through
 	``pulse.api.permissions.get_scope_for_user``. The requested scope is then
