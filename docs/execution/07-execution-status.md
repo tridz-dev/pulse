@@ -57,15 +57,17 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 | --- | --- | --- | --- |
 | W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **complete (code); not runtime-verified** | all four merged; static + dispatcher-reviewer diff-check only |
 | W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete (code); not runtime-verified** | all six merged — idempotent generation, compliance scoring, and deadline finalization now form a closed loop |
-| W3 Execution/setup | S1-T05 ✅, S4-T03 (not started), S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | partial | 4/5 merged; only S4-T03 (Immutable finalized runs) remains, now dependency-ready (needs S1-T05 ✅ + S4-T01 ✅) |
-| W4 Explainability | S1-T06 (not started), S2-T03 (not started), S3-T01 (not started), S3-T02 (not started) | ready to start | none merged yet; S2-T03/S3-T01/S3-T02 all now dependency-ready (need S1-T04 ✅/S2-T00 ✅/S2-T02 ✅); S1-T06 needs S4-T03 first |
-| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 (not started), S3-T03 (not started), S3-T04 (not started) | partial | 3/6 merged; S2-T04/S3-T03/S3-T04 blocked on W4 analytics tasks |
+| W3 Execution/setup | S1-T05 ✅, S4-T03 ✅, S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | **complete (code); not runtime-verified** | all five merged — finalized-run mutation is now blocked at the DocType level as a backstop to the API-layer checks |
+| W4 Explainability | S1-T06 (not started), S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | 3/4 merged | only S1-T06 (Implement acceptance fixtures) remains, now dependency-ready (needs S1-T05 ✅ + S4-T03 ✅ + S0-T03 ✅) |
+| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 (not started), S3-T03 (not started), S3-T04 (not started) | partial | 3/6 merged; S2-T04 now dependency-ready (needs S2-T03 ✅ + S3-T01 ✅); S3-T03/S3-T04 follow once S2-T04 lands |
 
-**19 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
-this resume session (2026-08-26, same day as the original handoff). W1 and W2
-are fully code-complete — the core lifecycle loop (idempotent scheduled
-generation → run-level compliance scoring → deadline finalization →
-concurrency-safe user completion) is closed. All merges are code-complete and
+**23 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
+this resume session (2026-08-26, same day as the original handoff). W1, W2,
+and W3 are fully code-complete — the core lifecycle loop (idempotent
+scheduled generation → run-level compliance scoring → deadline finalization
+→ concurrency-safe user completion → immutability backstop) is closed, and
+the analytics layer (hierarchy roll-up, scoped failure list, timezone-aware
+score trends) is mostly in place too. All merges are code-complete and
 statically self-reviewed (by the dispatching CLI, a dedicated Claude
 dispatcher-reviewer subagent, and/or the integration owner directly) —
 **none have run on a live Frappe bench yet**. The first migration gate
@@ -110,6 +112,10 @@ just style nits), both worth noting for anyone auditing the process:
 | tasks.py fix | `6df2d19` | integration owner, found the same timezone bug in `finalize_overdue_runs` while verifying S1-T07 against S1-T03's fix | none | merged (unscheduled fix, not a backlog task) |
 | S2-T02 | `4e3b7c6` | dispatcher-reviewer (Kimi output), audit-only task, no fixes needed | none | merged |
 | S1-T05 | `4dc2267` | integration owner direct review | none | merged |
+| S3-T01 | `d46c9fb` | integration owner direct review | none | merged |
+| S4-T03 | `18f64e0` | integration owner direct review | none | merged |
+| S2-T03 | `4067b62` | dispatcher-reviewer (Antigravity output), audit-only task, fixed one float-precision test assertion | none | merged |
+| S3-T02 | `58245d3` | integration owner direct review; verified only `get_score_trends` changed in a large shared file | none | merged |
 
 ## Status update rules
 
