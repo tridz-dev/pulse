@@ -26,7 +26,6 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  X,
 } from 'lucide-react';
 import {
   Sheet,
