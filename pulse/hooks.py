@@ -158,6 +158,11 @@ scheduler_events = {
 	"monthly": [
 		"pulse.tasks.monthly"
 	],
+	"cron": {
+		"*/5 * * * *": [
+			"pulse.tasks.finalize_overdue_runs"
+		]
+	},
 }
 
 # Testing

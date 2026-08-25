@@ -207,12 +207,21 @@ def generate_monthly_runs():
 	_generate_runs_for_frequency("Monthly")
 
 
-def lock_overdue_runs():
-	"""Mark all open runs with period_date < today: set Pending items to Missed, run status to Locked."""
-	today_str = getdate().strftime("%Y-%m-%d")
+def finalize_overdue_runs(evaluation_instant=None):
+	"""Materialize overdue Pending runs as Failed+Locked idempotently.
+
+	Runs whose ``due_at`` has passed and whose ``compliance_result`` is still
+	``Pending`` are finalized: ``compliance_result`` becomes ``Failed``,
+	``status`` becomes ``Locked``, and any still-``Pending`` run item rows are
+	marked ``Missed`` for bookkeeping. Already ``Passed`` or ``Failed`` runs are
+	never touched, so retries are safe.
+	"""
+	if evaluation_instant is None:
+		evaluation_instant = now_datetime()
+
 	runs = frappe.get_all(
 		"SOP Run",
-		filters={"period_date": ["<", today_str], "status": "Open"},
+		filters={"compliance_result": "Pending", "due_at": ["<=", evaluation_instant]},
 		pluck="name",
 	)
 	for run_name in runs:
@@ -221,9 +230,15 @@ def lock_overdue_runs():
 			if row.status == "Pending":
 				row.status = "Missed"
 		run.status = "Locked"
+		run.compliance_result = "Failed"
 		run.flags.ignore_validate_update_after_submit = True
 		run.save()
 	frappe.db.commit()
+
+
+def lock_overdue_runs():
+	"""Backward-compatible name for the due_at-based deadline finalizer."""
+	finalize_overdue_runs()
 
 
 def cache_score_snapshots():
@@ -266,7 +281,7 @@ def cache_score_snapshots():
 
 def daily():
 	generate_daily_runs()
-	lock_overdue_runs()
+	finalize_overdue_runs()
 
 
 def weekly():
