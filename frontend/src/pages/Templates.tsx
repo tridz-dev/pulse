@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
-import { getAllTemplates, getTemplateItems } from '@/services/templates';
-import type { SOPTemplate, SOPChecklistItem } from '@/types';
+import {
+  getAllTemplates,
+  getTemplateItems,
+  getTemplateDetails,
+  createTemplate,
+  updateTemplate,
+} from '@/services/templates';
+import type { FullSOPTemplate } from '@/services/templates';
+import type { SOPChecklistItem } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/store/AuthContext';
+import { Input } from '@/components/ui/input';
 import {
   FileText,
   Printer,
@@ -12,6 +21,12 @@ import {
   Clock,
   Activity,
   ClipboardCheck,
+  Pencil,
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  X,
 } from 'lucide-react';
 import {
   Sheet,
@@ -22,23 +37,48 @@ import {
 } from '@/components/ui/sheet';
 
 export function Templates() {
-  const [templates, setTemplates] = useState<Partial<SOPTemplate>[]>([]);
+  const { currentUser } = useAuth();
+  const [templates, setTemplates] = useState<Partial<FullSOPTemplate>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedTemplate, setSelectedTemplate] = useState<Partial<SOPTemplate> | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<Partial<FullSOPTemplate> | null>(null);
   const [templateItems, setTemplateItems] = useState<SOPChecklistItem[]>([]);
   const [isSheetLoading, setIsSheetLoading] = useState(false);
 
+  // Editor states
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<FullSOPTemplate | null>(null);
+  const [formTitle, setFormTitle] = useState('');
+  const [formDepartment, setFormDepartment] = useState('');
+  const [formFrequencyType, setFormFrequencyType] = useState<'Daily' | 'Weekly' | 'Monthly' | 'Custom'>('Daily');
+  const [formOwnerRole, setFormOwnerRole] = useState('');
+  const [formActiveFrom, setFormActiveFrom] = useState('');
+  const [formActiveTo, setFormActiveTo] = useState('');
+  const [formLocalStartTime, setFormLocalStartTime] = useState('08:00');
+  const [formCompletionWindow, setFormCompletionWindow] = useState<number>(60);
+  const [formScheduleTimezone, setFormScheduleTimezone] = useState('UTC');
+  const [formChecklist, setFormChecklist] = useState<SOPChecklistItem[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const canEdit = currentUser && (
+    currentUser.systemRole === 'Pulse Admin' ||
+    currentUser.systemRole === 'Pulse Leader' ||
+    currentUser.id === 'Administrator'
+  );
+
+  async function loadTemplates() {
+    setIsLoading(true);
+    const data = await getAllTemplates();
+    setTemplates(data);
+    setIsLoading(false);
+  }
+
   useEffect(() => {
-    async function loadTemplates() {
-      setIsLoading(true);
-      const data = await getAllTemplates();
-      setTemplates(data);
-      setIsLoading(false);
-    }
     loadTemplates();
   }, []);
 
-  const handleViewTemplate = async (template: Partial<SOPTemplate>) => {
+  const handleViewTemplate = async (template: Partial<FullSOPTemplate>) => {
     setSelectedTemplate(template);
     if (!template.name) return;
     setIsSheetLoading(true);
@@ -51,6 +91,171 @@ export function Templates() {
     window.print();
   };
 
+  const handleOpenCreate = () => {
+    setEditingTemplate(null);
+    setFormTitle('');
+    setFormDepartment('');
+    setFormFrequencyType('Daily');
+    setFormOwnerRole('');
+    setFormActiveFrom(new Date().toISOString().slice(0, 10));
+    setFormActiveTo('');
+    setFormLocalStartTime('08:00');
+    setFormCompletionWindow(60);
+    setFormScheduleTimezone('UTC');
+    setFormChecklist([
+      { description: '', sequence: 1, weight: 1, item_type: 'Checkbox', evidence_required: 'None' }
+    ]);
+    setFormError(null);
+    setFormFieldErrors({});
+    setIsEditorOpen(true);
+  };
+
+  const handleOpenEdit = async (template: Partial<FullSOPTemplate>) => {
+    if (!template.name) return;
+    try {
+      setIsSheetLoading(true);
+      const fullDoc = await getTemplateDetails(template.name);
+      
+      setEditingTemplate(fullDoc);
+      setFormTitle(fullDoc.title || '');
+      setFormDepartment(fullDoc.department || '');
+      setFormFrequencyType(fullDoc.frequency_type || 'Daily');
+      setFormOwnerRole(fullDoc.owner_role || '');
+      setFormActiveFrom(fullDoc.active_from || '');
+      setFormActiveTo(fullDoc.active_to || '');
+      setFormLocalStartTime(fullDoc.local_start_time || '08:00');
+      setFormCompletionWindow(fullDoc.completion_window_minutes || 60);
+      setFormScheduleTimezone(fullDoc.schedule_timezone || 'UTC');
+      
+      const items = await getTemplateItems(template.name);
+      setFormChecklist(items.length > 0 ? items : [
+        { description: '', sequence: 1, weight: 1, item_type: 'Checkbox', evidence_required: 'None' }
+      ]);
+      
+      setFormError(null);
+      setFormFieldErrors({});
+      setIsEditorOpen(true);
+    } catch (err: any) {
+      alert(err.message || 'Failed to load template details');
+    } finally {
+      setIsSheetLoading(false);
+    }
+  };
+
+  const moveItem = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === formChecklist.length - 1) return;
+    const nextIndex = direction === 'up' ? index - 1 : index + 1;
+    const newItems = [...formChecklist];
+    const temp = newItems[index];
+    newItems[index] = newItems[nextIndex];
+    newItems[nextIndex] = temp;
+    newItems.forEach((item, idx) => {
+      item.sequence = idx + 1;
+    });
+    setFormChecklist(newItems);
+  };
+
+  const removeChecklistItem = (index: number) => {
+    const newItems = formChecklist.filter((_, idx) => idx !== index);
+    newItems.forEach((item, idx) => {
+      item.sequence = idx + 1;
+    });
+    setFormChecklist(newItems);
+  };
+
+  const addChecklistItem = () => {
+    const newItem: SOPChecklistItem = {
+      description: '',
+      sequence: formChecklist.length + 1,
+      weight: 1,
+      item_type: 'Checkbox',
+      evidence_required: 'None',
+    };
+    setFormChecklist([...formChecklist, newItem]);
+  };
+
+  const updateChecklistItem = (index: number, field: keyof SOPChecklistItem, value: any) => {
+    const newItems = [...formChecklist];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setFormChecklist(newItems);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setFormError(null);
+    setFormFieldErrors({});
+
+    if (!formTitle.trim()) {
+      setFormFieldErrors(prev => ({ ...prev, title: 'Title is required' }));
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formActiveFrom) {
+      setFormFieldErrors(prev => ({ ...prev, active_from: 'Active from date is required' }));
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formScheduleTimezone.trim()) {
+      setFormFieldErrors(prev => ({ ...prev, schedule_timezone: 'Schedule Timezone is required' }));
+      setIsSubmitting(false);
+      return;
+    }
+    if (formCompletionWindow <= 0) {
+      setFormFieldErrors(prev => ({ ...prev, completion_window: 'Completion window must be a positive integer' }));
+      setIsSubmitting(false);
+      return;
+    }
+    if (formChecklist.length === 0 || formChecklist.some(item => !item.description.trim())) {
+      setFormError('At least one checklist item is required and all items must have descriptions.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const input = {
+        title: formTitle,
+        frequency_type: formFrequencyType,
+        active_from: formActiveFrom,
+        local_start_time: formLocalStartTime,
+        completion_window_minutes: Number(formCompletionWindow),
+        schedule_timezone: formScheduleTimezone,
+        department: formDepartment || undefined,
+        owner_role: formOwnerRole || undefined,
+        active_to: formActiveTo || undefined,
+        checklist_items: formChecklist,
+      };
+
+      if (editingTemplate && editingTemplate.name) {
+        await updateTemplate(editingTemplate.name, input);
+      } else {
+        await createTemplate(input);
+      }
+
+      setIsEditorOpen(false);
+      setSelectedTemplate(null);
+      await loadTemplates();
+    } catch (error: any) {
+      const errMsg = error.message || error.exc || 'An error occurred';
+      const fieldErrors: Record<string, string> = {};
+      if (errMsg.includes("Completion window")) {
+        fieldErrors.completion_window = errMsg;
+      } else if (errMsg.includes("timezone")) {
+        fieldErrors.schedule_timezone = errMsg;
+      } else if (errMsg.includes("frequency")) {
+        fieldErrors.frequency_type = errMsg;
+      } else if (errMsg.includes("checklist")) {
+        fieldErrors.checklist = errMsg;
+      } else {
+        setFormError(errMsg);
+      }
+      setFormFieldErrors(fieldErrors);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex justify-between items-center">
@@ -58,13 +263,16 @@ export function Templates() {
           <h1 className="text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
           <p className="text-zinc-400 text-sm mt-1">Master definitions of all operational checklists.</p>
         </div>
-        <Button
-          variant="outline"
-          className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-2 hover:bg-zinc-800"
-        >
-          <LayoutList size={16} />
-          <span>Create Template</span>
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={handleOpenCreate}
+            variant="outline"
+            className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-2 hover:bg-zinc-800"
+          >
+            <LayoutList size={16} />
+            <span>Create Template</span>
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -128,15 +336,28 @@ export function Templates() {
                     <ClipboardCheck size={18} />
                     <span className="text-xs font-bold uppercase tracking-widest">Master Protocol</span>
                   </div>
-                  <Button
-                    onClick={handlePrint}
-                    variant="outline"
-                    size="sm"
-                    className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
-                  >
-                    <Printer size={14} />
-                    <span>Print Task Sheet</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <Button
+                        onClick={() => handleOpenEdit(selectedTemplate)}
+                        variant="outline"
+                        size="sm"
+                        className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
+                      >
+                        <Pencil size={14} />
+                        <span>Edit</span>
+                      </Button>
+                    )}
+                    <Button
+                      onClick={handlePrint}
+                      variant="outline"
+                      size="sm"
+                      className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
+                    >
+                      <Printer size={14} />
+                      <span>Print Task Sheet</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <SheetTitle className="text-2xl text-white print:text-black print:text-3xl">
@@ -221,6 +442,261 @@ export function Templates() {
         </SheetContent>
       </Sheet>
 
+      {/* Create / Edit Form Sheet */}
+      <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <SheetContent className="bg-[#09090b] border-zinc-800 w-[500px] sm:w-[640px] p-0 flex flex-col max-h-screen">
+          <SheetHeader className="p-6 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0">
+            <SheetTitle className="text-xl text-white">
+              {editingTemplate ? 'Edit SOP Template' : 'Create SOP Template'}
+            </SheetTitle>
+            <SheetDescription className="text-zinc-400 text-xs">
+              Define the template details, schedule configuration, and checklist items.
+            </SheetDescription>
+          </SheetHeader>
+
+          <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+            {formError && (
+              <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-red-200 text-xs">
+                {formError}
+              </div>
+            )}
+
+            {/* General Info */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">General Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Title <span className="text-red-500">*</span></label>
+                  <Input
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    placeholder="e.g. Daily Facility Inspection"
+                  />
+                  {formFieldErrors.title && <p className="text-red-500 text-[11px]">{formFieldErrors.title}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Department</label>
+                  <Input
+                    value={formDepartment}
+                    onChange={(e) => setFormDepartment(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    placeholder="e.g. Operations"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Frequency Type <span className="text-red-500">*</span></label>
+                  <select
+                    value={formFrequencyType}
+                    onChange={(e) => setFormFrequencyType(e.target.value as any)}
+                    className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 px-2 outline-none focus:border-zinc-700"
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                  {formFieldErrors.frequency_type && <p className="text-red-500 text-[11px]">{formFieldErrors.frequency_type}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Owner Role</label>
+                  <Input
+                    value={formOwnerRole}
+                    onChange={(e) => setFormOwnerRole(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    placeholder="e.g. Operator"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Active From <span className="text-red-500">*</span></label>
+                  <Input
+                    type="date"
+                    value={formActiveFrom}
+                    onChange={(e) => setFormActiveFrom(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                  />
+                  {formFieldErrors.active_from && <p className="text-red-500 text-[11px]">{formFieldErrors.active_from}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Active To</label>
+                  <Input
+                    type="date"
+                    value={formActiveTo}
+                    onChange={(e) => setFormActiveTo(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Info */}
+            <div className="space-y-4 pt-4 border-t border-zinc-800/80">
+              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Schedule Configuration</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Start Time <span className="text-red-500">*</span></label>
+                  <Input
+                    type="time"
+                    value={formLocalStartTime}
+                    onChange={(e) => setFormLocalStartTime(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Window (mins) <span className="text-red-500">*</span></label>
+                  <Input
+                    type="number"
+                    value={formCompletionWindow}
+                    onChange={(e) => setFormCompletionWindow(Number(e.target.value))}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                  />
+                  {formFieldErrors.completion_window && <p className="text-red-500 text-[11px]">{formFieldErrors.completion_window}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400">Timezone <span className="text-red-500">*</span></label>
+                  <Input
+                    value={formScheduleTimezone}
+                    onChange={(e) => setFormScheduleTimezone(e.target.value)}
+                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    placeholder="e.g. UTC, Asia/Kolkata"
+                  />
+                  {formFieldErrors.schedule_timezone && <p className="text-red-500 text-[11px]">{formFieldErrors.schedule_timezone}</p>}
+                </div>
+              </div>
+            </div>
+
+            {/* Checklist Items */}
+            <div className="space-y-4 pt-4 border-t border-zinc-800/80">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Checklist Items</h3>
+                <Button
+                  type="button"
+                  onClick={addChecklistItem}
+                  variant="outline"
+                  size="sm"
+                  className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-1 hover:bg-zinc-800"
+                >
+                  <Plus size={14} />
+                  <span>Add Item</span>
+                </Button>
+              </div>
+              {formFieldErrors.checklist && (
+                <p className="text-red-500 text-[11px]">{formFieldErrors.checklist}</p>
+              )}
+
+              <div className="space-y-4">
+                {formChecklist.map((item, index) => (
+                  <div key={index} className="p-4 bg-zinc-950/40 border border-zinc-800/60 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-zinc-400 hover:text-zinc-200 disabled:opacity-30"
+                          disabled={index === 0}
+                          onClick={() => moveItem(index, 'up')}
+                        >
+                          <ArrowUp size={14} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-zinc-400 hover:text-zinc-200 disabled:opacity-30"
+                          disabled={index === formChecklist.length - 1}
+                          onClick={() => moveItem(index, 'down')}
+                        >
+                          <ArrowDown size={14} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-red-400 hover:text-red-300 disabled:opacity-30 hover:bg-red-950/20"
+                          disabled={formChecklist.length <= 1}
+                          onClick={() => removeChecklistItem(index)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-zinc-500">Description <span className="text-red-500">*</span></label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateChecklistItem(index, 'description', e.target.value)}
+                        placeholder="e.g. Verify battery backup power is on"
+                        className="bg-zinc-900 border-zinc-800 text-zinc-100 text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-zinc-500">Type</label>
+                        <select
+                          value={item.item_type}
+                          onChange={(e) => updateChecklistItem(index, 'item_type', e.target.value)}
+                          className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-1 outline-none focus:border-zinc-700"
+                        >
+                          <option value="Checkbox">Checkbox</option>
+                          <option value="Numeric">Numeric</option>
+                          <option value="Photo">Photo</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-zinc-500">Weight</label>
+                        <Input
+                          type="number"
+                          value={item.weight}
+                          onChange={(e) => updateChecklistItem(index, 'weight', Number(e.target.value))}
+                          className="bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-zinc-500">Evidence</label>
+                        <select
+                          value={item.evidence_required || 'None'}
+                          onChange={(e) => updateChecklistItem(index, 'evidence_required', e.target.value)}
+                          className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-1 outline-none focus:border-zinc-700"
+                        >
+                          <option value="None">None</option>
+                          <option value="Photo">Photo</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </form>
+
+          <div className="border-t border-zinc-800 p-4 bg-zinc-900/50 flex justify-end gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsEditorOpen(false)}
+              className="text-zinc-400 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg"
+            >
+              {isSubmitting ? 'Saving...' : 'Save Template'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -239,3 +715,4 @@ export function Templates() {
     </div>
   );
 }
+
