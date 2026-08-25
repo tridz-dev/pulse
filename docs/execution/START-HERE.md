@@ -26,6 +26,7 @@ Do not implement in the original checkout or inside a bench app checkout.
 - Independent task worktrees: `<track root>/worktrees/`
 - Integration branch: `track/pulse-first-milestone`
 - Planning baseline commit: `bd6b00d docs: add Pulse execution and domain plan`
+- Host-worktree/handoff commit: `9f639fe docs: record host-worktree execution handoff`
 - Bootstrap branch retaining that commit: `bootstrap/pulse-first-milestone`
 - No implementation branch has been pushed to a remote yet.
 
@@ -109,8 +110,7 @@ The model inventory maps all ten current core DocTypes, APIs, frontend
 surfaces, legacy scoring/lifecycle behavior, missing setup commands, likely
 migrations, and risks.
 
-The integration worktree currently has three intentional, uncommitted planning
-edits:
+Commit `9f639fe` records three intentional planning edits:
 
 ```text
 M docs/execution/00-operating-model.md
@@ -121,7 +121,8 @@ M docs/execution/07-execution-status.md
 They record the user-directed workflow change: development happens in
 independent host worktrees without a live bench; a disposable bench is required
 only for migrations, site-writing tests, scheduler/runtime checks, and manual
-acceptance. Review and commit these files together before merging worker tasks.
+acceptance. They are committed on the integration branch and need no further
+bootstrap action before worker-task review.
 
 ## 5. Git/worktree topology
 
@@ -129,7 +130,7 @@ All worktrees are based on `bd6b00d`:
 
 | Branch | Host path | Assigned task | Current state |
 | --- | --- | --- | --- |
-| `track/pulse-first-milestone` | `<track root>/integration` | Integration | Three uncommitted execution-gate docs; no product code |
+| `track/pulse-first-milestone` | `<track root>/integration` | Integration | Handoff and execution-gate docs committed at `9f639fe`; no product code |
 | `agent/s0-t03-fixture` | `<track root>/worktrees/s0-t03-fixture` | S0-T03 acceptance fixture spec | Clean; GPT worker stopped before editing |
 | `agent/s1-t00-scaffold` | `<track root>/worktrees/s1-t00-scaffold` | S1-T00 package/test scaffold | Three untracked files created by Kimi; not reviewed or committed |
 | `agent/s1-t01-lifecycle` | `<track root>/worktrees/s1-t01-lifecycle` | S1-T01 lifecycle schema/migration | Clean; Antigravity worker stopped before editing |
@@ -250,8 +251,8 @@ integration gate needs migration/runtime/manual testing.
 
 ## 10. Exact resume sequence
 
-1. In the integration worktree, review and commit the three host-worktree gate
-   documentation edits plus this ledger and its README/status links.
+1. In the integration worktree, read this ledger and confirm `git status` is
+   clean at the committed handoff snapshot.
 2. Review the partial S1-T00 files in `worktrees/s1-t00-scaffold`; adjust the
    smoke-test base if required, perform a safe syntax review, commit on
    `agent/s1-t00-scaffold`, then cherry-pick into integration.
