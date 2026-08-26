@@ -174,15 +174,15 @@ def _generate_runs_for_frequency(frequency_type: str, evaluation_instant=None) -
 	if evaluation_instant is None:
 		# ``now_datetime()`` returns a naive datetime in the system time zone.
 		# Convert it to a proper UTC-aware instant before resolving schedules.
-		# Only the defaulted (real scheduler) path is reinterpreted this way —
-		# an explicitly-supplied evaluation_instant (e.g. a test's fixed
-		# instant) is trusted as-is, whether naive-UTC or timezone-aware, so
-		# callers get deterministic behavior regardless of system time zone.
-		evaluation_instant = (
-			now_datetime()
-			.replace(tzinfo=ZoneInfo(site_tz))
-			.astimezone(ZoneInfo("UTC"))
-		)
+		# Only reinterpret it as site-local when it's actually naive — a
+		# caller (or a mocked ``now_datetime`` in a test) may already return
+		# a tz-aware instant, and blindly overwriting its tzinfo would shift
+		# the wall-clock time by the site's UTC offset instead of converting
+		# it.
+		instant = now_datetime()
+		if instant.tzinfo is None:
+			instant = instant.replace(tzinfo=ZoneInfo(site_tz))
+		evaluation_instant = instant.astimezone(ZoneInfo("UTC"))
 
 	created = 0
 	for assignment, template in _active_assignments_for_frequency(frequency_type):
