@@ -5,6 +5,25 @@ Status: integration-owner maintained
 Paused handoff: read [START-HERE.md](START-HERE.md) before resuming any worker,
 merge, or bench action.
 
+**2026-08-27 re-verification note:** the disposable bench referenced
+throughout this file as `pulse-w1w5-verify` no longer exists in the bench
+registry (confirmed via `mh list`). It has been superseded by a fresh
+disposable bench, `pulse-w1w5-reverify`, provisioned from
+`track/pulse-first-milestone` at current HEAD, on which the backend test
+suite (82/82 pass), frontend `yarn typecheck`, and the acceptance-fixture
+score contract were all re-run and confirmed passing (the reference-restore
+backup needed a `pulse-clear-demo` / `purge-jobs` /
+`pulse-clear-acceptance-fixture` sweep first to remove stale residue baked
+into the backup itself — a real issue with that backup worth fixing
+separately). That bench is left running at `http://localhost:8001/pulse`
+(moved off its assigned 8082 to the reachable 8001 range) with the full demo
+dataset loaded. References below to `pulse-w1w5-verify` being "left running"
+describe the prior (now-gone) bench, not the current one. Separately, and not
+reflected below: the 26 stale `agent/*` task worktrees/branches are being
+cleaned up, and the legacy compatibility-only analytics endpoints from
+S2-T02 are being reviewed for removal, both by other agents in parallel as of
+this writing.
+
 Worker pool (2026-08-26 resume): Kimi CLI, Antigravity (Gemini), Claude
 (dispatch + dispatcher-reviewer subagents, and execution fallback). Codex is
 out of quota for this session (hit its usage limit; retry after ~03:02) and is
@@ -144,7 +163,14 @@ run-generation test has ever errored on it before.
 
 ## Manual test/demo environment
 
-`pulse-w1w5-verify` is now also seeded with a full manual-QA dataset and left
+**Stale as of 2026-08-27:** `pulse-w1w5-verify` no longer exists (see the
+note at the top of this file). The description below of its seeded dataset
+and bugs found is kept as historical record of what this session's original
+verification pass did and found; the currently-live bench is
+`pulse-w1w5-reverify` at `http://localhost:8001/pulse`, seeded via `bench
+pulse-load-demo`, same `Administrator`/`Demo@123` credentials.
+
+`pulse-w1w5-verify` was seeded with a full manual-QA dataset and left
 running (http://localhost:8081, or `/pulse` for the app) — password
 `Demo@123` for every account, `Administrator` included:
 
@@ -231,11 +257,14 @@ just style nits), both worth noting for anyone auditing the process:
 As of `db04555`, every task in W1-W5 (the full first-milestone execution
 plan) is merged. **This is a code-completeness milestone, not a
 "working software" milestone** — see the runtime-verification gate above.
-The literal next step, unchanged from the original resume plan: provision a
-disposable Frappe 16 bench, run `bench migrate`, run every merged test file,
-then `bench --site <site> pulse-load-acceptance-fixture` and confirm the
-acceptance-fixture.md 1.0/0.0/0.5/null score cases through the real
-`get_compliance_score` endpoint before any Sonnet/Codex final review.
+The literal next step described here (provision a disposable bench, migrate,
+run tests, load the acceptance fixture) was completed for this HEAD twice
+now: once on `pulse-w1w5-verify` (now gone from the bench registry) and
+again on 2026-08-27 on `pulse-w1w5-reverify`, with the same result (82/82
+backend tests, clean frontend typecheck, exact acceptance-fixture score
+match) — see the 2026-08-27 note at the top of this file. What remains
+before the milestone is fully closed out: the Sonnet/Codex final review has
+still not been run against this merged state.
 
 ## Status update rules
 

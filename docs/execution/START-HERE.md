@@ -1,11 +1,26 @@
 # Pulse First Milestone — Resume Ledger
 
-Last updated: 2026-08-26, Asia/Kolkata
+Last updated: 2026-08-27, Asia/Kolkata
 
 This is the authoritative handoff for the paused implementation run. Start
-here, then follow the linked contracts and status board. Nothing in this file
-claims the product milestone is implemented; it records the exact safe resume
-point.
+here, then follow the linked contracts and status board.
+
+**2026-08-27 update:** the state described through most of this file (only a
+handful of worktrees provisioned, no product code merged) is stale. As of this
+update, 27 of ~35 backlog tasks are merged into `track/pulse-first-milestone`,
+and all of waves W1 through W5 — the entire actively-planned first-milestone
+scope — are code-complete; see the "First-milestone waves" table in
+`07-execution-status.md`, which already reflected this correctly and was left
+unchanged. The original runtime-verification bench, `pulse-w1w5-verify`, no
+longer exists in the bench registry (confirmed via `mh list`). A fresh
+disposable bench, `pulse-w1w5-reverify`, was provisioned from
+`track/pulse-first-milestone` (same branch/HEAD) and re-verification was rerun
+in full — see the new dated entry at the end of section 7 and section 9 below
+for exact results. Separately, and not covered by this update: the 26 stale
+`agent/*` task worktrees/branches are being reconciled/cleaned up, and the
+legacy compatibility-only analytics endpoints from S2-T02 are being reviewed
+for removal, both by other agents in parallel — neither is done as of this
+writing.
 
 ## 1. Where to start
 
@@ -126,6 +141,15 @@ bootstrap action before worker-task review.
 
 ## 5. Git/worktree topology
 
+**Stale as of 2026-08-27:** the table below describes the original bootstrap
+snapshot (four worktrees, nothing merged). That is no longer the state of the
+integration branch — 27/35 backlog tasks and all of W1-W5 are merged into
+`track/pulse-first-milestone` (see `07-execution-status.md`'s "Worker
+handoffs awaiting integration" table for the full merged-commit list). The 26
+`agent/*` task worktrees/branches accumulated since this snapshot are being
+reconciled/cleaned up by a separate agent as of this writing; their outcome is
+not yet known and is not recorded here. Do not treat the row below as current.
+
 All worktrees are based on `bd6b00d`:
 
 | Branch | Host path | Assigned task | Current state |
@@ -145,10 +169,9 @@ pulse/tests/test_smoke.py
 ```
 
 The two initializers are empty. `test_smoke.py` currently uses
-`unittest.TestCase` and an always-true test. The next integrator must decide
-whether the task's phrase “Frappe test” requires `FrappeTestCase`; do not commit
-the partial files without reviewing that point. No check ran because host
-`python` is unavailable and the run was paused before a bench check.
+`unittest.TestCase` and an always-true test. This was resolved during
+integration (see `07-execution-status.md`'s merged-commit table, S1-T00
+`62d35cb`) — it is no longer open.
 
 ## 6. Agent pool and observed health
 
@@ -221,6 +244,37 @@ worktrees. Do not keep a live bench per agent. Merge reviewed work into the
 integration/test branch, then use one multihand Frappe 16 bench whenever an
 integration gate needs migration/runtime/manual testing.
 
+**2026-08-27 re-verification entry:** the bench used for the original W1-W5
+verification, `pulse-w1w5-verify`, no longer exists in the bench registry
+(confirmed via `mh list`). A fresh disposable bench, `pulse-w1w5-reverify`,
+was provisioned from `track/pulse-first-milestone` (same branch, current
+HEAD) and full re-verification was rerun:
+
+- Backend test suite: 82/82 tests pass, 0 failures, 0 errors — same count as
+  the original verification — but only after running `bench
+  pulse-clear-demo`, `bench purge-jobs`, and `bench
+  pulse-clear-acceptance-fixture` first. The disposable bench's underlying
+  reference-restore backup carried over 448 stale SOP Run records, 20 stale
+  Pulse Employee records, and 522 queued background jobs baked into the
+  backup itself. This is a real infrastructure issue: the reference backup
+  used by `mh new --from-reference` is contaminated with old test/demo
+  residue and should be re-created clean at some point.
+- Frontend: `yarn typecheck` passes clean.
+- Acceptance fixture: loaded cleanly after the same demo-data sweep;
+  `get_compliance_score` for Owen Patel (`PLS-EMP-1304`) returns exactly
+  `{"score": 0.5, "passed_runs": 1, "failed_runs": 1, "eligible_runs": 2}`
+  for 2026-08-24 personal scope, matching the spec's central case exactly.
+  Nora Singh (`PLS-EMP-1305`) returns `score: null` in both personal and
+  inherited scope, also exactly per spec.
+- The bench is left running at `http://localhost:8001/pulse` (port 8001, not
+  8091/8081/8082 — moved during setup because of a container
+  port-publishing constraint: only ports 8000-8005 and 9000-9005 are
+  reachable from the host, and this bench's assigned port 8082 was not one
+  of them, so its Procfile's `bench serve --port` line was changed to 8001),
+  seeded with the full demo dataset via `bench pulse-load-demo`.
+  `Administrator`/`Demo@123`, and the same password for every seeded
+  account.
+
 ## 8. Verification already performed
 
 - `git diff --check` passed for the planning baseline and current model
@@ -247,9 +301,23 @@ integration gate needs migration/runtime/manual testing.
 - S0-T01 runtime baseline: partial evidence only; not verified.
 - `P0-runtime`: blocked until a disposable bench can safely allocate and the
   runtime preflight/baseline reruns.
-- W1/W2/W3/W4/W5 product work: not merged and not runtime-verified.
+- **Stale as of 2026-08-27**: the line below ("not merged and not
+  runtime-verified") described the original bootstrap snapshot. It no longer
+  holds. W1/W2/W3/W4/W5 product work: merged (27/35 backlog tasks) and
+  runtime-verified — re-verified again on 2026-08-27 on the disposable bench
+  `pulse-w1w5-reverify` (backend 82/82 tests, frontend `yarn typecheck`
+  clean, acceptance fixture exact match). See section 7's 2026-08-27 entry
+  and `07-execution-status.md`'s "First-milestone waves" table for details.
 
 ## 10. Exact resume sequence
+
+**Stale as of 2026-08-27:** the numbered sequence below is the original
+bootstrap plan and has largely already happened — W1-W5 are merged and
+re-verified (see sections 7 and 9). It is kept for historical record of the
+intended process, not as a live to-do list. Outstanding, not covered by this
+sequence: the 26 `agent/*` worktree/branch cleanup and the S2-T02 legacy
+compatibility-endpoint removal review, both in progress by other agents as of
+this writing, plus the Sonnet/Codex final review referenced in step 10 below.
 
 1. In the integration worktree, read this ledger and confirm `git status` is
    clean at the committed handoff snapshot.
@@ -284,9 +352,14 @@ integration gate needs migration/runtime/manual testing.
 
 ## 11. Completion is still unproven
 
-The active goal is not complete. Completion requires all dependency-mapped
-first-milestone tasks intended by the execution plan to be implemented,
-reviewed, merged, migrated, tested, and demonstrated in a manually usable
-Frappe 16 bench; four-lane bounded swarm execution; Claude Sonnet medium review;
-and final Codex audit. None of those broad completion claims should be inferred
-from the completed planning baseline.
+**Updated 2026-08-27:** the code-complete and runtime-verification parts of
+this are now done — all of W1-W5 is merged, and re-verification on a fresh
+bench (`pulse-w1w5-reverify`) confirmed the backend test suite (82/82),
+frontend typecheck, and the acceptance-fixture score contract all still pass
+on current HEAD. What is still outstanding: the required Claude Sonnet medium
+review and the final Codex requirement-by-requirement audit have not been
+run against this merged state. The 26 `agent/*` worktree/branch cleanup and
+the S2-T02 legacy-endpoint removal review are in progress by other agents in
+parallel; do not infer either is finished from this update. None of this
+should be read as the full milestone (including those final reviews) being
+complete.
