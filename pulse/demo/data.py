@@ -10,10 +10,10 @@ historical runs rather than data anchored to a fixed past date.
 from datetime import date, timedelta
 
 # ── Date range ────────────────────────────────────────────────────────────────
-# Historical window: 40 days up to (but not including) today.
+# Historical window: ~2.5 months up to (but not including) today.
 # "today" runs will be seeded as Open; prior days as Closed / Locked.
 _today = date.today()
-START_DATE: date = _today - timedelta(days=40)
+START_DATE: date = _today - timedelta(days=75)
 END_DATE: date = _today - timedelta(days=1)
 
 # ── Users ─────────────────────────────────────────────────────────────────────
