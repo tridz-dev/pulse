@@ -2,13 +2,15 @@
 # License: MIT
 
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import frappe
-from frappe.utils import getdate, get_first_day, get_last_day, get_system_timezone
+from frappe.utils import getdate, get_first_day, get_last_day, get_system_timezone, now_datetime
 
 from pulse.api.permissions import _get_system_role_for_employee, get_scope_for_user
 from pulse.domain.compliance import classify_runs
 from pulse.domain.hierarchy import get_descendants_scope, get_personal_scope
+from pulse.domain.periods import bucket_utc_bounds
 
 
 def _period_range(date_str: str, period_type: str):
@@ -360,16 +362,27 @@ def get_compliance_score(
 		return _empty_compliance_response(employee, scope, period_meta)
 
 	start_d, end_d = _period_range(date_str, period_type)
+	site_tz = period_meta["timezone"]
+	start_utc, end_utc = bucket_utc_bounds(
+		{"start": getdate(start_d), "end": getdate(end_d)}, site_tz
+	)
 	runs = frappe.get_all(
 		"SOP Run",
-		filters={
-			"employee": ["in", list(target_employees)],
-			"period_date": ["between", [start_d, end_d]],
-		},
-		fields=["compliance_result"],
+		filters=[
+			["employee", "in", list(target_employees)],
+			["due_at", ">=", start_utc],
+			["due_at", "<", end_utc],
+		],
+		fields=["compliance_result", "due_at", "completed_at"],
 	)
 
-	result = classify_runs(runs)
+	evaluation_instant = (
+		now_datetime()
+		.replace(tzinfo=ZoneInfo(get_system_timezone()))
+		.astimezone(ZoneInfo("UTC"))
+		.replace(tzinfo=None)
+	)
+	result = classify_runs(runs, evaluation_instant)
 	return {
 		"scope": scope,
 		"subject": employee,

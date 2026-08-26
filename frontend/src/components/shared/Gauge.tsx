@@ -142,7 +142,7 @@ const PRESETS = {
 };
 
 interface GaugeProps {
-  value: number;
+  value: number | null;
   size?: number;
   strokeWidth?: number;
   label?: string;
@@ -180,9 +180,18 @@ export function Gauge({
 
   const colors = PRESETS[theme] || PRESETS.default;
   const sw = _sw || Math.max(size * 0.07, 8);
-  const norm = clamp(value, 0, 100);
+  const isNoData = value === null;
+  const norm = isNoData ? 0 : clamp(value, 0, 100);
 
   useEffect(() => {
+    // No-data state: skip the RAF animation entirely and keep the needle/arc
+    // at rest. This also ensures a later flip from null -> number always
+    // starts a clean animation from 0 rather than resuming mid-tween.
+    if (isNoData) {
+      setAnimated(0);
+      return;
+    }
+
     const from = animated;
     const to = norm;
     startRef.current = null;
@@ -199,7 +208,8 @@ export function Gauge({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [norm, animationDuration]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [norm, animationDuration, isNoData]);
 
   const cx = size / 2;
   const cy = size / 2 + size * 0.05;
@@ -219,6 +229,104 @@ export function Gauge({
   const needleY = cy + Math.sin(valueAngle) * needleLen;
 
   const percentage = Math.round(animated);
+  const noDataColor = theme === "light" ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.3)";
+
+  if (isNoData) {
+    return (
+      <div
+        className={cn("relative flex flex-col items-center", className)}
+        style={{
+          width: size,
+          height: size * 0.62,
+          background: colors.bg,
+        }}
+      >
+        <svg
+          width={size}
+          height={size * 0.62}
+          viewBox={`0 0 ${size} ${size * 0.62}`}
+          style={{ overflow: "visible" }}
+        >
+          {/* Neutral grey track only — no colored fill arc, no glow, no needle.
+              This is the "no eligible runs yet" state and must never be
+              mistaken for a real 0% score. */}
+          <path
+            d={describeArc(cx, cy, radius, arcStart, arcEnd)}
+            fill="none"
+            stroke={colors.trackColor}
+            strokeWidth={sw}
+            strokeLinecap="round"
+          />
+
+          {showTicks && (
+            <Ticks
+              cx={cx}
+              cy={cy}
+              radius={radius - sw / 2 - 3}
+              count={40}
+              tickLength={size * 0.03}
+              color={colors.tickColor}
+            />
+          )}
+
+          {showLabels && (
+            <ArcLabels
+              cx={cx}
+              cy={cy}
+              radius={radius + sw / 2 + size * 0.06}
+              divisions={4}
+              fontSize={size * 0.045}
+              color={colors.labelColor}
+            />
+          )}
+
+          {/* Static neutral dot at the pivot in place of a needle — signals
+              "no reading" rather than pointing at any position on the arc. */}
+          <circle cx={cx} cy={cy} r={sw * 0.35} fill={noDataColor} opacity={0.6} />
+        </svg>
+
+        <div
+          className="absolute inset-x-0 bottom-0 flex flex-col items-center pointer-events-none"
+          style={{ marginBottom: size * 0.02 }}
+        >
+          <span
+            className="font-bold tracking-tighter leading-none"
+            style={{
+              fontSize: size * 0.16,
+              color: noDataColor,
+              fontFamily: "'DM Mono', 'SF Mono', monospace",
+            }}
+          >
+            No data
+          </span>
+          {label && (
+            <span
+              className="font-semibold uppercase tracking-widest"
+              style={{
+                fontSize: Math.max(size * 0.048, 9),
+                color: colors.subTextColor,
+                marginTop: size * 0.01,
+              }}
+            >
+              {label}
+            </span>
+          )}
+          {subtitle && (
+            <span
+              className="mt-0.5"
+              style={{
+                fontSize: Math.max(size * 0.04, 8),
+                color: colors.subTextColor,
+                opacity: 0.65,
+              }}
+            >
+              {subtitle}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

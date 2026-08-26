@@ -600,12 +600,33 @@ export function Templates() {
                               >
                                 <option value="">-- Choose Employee --</option>
                                 {eligibleEmployees
-                                  .filter(
-                                    (emp) =>
-                                      !assignments.some(
-                                        (asgn) => asgn.employee === emp.name && asgn.is_active === 1
-                                      )
-                                  )
+                                  .filter((emp) => {
+                                    // Only block employees who already have an active
+                                    // assignment to this template with the SAME effective
+                                    // overrides as the ones currently being entered.
+                                    // Distinct overrides (e.g. a different schedule) are a
+                                    // legitimate, separate assignment and must stay selectable.
+                                    const tz = assignTimezoneOverride.trim() || null;
+                                    const start = assignStartTimeOverride.trim() || null;
+                                    const windowVal = assignWindowOverride.trim()
+                                      ? Number(assignWindowOverride)
+                                      : null;
+
+                                    return !assignments.some((asgn) => {
+                                      if (asgn.employee !== emp.name || asgn.is_active !== 1) {
+                                        return false;
+                                      }
+                                      const asgnTz = asgn.schedule_timezone_override || null;
+                                      const asgnStart = asgn.local_start_time_override || null;
+                                      const asgnWindow =
+                                        asgn.completion_window_minutes_override || null;
+                                      return (
+                                        asgnTz === tz &&
+                                        asgnStart === start &&
+                                        asgnWindow === windowVal
+                                      );
+                                    });
+                                  })
                                   .map((emp) => (
                                     <option key={emp.name} value={emp.name}>
                                       {emp.employee_name} ({emp.name})

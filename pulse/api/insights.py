@@ -4,9 +4,10 @@
 """Analytics API for Insights page. SQL-level aggregation for scale."""
 
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import frappe
-from frappe.utils import get_system_timezone, getdate
+from frappe.utils import get_system_timezone, getdate, now_datetime
 
 from pulse.api.permissions import (
 	_get_employee_for_user,
@@ -119,7 +120,7 @@ def get_score_trends(start_date=None, end_date=None, period_type="Day", departme
 		start_utc, end_utc = bucket_utc_bounds(bucket, site_tz)
 		rows = frappe.db.sql(
 			f"""
-			SELECT r.compliance_result, r.employee
+			SELECT r.compliance_result, r.employee, r.due_at, r.completed_at
 			FROM `tabSOP Run` r
 			WHERE r.employee IN ({placeholders})
 			  AND r.due_at >= %s AND r.due_at < %s
@@ -127,7 +128,13 @@ def get_score_trends(start_date=None, end_date=None, period_type="Day", departme
 			employees + [start_utc, end_utc],
 			as_dict=True,
 		)
-		result = classify_runs(rows)
+		evaluation_instant = (
+			now_datetime()
+			.replace(tzinfo=ZoneInfo(get_system_timezone()))
+			.astimezone(ZoneInfo("UTC"))
+			.replace(tzinfo=None)
+		)
+		result = classify_runs(rows, evaluation_instant)
 		employee_count = len({r["employee"] for r in rows})
 		out.append(
 			{

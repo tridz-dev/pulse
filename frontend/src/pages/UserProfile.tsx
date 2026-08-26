@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { ScoreSnapshot, User } from '@/types';
-import { getScoreForUser, getTeamScores } from '@/services/scores';
+import type { ScoreSnapshot, User, ComplianceScoreResponse } from '@/types';
+import { getTeamScores } from '@/services/scores';
 import { getRunsForEmployee } from '@/services/tasks';
 import type { RunListItem } from '@/services/tasks';
-import { getOperationsOverview } from '@/services/operations';
+import { getOperationsOverview, getComplianceScore } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +44,8 @@ export function UserProfile() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
-  const [score, setScore] = useState<ScoreSnapshot | null>(null);
+  const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
+  const [inheritedScore, setInheritedScore] = useState<ComplianceScoreResponse | null>(null);
   const [teamData, setTeamData] = useState<(ScoreSnapshot & { user: User })[]>([]);
   const [recentRuns, setRecentRuns] = useState<RunListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,9 +60,19 @@ export function UserProfile() {
         const overview = await getOperationsOverview(userId, today, periodType);
         if (overview?.user) setUser(overview.user as User);
 
-        const profileScore = await getScoreForUser(userId, today, periodType);
-        setScore(profileScore);
+        const [personal, inherited] = await Promise.all([
+          getComplianceScore(userId, 'personal', today, periodType),
+          getComplianceScore(userId, 'inherited', today, periodType),
+        ]);
+        setPersonalScore(personal);
+        setInheritedScore(inherited);
 
+        // NOTE: getTeamScores remains on the legacy path here. It is used only
+        // to render the per-subordinate bar chart below (name + score per
+        // direct report), which getComplianceScore cannot provide in a single
+        // call. The summary "Direct Reports" percentage card no longer uses
+        // this legacy team_score value; it now uses the compliant inherited
+        // score instead.
         const team = await getTeamScores(userId, today, periodType);
         setTeamData(team as (ScoreSnapshot & { user: User })[]);
 
@@ -98,14 +109,13 @@ export function UserProfile() {
     );
   }
 
-  const combinedScore = score?.combined_score ?? 0;
-  const ownScore = score?.own_score ?? 0;
-  const teamScore = score?.team_score ?? 0;
-  const totalItems = score?.total_items ?? 0;
-  const completedItems = score?.completed_items ?? 0;
-
-  const combinedPct = Math.round(combinedScore * 100);
-  const ownPct = Math.round(ownScore * 100);
+  // Contract: zero eligible runs returns score: null, not zero. Do not
+  // collapse null to 0 anywhere below — it must reach <Gauge> as null so it
+  // can render its distinct "no data" state.
+  const inheritedPct = inheritedScore?.score != null ? Math.round(inheritedScore.score * 100) : null;
+  const personalPct = personalScore?.score != null ? Math.round(personalScore.score * 100) : null;
+  const passedRuns = personalScore?.passed_runs ?? 0;
+  const eligibleRuns = personalScore?.eligible_runs ?? 0;
 
   const barChartData = teamData.map((t) => ({
     name: t.user?.name?.split(' ')[0] ?? '',
@@ -161,7 +171,7 @@ export function UserProfile() {
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
           <Gauge
-            value={combinedPct}
+            value={inheritedPct}
             size={220}
             label={`${periodType} KPI`}
             mode="gradient"
@@ -194,10 +204,22 @@ export function UserProfile() {
                 <span
                   className={cn(
                     'text-sm font-bold mt-1',
-                    combinedPct >= 80 ? 'text-emerald-400' : combinedPct >= 50 ? 'text-amber-400' : 'text-rose-400'
+                    inheritedPct === null
+                      ? 'text-zinc-500'
+                      : inheritedPct >= 80
+                        ? 'text-emerald-400'
+                        : inheritedPct >= 50
+                          ? 'text-amber-400'
+                          : 'text-rose-400'
                   )}
                 >
-                  {combinedPct >= 80 ? 'EXCEPTIONAL' : combinedPct >= 50 ? 'STABLE' : 'CRITICAL'}
+                  {inheritedPct === null
+                    ? 'NO DATA'
+                    : inheritedPct >= 80
+                      ? 'EXCEPTIONAL'
+                      : inheritedPct >= 50
+                        ? 'STABLE'
+                        : 'CRITICAL'}
                 </span>
               </div>
             </div>
@@ -215,9 +237,11 @@ export function UserProfile() {
               <Target className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-white tracking-tighter">{ownPct}%</div>
+              <div className="text-3xl font-bold text-white tracking-tighter">
+                {personalPct !== null ? `${personalPct}%` : '—'}
+              </div>
               <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">
-                {completedItems} / {totalItems} Items
+                {passedRuns} / {eligibleRuns} Runs
               </p>
             </CardContent>
           </Card>
@@ -234,10 +258,14 @@ export function UserProfile() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-white tracking-tighter">
-                {teamData.length > 0 ? `${Math.round(teamScore * 100)}%` : recentRuns.length}
+                {teamData.length > 0
+                  ? inheritedPct !== null
+                    ? `${inheritedPct}%`
+                    : '—'
+                  : recentRuns.length}
               </div>
               <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">
-                {teamData.length > 0 ? 'Average Score' : "Today's Schedule"}
+                {teamData.length > 0 ? 'Team-Inclusive Score' : "Today's Schedule"}
               </p>
             </CardContent>
           </Card>

@@ -2,6 +2,7 @@
 # License: MIT
 
 import unittest
+from datetime import datetime
 
 from pulse.domain.compliance import classify_runs
 
@@ -88,3 +89,80 @@ class TestComplianceClassifier(unittest.TestCase):
 		self.assertEqual(result["passed_runs"], 0)
 		self.assertEqual(result["eligible_runs"], 1)
 		self.assertEqual(result["score"], 0.0)
+
+	def test_passed_result_is_used_as_is_regardless_of_evaluation_instant(self):
+		"""A stored Passed result is trusted as-is, even if due_at is far in the past."""
+		evaluation_instant = datetime(2026, 1, 1, 12, 0, 0)
+		result = classify_runs(
+			[{
+				"compliance_result": "Passed",
+				"due_at": datetime(2020, 1, 1, 0, 0, 0),
+				"completed_at": datetime(2019, 12, 31, 23, 0, 0),
+			}],
+			evaluation_instant,
+		)
+		self.assertEqual(result["passed_runs"], 1)
+		self.assertEqual(result["failed_runs"], 0)
+		self.assertEqual(result["eligible_runs"], 1)
+		self.assertEqual(result["score"], 1.0)
+
+	def test_pending_run_past_due_at_is_read_time_derived_as_failed(self):
+		"""A Pending run whose due_at has elapsed counts as failed/eligible without
+		mutating the stored compliance_result."""
+		evaluation_instant = datetime(2026, 1, 1, 12, 0, 0)
+		run = {
+			"compliance_result": "Pending",
+			"due_at": datetime(2026, 1, 1, 10, 0, 0),
+		}
+		result = classify_runs([run], evaluation_instant)
+		self.assertEqual(result["passed_runs"], 0)
+		self.assertEqual(result["failed_runs"], 1)
+		self.assertEqual(result["eligible_runs"], 1)
+		self.assertEqual(result["score"], 0.0)
+		# The input dict itself is never mutated.
+		self.assertEqual(run["compliance_result"], "Pending")
+
+	def test_pending_run_before_due_at_stays_excluded(self):
+		"""A Pending run whose due_at has not yet elapsed remains excluded."""
+		evaluation_instant = datetime(2026, 1, 1, 8, 0, 0)
+		result = classify_runs(
+			[{
+				"compliance_result": "Pending",
+				"due_at": datetime(2026, 1, 1, 10, 0, 0),
+			}],
+			evaluation_instant,
+		)
+		self.assertEqual(result["passed_runs"], 0)
+		self.assertEqual(result["failed_runs"], 0)
+		self.assertEqual(result["eligible_runs"], 0)
+		self.assertIsNone(result["score"])
+
+	def test_pending_run_at_exact_due_at_is_derived_as_failed(self):
+		"""due_at == evaluation_instant counts as elapsed (boundary is inclusive)."""
+		instant = datetime(2026, 1, 1, 10, 0, 0)
+		result = classify_runs(
+			[{"compliance_result": "Pending", "due_at": instant}],
+			instant,
+		)
+		self.assertEqual(result["failed_runs"], 1)
+		self.assertEqual(result["eligible_runs"], 1)
+
+	def test_zero_eligible_runs_still_returns_null_score_with_evaluation_instant(self):
+		"""Passing evaluation_instant does not change the no-data score:null contract."""
+		evaluation_instant = datetime(2026, 1, 1, 8, 0, 0)
+		result = classify_runs(
+			[{"compliance_result": "Pending", "due_at": datetime(2026, 1, 1, 10, 0, 0)}],
+			evaluation_instant,
+		)
+		self.assertEqual(result["eligible_runs"], 0)
+		self.assertIsNone(result["score"])
+
+	def test_pending_run_without_due_at_is_excluded_even_with_evaluation_instant(self):
+		"""No due_at means no basis for read-time derivation; stays excluded."""
+		evaluation_instant = datetime(2026, 1, 1, 12, 0, 0)
+		result = classify_runs(
+			[{"compliance_result": "Pending"}],
+			evaluation_instant,
+		)
+		self.assertEqual(result["eligible_runs"], 0)
+		self.assertIsNone(result["score"])

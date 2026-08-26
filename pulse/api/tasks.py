@@ -159,16 +159,28 @@ def complete_run(run_name: str):
 		frappe.throw("Run is not in a state that can be completed.")
 
 	run = frappe.get_doc("SOP Run", run_name)
-	
+
 	current_time = now()
 	run.completed_at = current_time
 	run.status = "Completed"
-	
+
 	# Pass / Fail check: completion exactly at deadline (completed_at == due_at) is Passed.
-	from frappe.utils import get_datetime
-	comp_dt = get_datetime(current_time)
+	#
+	# ``due_at`` is stored as naive UTC (see _generate_runs_for_frequency /
+	# finalize_overdue_runs in pulse/tasks.py). ``now()``/``current_time`` is
+	# naive site-local time, so it must be converted to naive UTC before
+	# comparing against due_at — comparing them directly would shift the
+	# Pass/Fail boundary by the site's UTC offset.
+	from frappe.utils import get_datetime, get_system_timezone
+	from zoneinfo import ZoneInfo
+	comp_dt = (
+		get_datetime(current_time)
+		.replace(tzinfo=ZoneInfo(get_system_timezone()))
+		.astimezone(ZoneInfo("UTC"))
+		.replace(tzinfo=None)
+	)
 	due_dt = get_datetime(run_data.due_at) if run_data.due_at else None
-	
+
 	if due_dt and comp_dt <= due_dt:
 		run.compliance_result = "Passed"
 	else:

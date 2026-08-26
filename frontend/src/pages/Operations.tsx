@@ -249,7 +249,7 @@ export function Operations() {
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
               <div className="shrink-0">
                 <Gauge
-                  value={complianceScore && complianceScore.score !== null ? Math.round(complianceScore.score * 100) : 0}
+                  value={complianceScore && complianceScore.score !== null ? Math.round(complianceScore.score * 100) : null}
                   size={160}
                   label="Inherited KPI"
                   mode="gradient"

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import type { ScoreSnapshot, FailureItem } from '@/types';
+import type { FailureItem, ComplianceScoreResponse } from '@/types';
 import { useAuth } from '@/store/AuthContext';
-import { getScoreForUser, getTeamScores, getFailureAnalytics } from '@/services/scores';
+import { getTeamScores, getFailureAnalytics } from '@/services/scores';
 import type { TeamScoreItem } from '@/services/scores';
 import { getDemoStatus, installDemoData } from '@/services/demo';
-import { getFailureList } from '@/services/operations';
+import { getFailureList, getComplianceScore } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2, AlertTriangle, ChevronRight } from 'lucide-react';
@@ -77,7 +77,8 @@ export function getOverdueDuration(dueAtString: string): string {
 export function Dashboard() {
   const { currentUser, refetch } = useAuth();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
-  const [score, setScore] = useState<ScoreSnapshot | null>(null);
+  const [heroScore, setHeroScore] = useState<ComplianceScoreResponse | null>(null);
+  const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
   const [teamData, setTeamData] = useState<TeamScoreItem[]>([]);
   const [analytics, setAnalytics] = useState<{ id: string; taskName: string; templateName: string; misses: number }[]>([]);
   const [failures, setFailures] = useState<FailureItem[]>([]);
@@ -97,11 +98,18 @@ export function Dashboard() {
       if (!currentUser) return;
       setIsLoading(true);
       const today = todayISO();
+      const isManager = !!currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole);
       try {
-        const userScore = await getScoreForUser(currentUser.id, today, periodType);
-        setScore(userScore);
+        const personal = await getComplianceScore(currentUser.id, 'personal', today, periodType);
+        setPersonalScore(personal);
+        // Manager-facing hero gauge defaults to inherited (team) health; individual
+        // contributors have no team to inherit from, so their hero is their personal score.
+        const hero = isManager
+          ? await getComplianceScore(currentUser.id, 'inherited', today, periodType)
+          : personal;
+        setHeroScore(hero);
 
-        if (currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole)) {
+        if (isManager) {
           const team = await getTeamScores(currentUser.id, today, periodType);
           setTeamData(team);
           const analyticsData = await getFailureAnalytics(currentUser.id, today);
@@ -168,14 +176,16 @@ export function Dashboard() {
     );
   }
 
-  const combinedScore = score?.combined_score ?? 0;
-  const ownScore = score?.own_score ?? 0;
-  const teamScore = score?.team_score ?? 0;
-  const totalItems = score?.total_items ?? 0;
-  const completedItems = score?.completed_items ?? 0;
-
-  const combinedPct = Math.round(combinedScore * 100);
-  const ownPct = Math.round(ownScore * 100);
+  // Hero gauge score: pass straight through, no null-to-zero collapsing. A
+  // genuinely null score (zero eligible runs) must reach Gauge as null so it
+  // renders the "no data" state rather than a misleading red 0%.
+  const heroPct = heroScore?.score != null ? Math.round(heroScore.score * 100) : null;
+  const ownPct = personalScore?.score != null ? Math.round(personalScore.score * 100) : null;
+  const totalItems = personalScore?.eligible_runs ?? 0;
+  const completedItems = personalScore?.passed_runs ?? 0;
+  const teamScore = teamData.length > 0
+    ? teamData.reduce((sum, t) => sum + (t.combined_score ?? 0), 0) / teamData.length
+    : 0;
 
   const barChartData = teamData.map((t) => ({
     name: t.user?.name?.split(' ')[0] ?? t.user?.id ?? '',
@@ -260,7 +270,7 @@ export function Dashboard() {
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
               <Gauge
-                value={combinedPct}
+                value={heroPct}
                 size={220}
                 label={`${periodType} KPI`}
                 mode="gradient"
@@ -298,10 +308,10 @@ export function Dashboard() {
                     <span
                       className={cn(
                         'text-sm font-bold mt-1',
-                        combinedPct >= 80 ? 'text-emerald-400' : combinedPct >= 50 ? 'text-amber-400' : 'text-rose-400'
+                        heroPct === null ? 'text-zinc-500' : heroPct >= 80 ? 'text-emerald-400' : heroPct >= 50 ? 'text-amber-400' : 'text-rose-400'
                       )}
                     >
-                      {combinedPct >= 80 ? 'EXCEPTIONAL' : combinedPct >= 50 ? 'STABLE' : 'CRITICAL'}
+                      {heroPct === null ? 'NO DATA' : heroPct >= 80 ? 'EXCEPTIONAL' : heroPct >= 50 ? 'STABLE' : 'CRITICAL'}
                     </span>
                   </div>
                 </div>
@@ -316,7 +326,7 @@ export function Dashboard() {
                   <Target className="h-4 w-4 text-zinc-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-white tracking-tighter">{ownPct}%</div>
+                  <div className="text-3xl font-bold text-white tracking-tighter">{ownPct !== null ? `${ownPct}%` : '—'}</div>
                   <p className="text-[10px] text-zinc-500 mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
                 </CardContent>
               </Card>
