@@ -35,6 +35,7 @@ from pulse.demo.data import (
     ACCEPTANCE_USERS,
     ASSIGNMENTS,
     COMPLETION_RATE,
+    DEMO_TIMEZONE,
     DEPARTMENTS,
     EMPLOYEE_BRANCH,
     EMPLOYEE_DEPARTMENT,
@@ -180,7 +181,7 @@ def _create_employees() -> None:
 def _create_templates() -> None:
     active_from = START_DATE.isoformat()
 
-    for title, dept, freq, owner_role, items in SOP_TEMPLATES:
+    for title, dept, freq, owner_role, local_start, window_minutes, items in SOP_TEMPLATES:
         if frappe.db.exists("SOP Template", {"title": title}):
             continue
 
@@ -202,6 +203,9 @@ def _create_templates() -> None:
             "owner_role":    owner_role,
             "active_from":   active_from,
             "is_active":     1,
+            "schedule_timezone":         DEMO_TIMEZONE,
+            "local_start_time":          local_start,
+            "completion_window_minutes": window_minutes,
             "checklist_items": checklist,
         }).insert(ignore_permissions=True)
 
@@ -227,56 +231,150 @@ def _create_assignments() -> None:
 
 
 def _create_runs() -> None:
+    """Create historical + today's SOP Runs with real due_at/schedule_key facts.
+
+    Uses the same pulse.domain.scheduling.resolve_schedule the live scheduler
+    uses (rather than hand-typing period_date-only rows), so this demo data
+    is visible to every due_at-scoped endpoint (Mission Control, failure
+    list, score trends), not just the legacy period_date-based views.
+    """
+    from pulse.domain.scheduling import make_run_key, resolve_schedule
+    from pulse.tasks import _build_manager_path
+
+    tz = ZoneInfo(DEMO_TIMEZONE)
+
     assignments = frappe.get_all(
         "SOP Assignment",
         filters={"is_active": 1},
         fields=["name", "template", "employee"],
     )
-    emp_user = {
-        e.name: frappe.db.get_value("Pulse Employee", e.name, "user")
-        for e in frappe.get_all("Pulse Employee", fields=["name", "user"])
+    employees = {
+        e.name: e
+        for e in frappe.get_all(
+            "Pulse Employee",
+            fields=["name", "user", "employee_name", "branch", "department"],
+        )
     }
-    emp_user = {k: v for k, v in emp_user.items() if v}
+    templates = {t.name: t for t in frappe.get_all(
+        "SOP Template",
+        fields=[
+            "name", "title", "modified", "frequency_type",
+            "schedule_timezone", "local_start_time", "completion_window_minutes",
+        ],
+    )}
+    department_names = {
+        d.name: d.department_name
+        for d in frappe.get_all("Pulse Department", fields=["name", "department_name"])
+    }
+    manager_paths = {emp: _build_manager_path(emp) for emp in employees}
 
-    today    = getdate()
-    current  = START_DATE
+    today = getdate()
+    current = START_DATE
 
     while current <= END_DATE:
         is_today = current == today
         for a in assignments:
-            user = emp_user.get(a.employee)
-            if not user:
+            employee = employees.get(a.employee)
+            template = templates.get(a.template)
+            if not employee or not template or not employee.user:
                 continue
 
-            rate     = COMPLETION_RATE.get(user, 0.85)
-            template = frappe.get_doc("SOP Template", a.template)
+            rate = COMPLETION_RATE.get(employee.user, 0.85)
 
-            if template.frequency_type == "Weekly" and current.weekday() != 0:
+            template_dict = {
+                "frequency_type":            template.frequency_type,
+                "schedule_timezone":         template.schedule_timezone,
+                "local_start_time":          template.local_start_time,
+                "completion_window_minutes": template.completion_window_minutes,
+            }
+            assignment_dict = {
+                "schedule_timezone_override": None,
+                "local_start_time_override": None,
+                "completion_window_minutes_override": None,
+            }
+
+            local_start = template.local_start_time
+            if isinstance(local_start, str):
+                local_start = time.fromisoformat(local_start)
+            if isinstance(local_start, timedelta):
+                local_start = (datetime.min + local_start).time()
+
+            opens_at_local = datetime.combine(current, local_start).replace(tzinfo=tz)
+            opens_at_utc = opens_at_local.astimezone(ZoneInfo("UTC"))
+
+            try:
+                schedule = resolve_schedule(template_dict, assignment_dict, opens_at_utc, DEMO_TIMEZONE)
+            except ValueError:
                 continue
-            if template.frequency_type == "Monthly" and current.day != 1:
+            if not schedule or schedule["window_date"] != current:
                 continue
+
+            run_key = make_run_key(a.name, schedule["schedule_key"])
+            if frappe.db.exists("SOP Run", {"run_key": run_key}):
+                continue
+
+            full_template = frappe.get_doc("SOP Template", a.template)
+            completed_at = None
+            if is_today:
+                result, run_status = "Pending", "Open"
+            else:
+                all_pass = all(random.random() < rate for _ in full_template.checklist_items)
+                if all_pass:
+                    result, run_status = "Passed", "Completed"
+                    completed_at = schedule["opens_at"] + timedelta(minutes=5)
+                else:
+                    result, run_status = "Failed", "Locked"
 
             run_items = []
-            for ci in template.checklist_items:
-                completed = random.random() < rate
-                status    = "Completed" if completed else ("Pending" if is_today else "Missed")
+            for ci in full_template.checklist_items:
+                if is_today:
+                    item_status, item_completed_at = "Pending", None
+                elif result == "Passed":
+                    item_status, item_completed_at = "Completed", completed_at
+                else:
+                    completed = random.random() < rate
+                    item_status = "Completed" if completed else "Missed"
+                    item_completed_at = completed_at if completed else None
                 run_items.append({
-                    "checklist_item":   ci.description,
-                    "weight":           ci.weight,
-                    "item_type":        ci.item_type,
-                    "status":           status,
+                    "checklist_item":    ci.description,
+                    "weight":            ci.weight,
+                    "item_type":         ci.item_type,
+                    "status":            item_status,
                     "evidence_required": ci.evidence_required or "None",
-                    "completed_at":     now() if completed and not is_today else None,
+                    "completed_at":      item_completed_at,
                 })
 
-            run_status = "Open" if is_today else ("Locked" if random.random() < 0.1 else "Closed")
+            total_items = len(run_items)
+            completed_items = sum(1 for ri in run_items if ri["status"] == "Completed")
+            progress = (completed_items / total_items * 100) if total_items else 0
+
             frappe.get_doc({
-                "doctype":     "SOP Run",
-                "template":    a.template,
-                "employee":    a.employee,
-                "period_date": current.isoformat(),
-                "status":      run_status,
-                "run_items":   run_items,
+                "doctype":                            "SOP Run",
+                "template":                           a.template,
+                "employee":                           a.employee,
+                "period_date":                        schedule["window_date"],
+                "status":                             run_status,
+                "compliance_result":                  result,
+                "completed_at":                       completed_at,
+                "assignment":                         a.name,
+                "schedule_key":                       schedule["schedule_key"],
+                "run_key":                            run_key,
+                "opens_at":                           schedule["opens_at"],
+                "due_at":                             schedule["due_at"],
+                "effective_timezone":                 schedule["effective_timezone"],
+                "template_title_snapshot":            full_template.title,
+                "template_modified_snapshot":         full_template.modified,
+                "employee_name_snapshot":             employee.employee_name,
+                "manager_path_snapshot":              manager_paths.get(a.employee, "[]"),
+                "department_snapshot":                department_names.get(employee.department),
+                "branch_snapshot":                    employee.branch,
+                "frequency_snapshot":                 full_template.frequency_type,
+                "completion_window_minutes_snapshot": schedule["completion_window_minutes"],
+                "snapshot_is_complete":               1,
+                "run_items":                          run_items,
+                "total_items":                        total_items,
+                "completed_items":                    completed_items,
+                "progress":                           progress,
             }).insert(ignore_permissions=True)
 
         current = add_days(current, 1)
@@ -378,7 +476,7 @@ def _compute_scores() -> dict:
 def _create_corrective_actions() -> None:
     runs_with_missed = frappe.get_all(
         "SOP Run",
-        filters={"status": ["in", ["Closed", "Locked"]]},
+        filters={"status": ["in", ["Completed", "Locked"]]},
         fields=["name", "employee"],
     )
     run_items = frappe.get_all(

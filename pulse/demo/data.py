@@ -126,10 +126,12 @@ EMPLOYEE_BRANCH = {
 # ── SOP Templates ─────────────────────────────────────────────────────────────
 # (title, department, frequency_type, owner_role, checklist_items)
 # checklist_items: [(description, sequence, weight, item_type, evidence_required)]
+# (title, department, frequency_type, owner_role, local_start_time,
+#  completion_window_minutes, checklist_items)
 SOP_TEMPLATES = [
     (
         "Kitchen Open Checklist",
-        "Kitchen", "Daily", "Operator",
+        "Kitchen", "Daily", "Operator", "06:00", 45,
         [
             ("Preheat grills and fryers",          10, 1.0, "Checkbox", "None"),
             ("Check stock levels - cold storage",   20, 1.5, "Checkbox", "Photo"),
@@ -139,7 +141,7 @@ SOP_TEMPLATES = [
     ),
     (
         "Kitchen Close Checklist",
-        "Kitchen", "Daily", "Operator",
+        "Kitchen", "Daily", "Operator", "22:00", 60,
         [
             ("Shut down all equipment",  10, 1.5, "Checkbox", "None"),
             ("Clean and sanitize grills",20, 1.0, "Checkbox", "Photo"),
@@ -149,7 +151,7 @@ SOP_TEMPLATES = [
     ),
     (
         "Cashier Daily Checklist",
-        "Front-of-House", "Daily", "Operator",
+        "Front-of-House", "Daily", "Operator", "08:00", 30,
         [
             ("Count cash drawer",          10, 2.0, "Checkbox", "None"),
             ("Verify POS system",          20, 1.0, "Checkbox", "None"),
@@ -159,7 +161,7 @@ SOP_TEMPLATES = [
     ),
     (
         "Store Clean Checklist",
-        "Operations", "Daily", "Operator",
+        "Operations", "Daily", "Operator", "07:00", 60,
         [
             ("Sweep and mop lobby",     10, 1.0, "Checkbox", "None"),
             ("Clean restrooms",         20, 1.5, "Checkbox", "Photo"),
@@ -169,7 +171,7 @@ SOP_TEMPLATES = [
     ),
     (
         "Supervisor Daily Review",
-        "Operations", "Daily", "Supervisor",
+        "Operations", "Daily", "Supervisor", "17:00", 90,
         [
             ("Review team task completion",    10, 2.0, "Checkbox", "None"),
             ("Spot-check one completed SOP",   20, 1.5, "Checkbox", "Photo"),
@@ -178,7 +180,7 @@ SOP_TEMPLATES = [
     ),
     (
         "Weekly Deep Clean",
-        "Operations", "Weekly", "Operator",
+        "Operations", "Weekly", "Operator", "09:00", 180,
         [
             ("Deep clean kitchen exhaust",  10, 2.0, "Checkbox", "Photo"),
             ("Sanitize all storage areas",  20, 1.5, "Checkbox", "Photo"),
@@ -186,6 +188,8 @@ SOP_TEMPLATES = [
         ],
     ),
 ]
+
+DEMO_TIMEZONE = "Asia/Kolkata"
 
 # ── Assignments ───────────────────────────────────────────────────────────────
 # (user_email, template_title)
