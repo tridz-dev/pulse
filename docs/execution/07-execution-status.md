@@ -93,10 +93,20 @@ session's work, and are not blocking. One real bug was caught by
 fallback field that the type (and the service-layer normalization in
 `operations.ts`) never actually produces — dead/incorrect code, removed.
 
-The acceptance-fixture bench command (`pulse-load-acceptance-fixture` +
-confirming the 1.0/0.0/0.5/null score cases through `get_compliance_score`)
-is the one remaining verification step before the full milestone can be
-called done.
+**Acceptance-fixture gate: PASSED.** `bench pulse-load-acceptance-fixture`
+loaded cleanly on `pulse-w1w5-verify`; the three generated runs for Owen
+Patel match the spec's run keys, due_at values, and compliance_result
+exactly (`A1:2026-08-24` Passed, `A2:2026-08-24` Failed, `A1:2026-08-25`
+Pending). `get_compliance_score` confirms the mixed period (`2026-08-24`,
+one Passed + one Failed) returns exactly `score: 0.5, passed_runs: 1,
+failed_runs: 1, eligible_runs: 2` — the spec's central `1/2 = 0.5` case —
+and Nora Singh (no assignment, no generated run) returns `score: null` for
+both personal and inherited scope, exactly as specified.
+
+**All planned verification gates for this session are now green:** backend
+test suite (82/82), frontend typecheck/build, and the acceptance-fixture
+score contract. Remaining backlog items (S4-T02/S4-T04 design docs, and
+S5/S6) are out of scope for this milestone per `CONTEXT.md`.
 
 Seven real bugs were caught and fixed only once the suite actually ran on a
 live bench (not caught by static/dispatcher review), reinforcing why this
