@@ -7,7 +7,7 @@ import { getDemoStatus, installDemoData } from '@/services/demo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2 } from 'lucide-react';
-import { Gauge } from '@/components/shared/Gauge';
+import { Ledger } from '@/components/ui/ledger';
 import {
   BarChart,
   Bar,
@@ -190,14 +190,7 @@ export function Dashboard() {
           <div className="grid gap-6 md:grid-cols-3">
             <Card className="bg-[#141415] border-zinc-800 md:col-span-2 p-8 relative overflow-hidden flex items-center gap-12 group hover:border-zinc-700/50 transition-all">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-              <Gauge
-                value={combinedPct}
-                size={220}
-                label={`${periodType} KPI`}
-                mode="gradient"
-                showTicks
-                showGlow
-              />
+              <Ledger value={combinedPct} label={`${periodType} KPI`} />
               <div className="flex flex-col justify-center gap-6 flex-1">
                 <div>
                   <h2 className="text-2xl font-bold text-white tracking-tight">Execution Health</h2>

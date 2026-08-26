@@ -17,7 +17,7 @@ import {
   ArrowLeft,
   AlertCircle,
 } from 'lucide-react';
-import { Gauge } from '@/components/shared/Gauge';
+import { Ledger } from '@/components/ui/ledger';
 import {
   BarChart,
   Bar,
@@ -160,14 +160,7 @@ export function UserProfile() {
           onClick={() => setIsBreakdownOpen(true)}
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-          <Gauge
-            value={combinedPct}
-            size={220}
-            label={`${periodType} KPI`}
-            mode="gradient"
-            showTicks
-            showGlow
-          />
+          <Ledger value={combinedPct} label={`${periodType} KPI`} />
           <div className="flex flex-col justify-center gap-6 flex-1">
             <div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Performance Profile</h2>
