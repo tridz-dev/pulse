@@ -43,7 +43,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle, CalendarDays } from 'lucide-react';
+import { TableEmptyState } from '@/components/ui/table-states';
 import {
   LineChart,
   Line,
@@ -400,7 +401,13 @@ export function Insights() {
                       <span className="text-sm font-bold font-mono text-pass">{formatScore(p.combined_score * 100)}</span>
                     </div>
                   ))}
-                  {performers.top.length === 0 && <p className="text-xs text-mute">No data</p>}
+                  {performers.top.length === 0 && (
+                    <TableEmptyState
+                      icon={<TrendingUp size={16} />}
+                      title="No top performers yet"
+                      description="Scores will appear here once employees complete checklists in this period."
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -420,7 +427,13 @@ export function Insights() {
                       <span className="text-sm font-bold font-mono text-fail">{formatScore(p.combined_score * 100)}</span>
                     </div>
                   ))}
-                  {performers.bottom.length === 0 && <p className="text-xs text-mute">No data</p>}
+                  {performers.bottom.length === 0 && (
+                    <TableEmptyState
+                      icon={<AlertTriangle size={16} />}
+                      title="No one needs attention"
+                      description="Low-scoring employees will show up here once there's enough completed activity."
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -462,7 +475,13 @@ export function Insights() {
                       </div>
                     );
                   })}
-                  {dayHeatmap.length === 0 && <p className="text-xs text-mute">No data</p>}
+                  {dayHeatmap.length === 0 && (
+                    <TableEmptyState
+                      icon={<CalendarDays size={16} />}
+                      title="Not enough data for this period"
+                      description="Day-of-week completion rates will appear once checklists have been completed across multiple days."
+                    />
+                  )}
                 </div>
               </CardContent>
             </Card>

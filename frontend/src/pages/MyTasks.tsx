@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Meter } from '@/components/ui/meter';
 import { CheckCircle2, CheckSquare, Lock } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CheckboxRow } from '@/components/ui/checkbox-row';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/store/ToastContext';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -175,10 +176,25 @@ function ChecklistRunner({
     await updateRunItem(itemId, newStatus);
   };
 
+  const { showToast } = useToast();
+
   const completeRunHandler = async () => {
     if (!details) return;
-    await completeRun(details.run.name ?? runId);
-    onOpenChange(false);
+    try {
+      await completeRun(details.run.name ?? runId);
+      showToast({
+        variant: 'pass',
+        title: 'Checklist submitted',
+        description: `${details.template?.title ?? 'Checklist'} completed.`,
+      });
+      onOpenChange(false);
+    } catch (err) {
+      showToast({
+        variant: 'fail',
+        title: 'Submission failed',
+        description: err instanceof Error ? err.message : 'Something went wrong submitting the checklist.',
+      });
+    }
   };
 
   if (!details) return null;
@@ -227,34 +243,24 @@ function ChecklistRunner({
             {details.items.map((item) => (
               <div
                 key={item.name}
-                className={`flex items-start gap-4 p-4 rounded-[var(--radius)] border ${
+                className={`p-4 rounded-[var(--radius)] border ${
                   item.status === 'Completed'
                     ? 'bg-sel/5 border-sel/20'
                     : 'bg-slab-2/50 border-rule'
                 } transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
               >
-                <Checkbox
-                  id={item.name}
+                <CheckboxRow
                   checked={item.status === 'Completed'}
                   disabled={isReadOnly}
                   onCheckedChange={() => toggleItem(item.name, item.status)}
-                  className="mt-0.5 border-rule-2 data-[state=checked]:bg-sel data-[state=checked]:border-sel"
+                  label={item.template_item?.description ?? item.checklist_item}
+                  secondary={
+                    (item.template_item?.weight ?? item.weight) > 1
+                      ? `Weight: ${item.template_item?.weight ?? item.weight}`
+                      : undefined
+                  }
+                  className={item.status === 'Completed' ? 'text-mute line-through opacity-70' : ''}
                 />
-                <div className="grid gap-1.5 leading-none w-full">
-                  <label
-                    htmlFor={item.name}
-                    className={`text-sm font-medium leading-tight cursor-pointer ${
-                      item.status === 'Completed' ? 'text-mute line-through opacity-70' : 'text-text'
-                    }`}
-                  >
-                    {item.template_item?.description ?? item.checklist_item}
-                  </label>
-                  {(item.template_item?.weight ?? item.weight) > 1 && (
-                    <span className="text-[10px] text-mute border border-rule rounded-[var(--radius)] px-1.5 py-0.5 w-max font-mono">
-                      Weight: {item.template_item?.weight ?? item.weight}
-                    </span>
-                  )}
-                </div>
               </div>
             ))}
           </div>

@@ -5,6 +5,7 @@ import type { TreeNode } from '@/services/operations';
 import { Network, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TreeRow, TreeRowGroup } from '@/components/ui/tree-row';
+import { Disclosure } from '@/components/ui/disclosure';
 import { scoreStatus } from '@/lib/score';
 
 function todayISO(): string {
@@ -75,17 +76,18 @@ export function Operations() {
           <div className="h-16 bg-slab rounded animate-pulse ml-16" />
         </div>
       ) : treeData ? (
-        <div className="mt-4 rounded border border-rule bg-slab overflow-hidden">
-          <div className="border-b border-rule bg-slab-2 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <Disclosure
+          className="mt-4"
+          defaultOpen={true}
+          title={
+            <span className="flex items-center gap-2">
               <Trophy size={16} className="text-mute" />
-              <span className="text-sm font-medium text-text">
-                Organization Health ({periodType})
-              </span>
-            </div>
-            <div className="text-xs text-faint font-mono">Select a row to drill down</div>
-          </div>
-          <div className="p-2 overflow-x-auto">
+              Organization Health ({periodType})
+            </span>
+          }
+          meta="Select a row to drill down"
+        >
+          <div className="overflow-x-auto -mx-1.5 -my-1">
             <div className="min-w-[600px]">
               <TreeRowGroup className="border-0 rounded-none">
                 <OperationNode
@@ -97,7 +99,7 @@ export function Operations() {
               </TreeRowGroup>
             </div>
           </div>
-        </div>
+        </Disclosure>
       ) : null}
     </div>
   );

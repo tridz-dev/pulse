@@ -1,6 +1,35 @@
 import { useAuth } from '@/store/AuthContext';
+import { useTheme } from '@/store/ThemeContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <div
+      role="group"
+      aria-label="Theme"
+      className="flex border border-rule-2 rounded-[var(--radius)] overflow-hidden"
+    >
+      {(['dark', 'light'] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          aria-pressed={theme === t}
+          onClick={() => setTheme(t)}
+          className={cn(
+            'px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wide text-faint transition-colors',
+            theme === t && 'bg-slab-2 text-text'
+          )}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function Topbar() {
   const { currentUser } = useAuth();
@@ -18,7 +47,8 @@ export function Topbar() {
         <span className="text-sm font-semibold text-text">{pageName}</span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
+        <ThemeToggle />
         <Avatar className="h-6 w-6 rounded-sm border border-rule">
           <AvatarImage src={currentUser?.avatarUrl} />
           <AvatarFallback className="text-[10px] bg-slab-2 text-text rounded-sm">

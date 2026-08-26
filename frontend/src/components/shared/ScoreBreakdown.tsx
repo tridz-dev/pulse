@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { StatusChip } from '@/components/ui/status-chip';
+import { Disclosure } from '@/components/ui/disclosure';
+import { TableEmptyState } from '@/components/ui/table-states';
 import {
-  ChevronRight,
   ChevronDown,
   Activity,
   Target,
@@ -37,7 +38,7 @@ interface ScoreBreakdownProps {
 export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }: ScoreBreakdownProps) {
   const [breakdown, setBreakdown] = useState<UserRunBreakdown | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const [initiallyExpandedGroups, setInitiallyExpandedGroups] = useState<string[]>([]);
 
   useEffect(() => {
     if (open && userId) {
@@ -51,7 +52,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
     try {
       const data = await getUserRunBreakdown(userId, date, periodType);
       setBreakdown(data);
-      setExpandedGroups(
+      setInitiallyExpandedGroups(
         data.templateGroups.filter((g) => g.missedItems > 0).map((g) => g.templateId)
       );
     } catch (error) {
@@ -59,10 +60,6 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
     }
     setIsLoading(false);
   }
-
-  const toggleGroup = (id: string) => {
-    setExpandedGroups((prev) => (prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]));
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -137,22 +134,17 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
                 </h4>
 
                 {breakdown.templateGroups.length === 0 ? (
-                  <div className="p-12 text-center border border-dashed border-rule rounded bg-slab/20">
-                    <AlertCircle className="mx-auto text-mute mb-3" size={32} />
-                    <p className="text-faint text-sm">No checklist instances found for this period.</p>
-                  </div>
+                  <TableEmptyState
+                    icon={<AlertCircle size={16} />}
+                    title="No checklist instances found"
+                    description="No checklist instances found for this period."
+                  />
                 ) : (
                   breakdown.templateGroups.map((group) => (
-                    <div key={group.templateId} className="flex flex-col gap-2">
-                      <button
-                        onClick={() => toggleGroup(group.templateId)}
-                        className={cn(
-                          'w-full flex items-center justify-between p-4 rounded border transition-all text-left',
-                          expandedGroups.includes(group.templateId)
-                            ? 'bg-slab-2/40 border-rule-2 shadow-lg'
-                            : 'bg-slab/40 border-rule hover:bg-slab-2/20'
-                        )}
-                      >
+                    <Disclosure
+                      key={group.templateId}
+                      defaultOpen={initiallyExpandedGroups.includes(group.templateId)}
+                      title={
                         <div className="flex items-center gap-3">
                           <div
                             className={cn(
@@ -171,28 +163,22 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex flex-col items-end mr-2">
-                            <span className="text-xs font-bold text-mute">
-                              {group.totalItems > 0
-                                ? Math.round((group.completedItems / group.totalItems) * 100)
-                                : 0}
-                              %
-                            </span>
-                            <span className="text-[10px] text-faint font-mono">
-                              {group.completedItems}/{group.totalItems} Items
-                            </span>
-                          </div>
-                          {expandedGroups.includes(group.templateId) ? (
-                            <ChevronDown size={16} className="text-faint" />
-                          ) : (
-                            <ChevronRight size={16} className="text-faint" />
-                          )}
+                      }
+                      meta={
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs font-bold text-mute">
+                            {group.totalItems > 0
+                              ? Math.round((group.completedItems / group.totalItems) * 100)
+                              : 0}
+                            %
+                          </span>
+                          <span className="text-[10px] text-faint font-mono">
+                            {group.completedItems}/{group.totalItems} Items
+                          </span>
                         </div>
-                      </button>
-
-                      {expandedGroups.includes(group.templateId) && (
-                        <div className="flex flex-col gap-4 pl-4 pr-1 py-4 border-l-2 border-rule ml-6 mt-1 animate-in slide-in-from-top-2 duration-300">
+                      }
+                    >
+                        <div className="flex flex-col gap-4">
                           {group.runs.map((run) => (
                             <div key={run.runId} className="flex flex-col gap-3">
                               <div className="flex items-center justify-between">
@@ -255,8 +241,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
                             </div>
                           ))}
                         </div>
-                      )}
-                    </div>
+                    </Disclosure>
                   ))
                 )}
               </div>

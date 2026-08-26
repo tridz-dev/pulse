@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Target, Users, Activity, Calendar, TrendingUp, Database } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
+import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
 import {
   BarChart,
   Bar,
@@ -335,9 +336,10 @@ export function Dashboard() {
               </CardHeader>
               <CardContent className="flex flex-col gap-4 mt-2">
                 {analytics.map((item) => (
-                  <div
+                  <StatusStrokeCard
                     key={item.id}
-                    className="flex items-center justify-between p-3 border border-rule bg-slab-2/60 transition-all hover:bg-slab-2"
+                    status="fail"
+                    className="flex items-center justify-between bg-slab-2/60 transition-all hover:bg-slab-2"
                   >
                     <div className="flex flex-col gap-0.5">
                       <span className="text-sm font-medium text-text">{item.taskName}</span>
@@ -347,7 +349,7 @@ export function Dashboard() {
                       <span className="text-sm font-bold font-mono text-fail">{item.misses}</span>
                       <span className="text-[10px] text-mute uppercase tracking-wider">Misses</span>
                     </div>
-                  </div>
+                  </StatusStrokeCard>
                 ))}
               </CardContent>
             </Card>

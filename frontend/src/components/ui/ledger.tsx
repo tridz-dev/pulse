@@ -33,12 +33,12 @@ function Ledger({
   return (
     <div data-slot="ledger" className={cn("flex flex-col gap-3", className)} {...props}>
       <div className="flex flex-col gap-1">
-        <div className={cn("flex items-baseline gap-1 font-sans font-bold tabular-nums tracking-tight", valueColor)}>
-          <span className="text-4xl md:text-5xl">{value}</span>
-          <span className="text-lg md:text-xl opacity-60">%</span>
+        <div className={cn("flex items-baseline gap-0.5 font-sans font-bold tabular-nums tracking-tight", valueColor)}>
+          <span className="text-[32px] md:text-[36px] leading-none">{value}</span>
+          <span className="text-[15px] text-mute">%</span>
         </div>
         {label && (
-          <span className="font-mono text-[10px] uppercase tracking-widest text-faint">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint mt-0.5">
             {label}
           </span>
         )}
