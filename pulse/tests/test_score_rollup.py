@@ -1,10 +1,27 @@
 # Copyright (c) 2026, Tridz and contributors
 # License: MIT
 
+import datetime
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import get_system_timezone
 
 from pulse.api.scores import get_compliance_score
+
+
+def _local_end_of_day_to_utc(period_date: str) -> str:
+	"""Convert the site-local end of ``period_date`` to a naive UTC string.
+
+	Mirrors how ``pulse.domain.scheduling.resolve_schedule`` freezes ``due_at``:
+	a local wall-clock instant converted to naive UTC, not a naive string
+	written as if it were already UTC.
+	"""
+	tz = ZoneInfo(get_system_timezone())
+	local_dt = datetime.datetime.strptime(f"{period_date} 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+	return local_dt.astimezone(ZoneInfo("UTC")).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
 
 
 class TestScoreRollup(FrappeTestCase):
@@ -133,7 +150,7 @@ class TestScoreRollup(FrappeTestCase):
 			"employee": employee,
 			"period_date": period_date,
 			"status": status,
-			"due_at": f"{period_date} 23:59:59",
+			"due_at": _local_end_of_day_to_utc(period_date),
 			"run_items": [
 				{
 					"checklist_item": "Test step",
@@ -224,7 +241,17 @@ class TestScoreRollup(FrappeTestCase):
 		self._create_run(op_c_emp, "Pending", status="Open")
 
 		frappe.set_user(self.sup_user)
-		result = get_compliance_score(self.sup_emp, scope="inherited", date=self.TEST_DATE)
+		# TEST_DATE is a fixed historical calendar date, but the endpoint always
+		# derives Pending-vs-Failed against the real wall-clock instant. Freeze
+		# the evaluation instant to a point on TEST_DATE that is still before
+		# the Pending run's due_at (end of TEST_DATE) so the assertion actually
+		# exercises "Pending, not yet due" rather than being at the mercy of the
+		# real current date.
+		with patch(
+			"pulse.api.scores.now_datetime",
+			return_value=datetime.datetime.strptime(f"{self.TEST_DATE} 09:00:00", "%Y-%m-%d %H:%M:%S"),
+		):
+			result = get_compliance_score(self.sup_emp, scope="inherited", date=self.TEST_DATE)
 
 		# Only Operator A's Passed run should be eligible.
 		self.assertEqual(result["eligible_runs"], 1)

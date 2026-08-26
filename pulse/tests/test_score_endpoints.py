@@ -1,10 +1,26 @@
 # Copyright (c) 2026, Tridz and contributors
 # License: MIT
 
+import datetime
+from zoneinfo import ZoneInfo
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import get_system_timezone
 
 from pulse.api.scores import get_compliance_score
+
+
+def _local_end_of_day_to_utc(period_date: str) -> str:
+    """Convert the site-local end of ``period_date`` to a naive UTC string.
+
+    Mirrors how ``pulse.domain.scheduling.resolve_schedule`` freezes ``due_at``:
+    a local wall-clock instant converted to naive UTC, not a naive string
+    written as if it were already UTC.
+    """
+    tz = ZoneInfo(get_system_timezone())
+    local_dt = datetime.datetime.strptime(f"{period_date} 23:59:59", "%Y-%m-%d %H:%M:%S").replace(tzinfo=tz)
+    return local_dt.astimezone(ZoneInfo("UTC")).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
 
 
 class TestScoreEndpointScope(FrappeTestCase):
@@ -132,7 +148,7 @@ class TestScoreEndpointScope(FrappeTestCase):
             "employee": employee,
             "period_date": period_date,
             "status": status,
-            "due_at": f"{period_date} 23:59:59",
+            "due_at": _local_end_of_day_to_utc(period_date),
             "run_items": [
                 {
                     "checklist_item": "Test step",
