@@ -3,20 +3,16 @@ import { useAuth } from '@/store/AuthContext';
 import { getOperationsOverview, getFailureList, getComplianceScore } from '@/services/operations';
 import type { TreeNode } from '@/services/operations';
 import type { FailureItem, ComplianceScoreResponse } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Gauge } from '@/components/shared/Gauge';
-import { Network, ChevronRight, ChevronDown, Trophy } from 'lucide-react';
+import { Ledger } from '@/components/ui/ledger';
+import { Network, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
+import { TreeRow, TreeRowGroup } from '@/components/ui/tree-row';
+import { Disclosure } from '@/components/ui/disclosure';
+import { scoreStatus } from '@/lib/score';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -121,10 +117,10 @@ export function Operations() {
 
   if (!currentUser || ['Pulse User', 'Pulse Manager'].includes(currentUser.systemRole ?? '')) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
-        <Network size={48} className="text-zinc-600 mb-4" />
-        <h3 className="text-base font-medium text-zinc-300">Access Restricted</h3>
-        <p className="text-sm text-zinc-500 mt-1 text-center max-w-sm">
+      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-rule border-dashed rounded bg-slab">
+        <Network size={48} className="text-faint mb-4" />
+        <h3 className="text-base font-medium text-text">Access Restricted</h3>
+        <p className="text-sm text-mute mt-1 text-center max-w-sm">
           Operations Overview is reserved for Area Managers and Executive Leadership.
         </p>
       </div>
@@ -212,55 +208,49 @@ export function Operations() {
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Mission Control</h1>
-          <p className="text-zinc-400 text-sm mt-1">Hierarchical roll-up of organizational execution.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-text">Mission Control</h1>
+          <p className="text-mute text-sm mt-1">Hierarchical roll-up of organizational execution.</p>
         </div>
-        <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shrink-0 self-start sm:self-center">
+        <div className="flex items-center gap-1 bg-slab p-1 rounded border border-rule shrink-0 self-start sm:self-center">
           {(['Day', 'Week', 'Month'] as const).map((p) => (
-            <Button
+            <button
               key={p}
-              variant="ghost"
-              size="sm"
+              type="button"
               onClick={() => setPeriodType(p)}
-              className={cn(
-                'h-8 px-3 text-xs font-medium transition-all rounded-md',
-                periodType === p ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
-              )}
+              className={
+                'h-8 px-3 text-xs font-medium transition-all rounded ' +
+                (periodType === p ? 'bg-slab-2 text-text shadow-sm' : 'text-faint hover:text-mute hover:bg-slab-2')
+              }
             >
               {p}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-4">
-          <div className="h-48 bg-zinc-900 rounded-xl animate-pulse" />
+          <div className="h-48 bg-slab animate-pulse" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="h-64 bg-zinc-900 rounded-xl animate-pulse lg:col-span-2" />
-            <div className="h-64 bg-zinc-900 rounded-xl animate-pulse" />
+            <div className="h-64 bg-slab animate-pulse lg:col-span-2" />
+            <div className="h-64 bg-slab animate-pulse" />
           </div>
         </div>
       ) : (
         <>
-          {/* Top section: Compliance Gauge & Weakest Subtree callout */}
+          {/* Top section: Compliance Ledger & Weakest Subtree callout */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-[#141415] md:col-span-2 border-zinc-800 p-6 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+            <Card className="bg-slab md:col-span-2 border-rule p-6 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
               <div className="shrink-0">
-                <Gauge
+                <Ledger
                   value={complianceScore && complianceScore.score !== null ? Math.round(complianceScore.score * 100) : null}
-                  size={160}
                   label="Inherited KPI"
-                  mode="gradient"
-                  showTicks
-                  showGlow
                 />
               </div>
               <div className="flex-1 flex flex-col gap-3 text-center md:text-left">
                 <div>
-                  <h2 className="text-xl font-semibold text-white tracking-tight">Inherited Compliance Score</h2>
-                  <p className="text-zinc-400 text-xs mt-1">
+                  <h2 className="text-xl font-semibold text-text tracking-tight">Inherited Compliance Score</h2>
+                  <p className="text-mute text-xs mt-1">
                     Prominently showing your team's overall inherited score based on {complianceScore?.eligible_runs || 0} eligible runs ({complianceScore?.passed_runs || 0} passed, {complianceScore?.failed_runs || 0} failed) for the selected period.
                   </p>
                 </div>
@@ -268,22 +258,22 @@ export function Operations() {
             </Card>
 
             {weakestNode && (
-              <Card 
-                className="bg-[#141415] border-zinc-800 p-6 flex flex-col justify-between hover:border-rose-500/40 transition-all cursor-pointer group"
+              <Card
+                className="bg-slab border-rule p-6 flex flex-col justify-between hover:border-rule-2 transition-all cursor-pointer group"
                 onClick={() => navigate(`/operations/${weakestNode!.user.id}`)}
               >
                 <div>
-                  <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider">Weakest Subtree / Person</span>
-                  <h3 className="text-lg font-bold text-zinc-100 mt-2 group-hover:text-indigo-300 transition-colors">
+                  <span className="text-[10px] text-fail font-bold uppercase tracking-wider">Weakest Subtree / Person</span>
+                  <h3 className="text-lg font-bold text-text mt-2 transition-colors">
                     {weakestNode.user.name}
                   </h3>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-mute mt-1">
                     {weakestNode.user.role} {weakestNode.user.branch ? `• ${weakestNode.user.branch}` : ''}
                   </p>
                 </div>
-                <div className="mt-4 pt-4 border-t border-zinc-800/80 flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">Score</span>
-                  <Badge variant="outline" className="text-rose-400 bg-rose-400/10 border-rose-400/20 font-mono text-xs font-bold">
+                <div className="mt-4 pt-4 border-t border-rule flex items-center justify-between">
+                  <span className="text-xs text-faint">Score</span>
+                  <Badge variant="outline" className="text-fail bg-fail/10 border-fail/20 font-mono text-xs font-bold">
                     {Math.round((weakestNode.score.combinedScore ?? 0) * 100)}%
                   </Badge>
                 </div>
@@ -294,44 +284,44 @@ export function Operations() {
           {/* Attention Lists Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Failed runs card */}
-            <Card className="bg-[#141415] border-zinc-800 lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-zinc-800">
+            <Card className="bg-slab border-rule lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-rule">
                 <div>
-                  <CardTitle className="text-lg font-bold text-white">Failed runs</CardTitle>
-                  <CardDescription className="text-xs text-zinc-500">
+                  <CardTitle className="text-lg font-bold text-text">Failed runs</CardTitle>
+                  <CardDescription className="text-xs text-faint">
                     Failing SOP runs ordered by overdue duration, repeat occurrences, and due time.
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-rose-400 bg-rose-400/10 border-rose-400/20 font-mono">
+                <Badge variant="outline" className="text-fail bg-fail/10 border-fail/20 font-mono">
                   {sortedFailures.length} Failed
                 </Badge>
               </CardHeader>
               <CardContent className="p-0">
                 {isFailuresLoading ? (
                   <div className="p-6 space-y-3">
-                    <div className="h-12 bg-zinc-900 animate-pulse rounded" />
-                    <div className="h-12 bg-zinc-900 animate-pulse rounded" />
+                    <div className="h-12 bg-slab-2 animate-pulse" />
+                    <div className="h-12 bg-slab-2 animate-pulse" />
                   </div>
                 ) : sortedFailures.length === 0 ? (
                   <div className="p-12 text-center">
-                    <p className="text-zinc-500 text-sm">No failed runs found in scope for this period.</p>
+                    <p className="text-faint text-sm">No failed runs found in scope for this period.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-zinc-800/60 max-h-[450px] overflow-y-auto">
+                  <div className="divide-y divide-rule max-h-[450px] overflow-y-auto">
                     {sortedFailures.map((f) => (
                       <div
                         key={f.run}
-                        className="flex items-center justify-between p-4 hover:bg-zinc-800/20 transition-all cursor-pointer group"
+                        className="flex items-center justify-between p-4 hover:bg-slab-2 transition-all cursor-pointer group"
                         onClick={() => setSelectedFailure(f)}
                       >
                         <div className="flex flex-col gap-1 min-w-0 mr-4">
-                          <span className="text-sm font-semibold text-zinc-200 truncate group-hover:text-indigo-300 transition-colors">
+                          <span className="text-sm font-semibold text-text truncate transition-colors">
                             {f.template_title}
                           </span>
-                          <span className="text-xs text-zinc-400 truncate">
+                          <span className="text-xs text-mute truncate">
                             Assigned to:{' '}
-                            <span 
-                              className="font-medium text-zinc-300 hover:underline"
+                            <span
+                              className="font-medium text-text hover:underline"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/operations/${f.person.employee}`);
@@ -340,16 +330,16 @@ export function Operations() {
                               {f.person.name}
                             </span>
                           </span>
-                          <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                          <span className="text-[10px] text-faint font-mono mt-0.5">
                             Due: {new Date(f.due_at.replace(' ', 'T')).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <Badge variant="outline" className="text-[10px] uppercase font-mono bg-rose-500/10 text-rose-400 border-rose-500/20">
+                          <Badge variant="outline" className="text-[10px] uppercase font-mono bg-fail/10 text-fail border-fail/20">
                             {getOverdueDuration(f.due_at)}
                           </Badge>
                           {f.repeatCount > 1 && (
-                            <Badge variant="outline" className="text-[10px] uppercase font-mono bg-amber-500/10 text-amber-400 border-amber-500/20">
+                            <Badge variant="outline" className="text-[10px] uppercase font-mono bg-risk/10 text-risk border-risk/20">
                               {f.repeatCount}x repeat fail
                             </Badge>
                           )}
@@ -362,29 +352,29 @@ export function Operations() {
             </Card>
 
             {/* Most repeated failed SOPs */}
-            <Card className="bg-[#141415] border-zinc-800">
-              <CardHeader className="pb-2 border-b border-zinc-800">
-                <CardTitle className="text-lg font-bold text-white">Repeated SOP Failures</CardTitle>
-                <CardDescription className="text-xs text-zinc-500">
+            <Card className="bg-slab border-rule">
+              <CardHeader className="pb-2 border-b border-rule">
+                <CardTitle className="text-lg font-bold text-text">Repeated SOP Failures</CardTitle>
+                <CardDescription className="text-xs text-faint">
                   SOP templates with the highest failure count in this period.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 {isFailuresLoading ? (
                   <div className="p-6 space-y-3">
-                    <div className="h-12 bg-zinc-900 animate-pulse rounded" />
-                    <div className="h-12 bg-zinc-900 animate-pulse rounded" />
+                    <div className="h-12 bg-slab-2 animate-pulse" />
+                    <div className="h-12 bg-slab-2 animate-pulse" />
                   </div>
                 ) : sortedSops.length === 0 ? (
                   <div className="p-12 text-center">
-                    <p className="text-zinc-500 text-sm">No SOP failures found.</p>
+                    <p className="text-faint text-sm">No SOP failures found.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-zinc-800/60">
+                  <div className="divide-y divide-rule">
                     {sortedSops.map((sop) => (
                       <div
                         key={sop.title}
-                        className="flex items-center justify-between p-4 hover:bg-zinc-800/20 transition-all cursor-pointer group"
+                        className="flex items-center justify-between p-4 hover:bg-slab-2 transition-all cursor-pointer group"
                         onClick={() => {
                           const sopFailures = failures.filter(f => f.template_title === sop.title);
                           setSelectedSopTitle(sop.title);
@@ -392,16 +382,16 @@ export function Operations() {
                         }}
                       >
                         <div className="flex flex-col gap-0.5 min-w-0 mr-4">
-                          <span className="text-sm font-semibold text-zinc-200 truncate group-hover:text-indigo-300 transition-colors">
+                          <span className="text-sm font-semibold text-text truncate transition-colors">
                             {sop.title}
                           </span>
-                          <span className="text-xs text-zinc-500 font-mono">
+                          <span className="text-xs text-faint font-mono">
                             Click to view failures
                           </span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className="text-base font-bold text-rose-400">{sop.count}</span>
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-semibold">Failures</span>
+                          <span className="text-base font-bold text-fail">{sop.count}</span>
+                          <span className="text-[9px] text-faint uppercase tracking-wider font-semibold">Failures</span>
                         </div>
                       </div>
                     ))}
@@ -413,27 +403,30 @@ export function Operations() {
 
           {/* Org Hierarchy Collapsible / Table */}
           {treeData && (
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-[#141415] overflow-hidden">
-              <div className="border-b border-zinc-800 bg-zinc-900/50 p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Trophy size={16} className="text-indigo-400" />
-                  <span className="text-sm font-medium text-zinc-200">
-                    Organization Hierarchy Roll-up ({periodType})
-                  </span>
-                </div>
-                <div className="text-xs text-zinc-500 font-mono">Select a row to drill down</div>
-              </div>
-              <div className="p-2 overflow-x-auto">
+            <Disclosure
+              className="mt-4"
+              defaultOpen={true}
+              title={
+                <span className="flex items-center gap-2">
+                  <Trophy size={16} className="text-mute" />
+                  Organization Health ({periodType})
+                </span>
+              }
+              meta="Select a row to drill down"
+            >
+              <div className="overflow-x-auto -mx-1.5 -my-1">
                 <div className="min-w-[600px]">
-                  <OperationNode
-                    node={treeData}
-                    level={0}
-                    defaultExpanded={true}
-                    onUserClick={(u) => navigate(`/operations/${u.id}`)}
-                  />
+                  <TreeRowGroup className="border-0 rounded-none">
+                    <OperationNode
+                      node={treeData}
+                      level={0}
+                      defaultExpanded={true}
+                      onUserClick={(u) => navigate(`/operations/${u.id}`)}
+                    />
+                  </TreeRowGroup>
                 </div>
               </div>
-            </div>
+            </Disclosure>
           )}
         </>
       )}
@@ -441,30 +434,30 @@ export function Operations() {
       {/* Run Detail Sheet */}
       {selectedFailure && (
         <Sheet open={!!selectedFailure} onOpenChange={(open) => { if (!open) setSelectedFailure(null); }}>
-          <SheetContent className="bg-[#18181b] border-zinc-800 sm:max-w-md w-full p-6 flex flex-col h-full text-zinc-100">
-            <SheetHeader className="text-left border-b border-zinc-800 pb-4">
+          <SheetContent className="bg-slab border-rule sm:max-w-md w-full p-6 flex flex-col h-full text-text">
+            <SheetHeader className="text-left border-b border-rule pb-4">
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-rose-400 border-rose-400/20 bg-rose-500/10">
+                <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10">
                   Failed Run
                 </Badge>
-                <Badge variant="secondary" className="bg-zinc-800 text-zinc-400">
+                <Badge variant="secondary" className="bg-slab-2 text-mute">
                   Read Only
                 </Badge>
               </div>
-              <SheetTitle className="text-xl text-zinc-100 mt-2">{selectedFailure.template_title}</SheetTitle>
-              <SheetDescription className="text-zinc-500">
+              <SheetTitle className="text-xl text-text mt-2">{selectedFailure.template_title}</SheetTitle>
+              <SheetDescription className="text-faint">
                 Run ID: {selectedFailure.run}
               </SheetDescription>
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-6">
-              <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-xl p-4 flex flex-col gap-4">
+              <div className="bg-slab-2 border border-rule p-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                  <span className="text-[10px] text-faint font-mono uppercase tracking-widest font-bold">
                     Assigned Person
                   </span>
-                  <span 
-                    className="text-sm font-medium text-zinc-200 hover:underline cursor-pointer"
+                  <span
+                    className="text-sm font-medium text-text hover:underline cursor-pointer"
                     onClick={() => {
                       setSelectedFailure(null);
                       navigate(`/operations/${selectedFailure.person.employee}`);
@@ -472,29 +465,29 @@ export function Operations() {
                   >
                     {selectedFailure.person.name}
                   </span>
-                  <span className="text-[10px] text-zinc-500 font-mono">
+                  <span className="text-[10px] text-faint font-mono">
                     ID: {selectedFailure.person.employee}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                  <span className="text-[10px] text-faint font-mono uppercase tracking-widest font-bold">
                     Due Date & Time
                   </span>
-                  <span className="text-sm font-medium text-zinc-200">
+                  <span className="text-sm font-medium text-text">
                     {new Date(selectedFailure.due_at.replace(' ', 'T')).toLocaleString()}
                   </span>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest font-bold">
+                  <span className="text-[10px] text-faint font-mono uppercase tracking-widest font-bold">
                     Current Status
                   </span>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-rose-400 border-rose-400/20 bg-rose-500/10 uppercase text-[10px]">
+                    <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10 uppercase text-[10px]">
                       {selectedFailure.status}
                     </Badge>
-                    <span className="text-xs text-rose-400 font-mono">
+                    <span className="text-xs text-fail font-mono">
                       ({getOverdueDuration(selectedFailure.due_at)})
                     </span>
                   </div>
@@ -502,9 +495,9 @@ export function Operations() {
               </div>
             </div>
 
-            <div className="border-t border-zinc-800 pt-6 mt-auto">
+            <div className="border-t border-rule pt-6 mt-auto">
               <Button
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                className="w-full bg-slab-2 hover:bg-slab-2/70 text-text"
                 onClick={() => setSelectedFailure(null)}
               >
                 Close Details
@@ -517,13 +510,13 @@ export function Operations() {
       {/* SOP Failures Sheet */}
       {selectedSopTitle && (
         <Sheet open={!!selectedSopTitle} onOpenChange={(open) => { if (!open) { setSelectedSopTitle(null); setSelectedSopFailures([]); } }}>
-          <SheetContent className="bg-[#18181b] border-zinc-800 sm:max-w-md w-full p-6 flex flex-col h-full text-zinc-100">
-            <SheetHeader className="text-left border-b border-zinc-800 pb-4">
-              <Badge variant="outline" className="text-rose-400 border-rose-400/20 bg-rose-500/10 w-fit">
+          <SheetContent className="bg-slab border-rule sm:max-w-md w-full p-6 flex flex-col h-full text-text">
+            <SheetHeader className="text-left border-b border-rule pb-4">
+              <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10 w-fit">
                 SOP Failed Runs
               </Badge>
-              <SheetTitle className="text-xl text-zinc-100 mt-2">{selectedSopTitle}</SheetTitle>
-              <SheetDescription className="text-zinc-500">
+              <SheetTitle className="text-xl text-text mt-2">{selectedSopTitle}</SheetTitle>
+              <SheetDescription className="text-faint">
                 Failed runs for this SOP template in the selected period.
               </SheetDescription>
             </SheetHeader>
@@ -532,27 +525,27 @@ export function Operations() {
               {selectedSopFailures.map((f) => (
                 <div
                   key={f.run}
-                  className="flex items-center justify-between p-3 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-800/40 transition-all cursor-pointer group"
+                  className="flex items-center justify-between p-3 border border-rule bg-slab-2/60 hover:bg-slab-2 transition-all cursor-pointer group"
                   onClick={() => setSelectedFailure(f)}
                 >
                   <div className="flex flex-col gap-1 min-w-0 mr-4">
-                    <span className="text-xs font-semibold text-zinc-200 truncate group-hover:text-indigo-300 transition-colors">
+                    <span className="text-xs font-semibold text-text truncate transition-colors">
                       {f.person.name}
                     </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">
+                    <span className="text-[10px] text-faint font-mono">
                       Due: {new Date(f.due_at.replace(' ', 'T')).toLocaleString()}
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-[9px] uppercase font-mono bg-rose-500/10 text-rose-400 border-rose-500/20 shrink-0">
+                  <Badge variant="outline" className="text-[9px] uppercase font-mono bg-fail/10 text-fail border-fail/20 shrink-0">
                     {getOverdueDuration(f.due_at)}
                   </Badge>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-zinc-800 pt-6 mt-auto">
+            <div className="border-t border-rule pt-6 mt-auto">
               <Button
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                className="w-full bg-slab-2 hover:bg-slab-2/70 text-text"
                 onClick={() => { setSelectedSopTitle(null); setSelectedSopFailures([]); }}
               >
                 Close List
@@ -578,88 +571,48 @@ function OperationNode({
 }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const hasChildren = node.children && node.children.length > 0;
-  const score = node.score as { combinedScore?: number; combined_score?: number; ownScore?: number; own_score?: number };
-  const combinedScore = score?.combinedScore ?? score?.combined_score ?? 0;
-  const ownScore = score?.ownScore ?? score?.own_score ?? 0;
+  const combinedScore = node.score?.combinedScore ?? 0;
+  const totalItems = node.score?.total_items ?? node.score?.totalGeneratedItems ?? 0;
+  const completedItems = node.score?.completed_items ?? node.score?.completedItems ?? 0;
   const scorePercentage = Math.round(combinedScore * 100);
-  let scoreColor = 'text-zinc-300 bg-zinc-800';
-  if (combinedScore >= 0.8) scoreColor = 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-  else if (combinedScore >= 0.5) scoreColor = 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-  else scoreColor = 'text-rose-400 bg-rose-400/10 border-rose-400/20';
+  const status = scoreStatus(scorePercentage);
+
+  // Prefer real composition counts (completed vs remaining) when available,
+  // falling back to a synthetic 2-segment score split otherwise.
+  const meter =
+    totalItems > 0
+      ? [
+          { value: completedItems, className: 'bg-pass' },
+          { value: Math.max(totalItems - completedItems, 0), className: 'bg-fail' },
+        ]
+      : [
+          { value: scorePercentage, className: 'bg-pass' },
+          { value: 100 - scorePercentage, className: 'bg-fail' },
+        ];
+
+  const rowLevel: 0 | 1 = level > 0 ? 1 : 0;
 
   return (
-    <div className="flex flex-col min-w-max">
-      <div
-        className={cn('flex items-center p-3 rounded-lg transition-colors hover:bg-zinc-800/40 relative group cursor-pointer')}
-        style={{ paddingLeft: `${Math.max(0.75, level * 2)}rem` }}
-        onClick={() => onUserClick(node.user)}
-      >
-        {level > 0 && (
-          <div
-            className="absolute left-0 top-1/2 w-6 border-t border-zinc-800 -z-10 group-hover:border-zinc-700 transition-colors pointer-events-none"
-            style={{ left: `${(level - 1) * 2 + 1}rem` }}
-          />
-        )}
-        {level > 0 && (
-          <div
-            className="absolute top-0 bottom-1/2 border-l border-zinc-800 -z-10 group-hover:border-zinc-700 transition-colors pointer-events-none"
-            style={{ left: `${(level - 1) * 2 + 1}rem` }}
-          />
-        )}
-        <div
-          className="w-8 h-8 flex items-center justify-center shrink-0 mr-1 text-zinc-500 hover:text-white transition-colors hover:bg-zinc-800 rounded-md z-10"
-          onClick={(e) => {
-            if (hasChildren) {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }
-          }}
-        >
-          {hasChildren ? (
-            isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />
-          ) : (
-            <div className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-          )}
-        </div>
-        <Avatar className="h-8 w-8 rounded-md border border-zinc-700 mr-3 shrink-0">
-          <AvatarImage src={node.user.avatarUrl} />
-          <AvatarFallback className="text-xs bg-zinc-800 text-zinc-300 rounded-md">
-            {node.user.name?.charAt(0) ?? '?'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col min-w-[200px] pr-4">
-          <span className="font-medium text-sm text-zinc-200 truncate group-hover:text-indigo-300 transition-colors">
-            {node.user.name}
+    <div className="flex flex-col" style={{ marginLeft: level > 1 ? `${(level - 1) * 1.5}rem` : undefined }}>
+      <TreeRow
+        level={rowLevel}
+        name={
+          <span className="flex flex-col items-start min-w-0">
+            <span className="truncate">{node.user.name}</span>
+            <span className="text-[10px] font-normal text-faint truncate">
+              {node.user.role} {node.user.branch ? `• ${node.user.branch}` : ''}
+            </span>
           </span>
-          <span className="text-[10px] text-zinc-500 truncate">
-            {node.user.role} {node.user.branch ? `• ${node.user.branch}` : ''}
-          </span>
-        </div>
-        <div className="ml-auto flex items-center gap-4 pl-4 shrink-0">
-          <div className="flex flex-col text-right w-20">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Own Score</span>
-            <span className="text-xs text-zinc-400 font-mono mt-0.5">{Math.round(ownScore * 100)}%</span>
-          </div>
-          <div className="w-px h-6 bg-zinc-800 mx-1" />
-          <div className="flex flex-col text-right w-24">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Combined KPI</span>
-            <div className="flex items-center justify-end gap-2 mt-0.5">
-              <Badge
-                variant="outline"
-                className={cn('px-1.5 py-0 border font-mono text-xs shadow-sm shadow-black', scoreColor)}
-              >
-                {scorePercentage}%
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
+        }
+        score={status === 'none' ? null : scorePercentage}
+        meter={meter}
+        expanded={hasChildren ? isExpanded : undefined}
+        onToggle={hasChildren ? () => setIsExpanded(!isExpanded) : undefined}
+        onClick={hasChildren ? undefined : () => onUserClick(node.user)}
+        onDoubleClick={hasChildren ? () => onUserClick(node.user) : undefined}
+      />
       {isExpanded && hasChildren && (
-        <div className="flex flex-col relative">
-          <div
-            className="absolute top-0 bottom-6 border-l border-zinc-800 -z-10 pointer-events-none"
-            style={{ left: `${level * 2 + 1.35}rem` }}
-          />
+        <div className="flex flex-col">
           {node.children!.map((child) => (
             <OperationNode
               key={child.user.id}

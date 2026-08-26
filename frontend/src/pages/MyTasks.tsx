@@ -5,10 +5,12 @@ import type { RunListItem } from '@/services/tasks';
 import type { SOPRunItem } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Meter } from '@/components/ui/meter';
 import { CheckCircle2, CheckSquare, Lock } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Checkbox } from '@/components/ui/checkbox';
+import { CheckboxRow } from '@/components/ui/checkbox-row';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/store/ToastContext';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -35,8 +37,8 @@ export function MyTasks() {
   return (
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-white">My Tasks</h1>
-        <p className="text-zinc-400 text-sm mt-1">
+        <h1 className="text-3xl font-semibold tracking-tight text-text">My Tasks</h1>
+        <p className="text-mute text-sm mt-1">
           Manage your active operations and standard operating procedures.
         </p>
       </div>
@@ -44,14 +46,14 @@ export function MyTasks() {
       {isLoading ? (
         <div className="grid gap-4 mt-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-zinc-900 rounded-lg animate-pulse" />
+            <div key={i} className="h-24 bg-slab rounded-[var(--radius)] animate-pulse" />
           ))}
         </div>
       ) : runs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 mt-4 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
-          <CheckCircle2 size={48} className="text-zinc-600 mb-4" />
-          <h3 className="text-base font-medium text-zinc-300">All caught up!</h3>
-          <p className="text-sm text-zinc-500 mt-1 text-center max-w-sm">
+        <div className="flex flex-col items-center justify-center p-12 mt-4 border border-rule border-dashed rounded-[var(--radius)] bg-slab/50">
+          <CheckCircle2 size={48} className="text-faint mb-4" />
+          <h3 className="text-base font-medium text-text">All caught up!</h3>
+          <p className="text-sm text-mute mt-1 text-center max-w-sm">
             You don&apos;t have any pending checklists for this period. Great job.
           </p>
         </div>
@@ -92,49 +94,53 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
   const isCompleted = run.status === 'Completed';
   const isLocked = run.status === 'Locked';
   const template = (typeof run.template === 'object' && run.template !== null ? run.template : null) as { title?: string; frequency_type?: string } | null;
+  const progress = Math.round(run.progress ?? 0);
 
   return (
     <Card
       onClick={onClick}
-      className={`p-4 bg-[#18181b] border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/30 transition-all cursor-pointer group flex items-center justify-between gap-4 ${isCompleted ? 'opacity-70' : ''}`}
+      className={`p-4 bg-slab border-rule hover:border-rule-2 hover:bg-slab-2/30 transition-all cursor-pointer group flex items-center justify-between gap-4 ${isCompleted ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center gap-4">
         <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+          className={`w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 ${
             isCompleted
-              ? 'bg-emerald-500/10 text-emerald-500'
+              ? 'bg-pass/10 text-pass'
               : isLocked
-                ? 'bg-zinc-800 text-zinc-500'
-                : 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20'
+                ? 'bg-slab-2 text-mute'
+                : 'bg-sel/10 text-sel group-hover:bg-sel/20'
           }`}
         >
           {isCompleted ? <CheckCircle2 size={20} /> : <CheckSquare size={20} />}
         </div>
         <div>
-          <h3 className="text-sm font-medium text-zinc-200">
+          <h3 className="text-sm font-medium text-text">
             {template?.title ?? (typeof run.template === 'string' ? run.template : '—')}
           </h3>
-          <div className="text-xs text-zinc-500 mt-1 flex items-center gap-3">
+          <div className="text-xs text-mute mt-1 flex items-center gap-3">
             <span>{template?.frequency_type ?? '—'}</span>
-            <span className="text-zinc-700">•</span>
-            <span>{Math.round(run.progress ?? 0)}% Complete</span>
+            <span className="text-faint">•</span>
+            <span className="font-mono">{progress}% Complete</span>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <div className="w-24 h-1.5 bg-zinc-900 rounded-full overflow-hidden hidden sm:block">
-          <div
-            className={`h-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-            style={{ width: `${run.progress ?? 0}%` }}
+        <div className="w-24 hidden sm:block">
+          <Meter
+            size="sm"
+            segments={[
+              { value: progress, className: isCompleted ? 'bg-pass' : 'bg-sel' },
+              { value: 100 - progress, className: 'bg-slab-2' },
+            ]}
           />
         </div>
         <Badge
           variant="outline"
           className={`
-          ${run.status === 'Open' ? 'text-indigo-400 border-indigo-400/20 bg-indigo-400/10' : ''}
-          ${run.status === 'In Progress' ? 'text-amber-500 border-amber-500/20 bg-amber-500/10' : ''}
-          ${run.status === 'Completed' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' : ''}
-          ${run.status === 'Locked' ? 'text-zinc-500 border-zinc-700 bg-zinc-800' : ''}
+          ${run.status === 'Open' ? 'text-sel border-sel/20 bg-sel/10' : ''}
+          ${run.status === 'In Progress' ? 'text-risk border-risk/20 bg-risk/10' : ''}
+          ${run.status === 'Completed' ? 'text-pass border-pass/20 bg-pass/10' : ''}
+          ${run.status === 'Locked' ? 'text-mute border-rule-2 bg-slab-2' : ''}
         `}
         >
           {run.status}
@@ -184,6 +190,8 @@ function ChecklistRunner({
     await updateRunItem(itemId, newStatus);
   };
 
+  const { showToast } = useToast();
+
   const completeRunHandler = async () => {
     if (!details) return;
     try {
@@ -191,53 +199,61 @@ function ChecklistRunner({
       if (onComplete) {
         onComplete(details.run.name ?? runId, res.status, res.compliance_result);
       }
+      showToast({
+        variant: 'pass',
+        title: 'Checklist submitted',
+        description: `${details.template?.title ?? 'Checklist'} completed.`,
+      });
       onOpenChange(false);
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error(err);
+      showToast({
+        variant: 'fail',
+        title: 'Submission failed',
+        description: err instanceof Error ? err.message : 'Something went wrong submitting the checklist.',
+      });
     }
   };
 
   if (!details) return null;
 
-  const progress =
-    details.items.length > 0
-      ? (details.items.filter((i) => i.status === 'Completed').length / details.items.length) * 100
-      : 0;
+  const completedCount = details.items.filter((i) => i.status === 'Completed').length;
+  const progress = details.items.length > 0 ? (completedCount / details.items.length) * 100 : 0;
   const isReadOnly = details.run?.status !== 'Open' && details.run?.status !== 'In Progress';
   const template = details.template ?? {};
   const run = details.run ?? {};
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-[#18181b] border-zinc-800 sm:max-w-md w-full p-0 flex flex-col h-full text-zinc-100">
-        <div className="p-6 border-b border-zinc-800">
+      <SheetContent className="bg-slab border-rule sm:max-w-md w-full p-0 flex flex-col h-full text-text">
+        <div className="p-6 border-b border-rule">
           <SheetHeader className="text-left">
             <div className="flex items-center justify-between">
-              <Badge variant="outline" className="text-zinc-400 border-zinc-700">
+              <Badge variant="outline" className="text-mute border-rule-2">
                 {template.department ?? '—'}
               </Badge>
               {isReadOnly && (
-                <Badge variant="secondary" className="bg-zinc-800 text-zinc-400">
+                <Badge variant="secondary" className="bg-slab-2 text-mute">
                   <Lock size={12} className="mr-1" /> Read Only
                 </Badge>
               )}
             </div>
-            <SheetTitle className="text-xl text-zinc-100 mt-2">{template.title ?? 'Checklist'}</SheetTitle>
-            <SheetDescription className="text-zinc-500">
+            <SheetTitle className="text-xl text-text mt-2">{template.title ?? 'Checklist'}</SheetTitle>
+            <SheetDescription className="text-mute">
               Assigned checklist for {run.period_date ? new Date(run.period_date).toLocaleDateString() : '—'}
             </SheetDescription>
           </SheetHeader>
           <div className="mt-6 flex flex-col gap-2">
-            <div className="flex justify-between text-xs font-medium text-zinc-400">
+            <div className="flex justify-between text-xs font-medium text-mute">
               <span>Progress</span>
-              <span>{Math.round(progress)}%</span>
+              <span className="font-mono">{Math.round(progress)}%</span>
             </div>
-            <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <Meter
+              segments={[
+                { value: completedCount, className: progress === 100 ? 'bg-pass' : 'bg-sel' },
+                { value: details.items.length - completedCount, className: 'bg-slab-2' },
+              ]}
+            />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
@@ -245,41 +261,31 @@ function ChecklistRunner({
             {details.items.map((item) => (
               <div
                 key={item.name}
-                className={`flex items-start gap-4 p-4 rounded-lg border ${
+                className={`p-4 rounded-[var(--radius)] border ${
                   item.status === 'Completed'
-                    ? 'bg-indigo-500/5 border-indigo-500/20'
-                    : 'bg-zinc-900/50 border-zinc-800'
+                    ? 'bg-sel/5 border-sel/20'
+                    : 'bg-slab-2/50 border-rule'
                 } transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
               >
-                <Checkbox
-                  id={item.name}
+                <CheckboxRow
                   checked={item.status === 'Completed'}
                   disabled={isReadOnly}
                   onCheckedChange={() => toggleItem(item.name, item.status)}
-                  className="mt-0.5 border-zinc-600 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                  label={item.template_item?.description ?? item.checklist_item}
+                  secondary={
+                    (item.template_item?.weight ?? item.weight) > 1
+                      ? `Weight: ${item.template_item?.weight ?? item.weight}`
+                      : undefined
+                  }
+                  className={item.status === 'Completed' ? 'text-mute line-through opacity-70' : ''}
                 />
-                <div className="grid gap-1.5 leading-none w-full">
-                  <label
-                    htmlFor={item.name}
-                    className={`text-sm font-medium leading-tight cursor-pointer ${
-                      item.status === 'Completed' ? 'text-zinc-300 line-through opacity-70' : 'text-zinc-200'
-                    }`}
-                  >
-                    {item.template_item?.description ?? item.checklist_item}
-                  </label>
-                  {(item.template_item?.weight ?? item.weight) > 1 && (
-                    <span className="text-[10px] text-zinc-500 border border-zinc-800 rounded px-1.5 py-0.5 w-max">
-                      Weight: {item.template_item?.weight ?? item.weight}
-                    </span>
-                  )}
-                </div>
               </div>
             ))}
           </div>
         </div>
         {!isReadOnly && (
-          <div className="p-6 border-t border-zinc-800 bg-zinc-950/50 sticky bottom-0">
-            <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" onClick={completeRunHandler}>
+          <div className="p-6 border-t border-rule bg-ink/50 sticky bottom-0">
+            <Button className="w-full bg-sel hover:bg-sel/90 text-white" onClick={completeRunHandler}>
               Submit & Close Checklist
             </Button>
           </div>

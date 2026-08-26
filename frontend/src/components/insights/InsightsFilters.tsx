@@ -101,7 +101,7 @@ export function InsightsFiltersBar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Date range presets */}
-      <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
+      <div className="flex gap-1 rounded-lg border border-rule bg-slab-2 p-1">
         {PRESETS.map(({ id, label }) => (
           <button
             key={id}
@@ -110,8 +110,8 @@ export function InsightsFiltersBar({
             className={cn(
               'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
               dateRange.preset === id
-                ? 'bg-zinc-700 text-white'
-                : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                ? 'bg-sel text-ink'
+                : 'text-mute hover:bg-slab hover:text-text'
             )}
           >
             {label}
@@ -122,7 +122,7 @@ export function InsightsFiltersBar({
       {/* Department multi-select */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-zinc-700 bg-zinc-900/50 text-zinc-300 hover:bg-zinc-800 gap-1"
+          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
         >
           Department {selectedDepts.length > 0 ? `(${selectedDepts.length})` : ''}
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
@@ -140,7 +140,7 @@ export function InsightsFiltersBar({
             </DropdownMenuCheckboxItem>
           ))}
           {departments.length === 0 && (
-            <div className="px-2 py-4 text-center text-xs text-zinc-500">No departments</div>
+            <div className="px-2 py-4 text-center text-xs text-faint">No departments</div>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -148,7 +148,7 @@ export function InsightsFiltersBar({
       {/* Branch multi-select */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-zinc-700 bg-zinc-900/50 text-zinc-300 hover:bg-zinc-800 gap-1"
+          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
         >
           Branch {selectedBranches.length > 0 ? `(${selectedBranches.length})` : ''}
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
@@ -166,7 +166,7 @@ export function InsightsFiltersBar({
             </DropdownMenuCheckboxItem>
           ))}
           {branches.length === 0 && (
-            <div className="px-2 py-4 text-center text-xs text-zinc-500">No branches</div>
+            <div className="px-2 py-4 text-center text-xs text-faint">No branches</div>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -176,7 +176,7 @@ export function InsightsFiltersBar({
           variant="ghost"
           size="sm"
           onClick={clearAll}
-          className="h-8 gap-1 text-zinc-400 hover:text-zinc-200"
+          className="h-8 gap-1 text-mute hover:text-text"
         >
           <X className="h-3.5 w-3.5" />
           Clear filters

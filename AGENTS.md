@@ -83,10 +83,26 @@ its reporting line, while personal score remains separate.
 | Frontend | React 19, React Router 7, Vite 5 |
 | Styling | Tailwind CSS 4, shadcn/ui (Radix), Base UI |
 | Charts | Recharts |
-| Gauges | Custom SVG (`Gauge.tsx`), `requestAnimationFrame` |
 | Icons | Lucide React |
-| Fonts | Geist Variable (body), DM Mono (metrics) |
+| Fonts | Geist Sans (display/body), Geist Mono (values) |
 | Frappe SDK | `frappe-js-sdk` |
+
+---
+
+## Design System
+
+The frontend implements the **Pulse Design System**. Source of truth: `pulse_design/DESIGN.md` (spec) and `pulse_design/tokens/tokens.css` (tokens), in the sibling `pulse_design` repo.
+
+Core reference rules for agents:
+- **Border Radius:** Flat `3px` border-radius everywhere.
+- **Color Vocabulary:** A closed 5-status set (`pass`, `risk`, `fail`, `waive`, `none`) plus a separate selection color `sel` (never used for status).
+- **Meters:** Segmented meters must be used instead of gauges or donuts.
+- **Null States:** Null or no-data always renders as a grey em-dash (`—`), never red and never coerced to `0`.
+- **Typography:** `font-mono` for numeric values/metrics vs `font-sans` for prose.
+
+Reusable UI primitives live in `frontend/src/components/ui/`:
+- `meter`, `status-chip`, `status-stroke-card`, `tree-row`, `ledger`, `disclosure`, `toggle-tag`, `checkbox-row`, `radio-option-card`, `toast`, and `table-states`.
+- The shared helper `frontend/src/lib/score.ts` handles score-to-status/color mapping.
 
 ---
 

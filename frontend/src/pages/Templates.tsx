@@ -341,13 +341,13 @@ export function Templates() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
-          <p className="text-zinc-400 text-sm mt-1">Master definitions of all operational checklists.</p>
+          <p className="text-mute text-sm mt-1">Master definitions of all operational checklists.</p>
         </div>
         {canEdit && (
           <Button
             onClick={handleOpenCreate}
             variant="outline"
-            className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-2 hover:bg-zinc-800"
+            className="bg-slab border-rule text-text gap-2 hover:bg-slab-2"
           >
             <LayoutList size={16} />
             <span>Create Template</span>
@@ -358,7 +358,7 @@ export function Templates() {
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-zinc-900 rounded-xl animate-pulse" />
+            <div key={i} className="h-48 bg-slab rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -366,28 +366,28 @@ export function Templates() {
           {templates.map((template) => (
             <Card
               key={template.name}
-              className="bg-[#141415] border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer group"
+              className="bg-slab border-rule hover:border-rule-2 transition-colors cursor-pointer group"
               onClick={() => handleViewTemplate(template)}
             >
               <CardHeader className="pb-3">
-                <div className="flex justify-between items-start mb-2 text-zinc-500">
-                  <FileText size={20} className="group-hover:text-indigo-400 transition-colors" />
+                <div className="flex justify-between items-start mb-2 text-faint">
+                  <FileText size={20} className="group-hover:text-text transition-colors" />
                   <Badge
                     variant="outline"
-                    className="text-[10px] uppercase border-zinc-800 text-zinc-500"
+                    className="text-[10px] uppercase border-rule text-faint"
                   >
                     {template.frequency_type ?? '—'}
                   </Badge>
                 </div>
-                <CardTitle className="text-lg text-zinc-200 group-hover:text-white transition-colors">
+                <CardTitle className="text-lg text-text group-hover:text-white transition-colors">
                   {template.title}
                 </CardTitle>
-                <CardDescription className="text-xs text-zinc-500 font-mono">
+                <CardDescription className="text-xs text-faint font-mono">
                   ID: {template.name} • Dept: {template.department ?? 'General'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 text-xs text-zinc-500">
+                <div className="flex items-center gap-4 text-xs text-faint">
                   <div className="flex items-center gap-1.5">
                     <Clock size={14} className="opacity-60" />
                     <span>Active</span>
@@ -397,7 +397,7 @@ export function Templates() {
                     <span>{template.owner_role ?? '—'}s</span>
                   </div>
                   <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight size={16} className="text-zinc-400" />
+                    <ChevronRight size={16} className="text-mute" />
                   </div>
                 </div>
               </CardContent>
@@ -407,12 +407,12 @@ export function Templates() {
       )}
 
       <Sheet open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
-        <SheetContent className="bg-[#09090b] border-zinc-800 w-[500px] sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
+        <SheetContent className="bg-ink border-rule w-[500px] sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
           {selectedTemplate && (
             <>
-              <SheetHeader className="p-8 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0 print:bg-white print:border-black">
+              <SheetHeader className="p-8 border-b border-rule bg-slab/30 shrink-0 print:bg-white print:border-black">
                 <div className="flex justify-between items-start print:hidden">
-                  <div className="flex items-center gap-3 text-indigo-400 mb-4 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20 w-fit">
+                  <div className="flex items-center gap-3 text-faint mb-4 bg-transparent px-3 py-1.5 rounded-[var(--radius)] border-rule w-fit">
                     <ClipboardCheck size={18} />
                     <span className="text-xs font-bold uppercase tracking-widest">Master Protocol</span>
                   </div>
@@ -422,7 +422,7 @@ export function Templates() {
                         onClick={() => handleOpenEdit(selectedTemplate)}
                         variant="outline"
                         size="sm"
-                        className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
+                        className="bg-slab border-rule text-mute gap-2 hover:text-white"
                       >
                         <Pencil size={14} />
                         <span>Edit</span>
@@ -432,7 +432,7 @@ export function Templates() {
                       onClick={handlePrint}
                       variant="outline"
                       size="sm"
-                      className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
+                      className="bg-slab border-rule text-mute gap-2 hover:text-white"
                     >
                       <Printer size={14} />
                       <span>Print Task Sheet</span>
@@ -443,7 +443,7 @@ export function Templates() {
                   <SheetTitle className="text-2xl text-white print:text-black print:text-3xl">
                     {selectedTemplate.title}
                   </SheetTitle>
-                  <SheetDescription className="text-zinc-400 print:text-zinc-500 flex items-center gap-3">
+                  <SheetDescription className="text-mute print:text-zinc-500 flex items-center gap-3">
                     <span>Frequency: {selectedTemplate.frequency_type ?? '—'}</span>
                     <span>•</span>
                     <span>Target: {selectedTemplate.owner_role ?? '—'}</span>
@@ -457,13 +457,13 @@ export function Templates() {
                 {isSheetLoading ? (
                   <div className="space-y-4 animate-pulse">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="h-12 bg-zinc-900 rounded-lg" />
+                      <div key={i} className="h-12 bg-slab rounded-lg" />
                     ))}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-6 print:gap-0">
                     <div className="print:hidden">
-                      <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+                      <h4 className="text-xs font-semibold text-faint uppercase tracking-widest mb-4">
                         Inspection Checklist
                       </h4>
                     </div>
@@ -471,25 +471,25 @@ export function Templates() {
                       {templateItems.map((item, index) => (
                         <div
                           key={item.name ?? index}
-                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-zinc-900/50 transition-colors border border-transparent hover:border-zinc-800/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
+                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-slab/50 transition-colors border border-transparent hover:border-rule/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
                         >
-                          <div className="w-6 h-6 rounded-md border-2 border-zinc-800 mt-0.5 flex items-center justify-center shrink-0 group-hover:border-zinc-700 print:border-zinc-300">
-                            <span className="text-[10px] text-zinc-600 font-mono print:hidden">
+                          <div className="w-6 h-6 rounded-md border-2 border-rule mt-0.5 flex items-center justify-center shrink-0 group-hover:border-rule-2 print:border-zinc-300">
+                            <span className="text-[10px] text-mute font-mono print:hidden">
                               {index + 1}
                             </span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <p className="text-sm font-medium text-zinc-200 print:text-black print:text-lg italic">
+                            <p className="text-sm font-medium text-text print:text-black print:text-lg italic">
                               {item.description}
                             </p>
                             <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
                               <Badge
                                 variant="outline"
-                                className="text-[9px] h-4 px-1 border-zinc-800 text-zinc-600 uppercase"
+                                className="text-[9px] h-4 px-1 border-rule text-mute uppercase"
                               >
                                 {item.item_type}
                               </Badge>
-                              <span className="text-[10px] text-zinc-700 font-mono italic">
+                              <span className="text-[10px] text-faint font-mono italic">
                                 Weight: {item.weight}
                               </span>
                             </div>
@@ -498,30 +498,30 @@ export function Templates() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-8 pt-8 border-t border-zinc-800/50 print:mt-12 print:border-black/10">
+                    <div className="mt-8 pt-8 border-t border-rule/50 print:mt-12 print:border-black/10">
                       <div className="grid grid-cols-2 gap-8">
                         <div className="flex flex-col gap-2">
-                          <span className="text-[10px] text-zinc-600 uppercase tracking-widest">
+                          <span className="text-[10px] text-mute uppercase tracking-widest">
                             Authorized By
                           </span>
-                          <div className="h-10 border-b border-zinc-800/80 print:border-black/20"></div>
+                          <div className="h-10 border-b border-rule/80 print:border-black/20"></div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <span className="text-[10px] text-zinc-600 uppercase tracking-widest">
+                          <span className="text-[10px] text-mute uppercase tracking-widest">
                             Inspection Date
                           </span>
-                          <div className="h-10 border-b border-zinc-800/80 print:border-black/20"></div>
+                          <div className="h-10 border-b border-rule/80 print:border-black/20"></div>
                         </div>
                       </div>
                     </div>
 
                     {/* Assignments Section */}
-                    <div className="mt-8 pt-8 border-t border-zinc-800/50 print:hidden space-y-6">
+                    <div className="mt-8 pt-8 border-t border-rule/50 print:hidden space-y-6">
                       <div>
-                        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">
+                        <h4 className="text-xs font-semibold text-mute uppercase tracking-widest">
                           Active Assignments
                         </h4>
-                        <p className="text-zinc-500 text-xs mt-1">
+                        <p className="text-mute text-xs mt-1">
                           Employees currently assigned to run this checklist.
                         </p>
                       </div>
@@ -529,26 +529,26 @@ export function Templates() {
                       {/* Assignment list */}
                       <div className="space-y-2">
                         {isAssignmentsLoading ? (
-                          <div className="h-12 bg-zinc-900 rounded-lg animate-pulse" />
+                          <div className="h-12 bg-slab rounded-lg animate-pulse" />
                         ) : assignments.length === 0 ? (
-                          <div className="p-4 bg-zinc-950/20 border border-zinc-800/50 rounded-xl text-center text-zinc-500 text-xs">
+                          <div className="p-4 bg-slab-2/20 border border-rule/50 rounded-xl text-center text-mute text-xs">
                             No active assignments for this template.
                           </div>
                         ) : (
                           assignments.map((assignment) => (
                             <div
                               key={assignment.name}
-                              className="flex items-center justify-between p-3 bg-zinc-950/40 border border-zinc-800/60 rounded-xl gap-4 text-xs"
+                              className="flex items-center justify-between p-3 bg-slab-2/40 border border-rule/60 rounded-xl gap-4 text-xs"
                             >
                               <div className="flex flex-col gap-1 min-w-0">
-                                <span className="font-medium text-zinc-200 truncate">
+                                <span className="font-medium text-text truncate">
                                   {assignment.employee}
                                 </span>
                                 {(assignment.schedule_timezone_override ||
                                   assignment.local_start_time_override ||
                                   (assignment.completion_window_minutes_override !== undefined &&
                                     assignment.completion_window_minutes_override > 0)) && (
-                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-zinc-500">
+                                  <div className="flex flex-wrap gap-x-2 text-[10px] text-mute">
                                     {assignment.schedule_timezone_override && (
                                       <span>TZ: {assignment.schedule_timezone_override}</span>
                                     )}
@@ -573,7 +573,7 @@ export function Templates() {
                                 </Button>
                               )}
                               {assignment.is_active !== 1 && (
-                                <Badge variant="outline" className="border-zinc-800 text-zinc-500 text-[10px]">
+                                <Badge variant="outline" className="border-rule text-mute text-[10px]">
                                   Inactive
                                 </Badge>
                               )}
@@ -584,19 +584,19 @@ export function Templates() {
 
                       {/* Assign form */}
                       {canEdit && (
-                        <div className="p-4 bg-zinc-900/20 border border-zinc-800/80 rounded-xl space-y-4">
-                          <h5 className="text-xs font-semibold text-zinc-400">
+                        <div className="p-4 bg-slab/20 border border-rule/80 rounded-xl space-y-4">
+                          <h5 className="text-xs font-semibold text-mute">
                             Assign to Employee
                           </h5>
                           <div className="space-y-3">
                             <div className="space-y-1">
-                              <label className="text-[10px] uppercase font-bold text-zinc-500">
+                              <label className="text-[10px] uppercase font-bold text-mute">
                                 Select Employee
                               </label>
                               <select
                                 value={selectedEmployeeName}
                                 onChange={(e) => setSelectedEmployeeName(e.target.value)}
-                                className="w-full h-9 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-2 outline-none focus:border-zinc-700"
+                                className="w-full h-9 bg-slab border border-rule rounded-lg text-xs text-text px-2 outline-none focus:border-rule-2"
                               >
                                 <option value="">-- Choose Employee --</option>
                                 {eligibleEmployees
@@ -640,44 +640,44 @@ export function Templates() {
                               <button
                                 type="button"
                                 onClick={() => setShowAdvancedAssign(!showAdvancedAssign)}
-                                className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 focus:outline-none"
+                                className="text-[10px] text-sel hover:text-sel/80 font-medium flex items-center gap-1 focus:outline-none"
                               >
                                 {showAdvancedAssign ? 'Hide advanced overrides' : 'Show advanced overrides'}
                               </button>
 
                               {showAdvancedAssign && (
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-zinc-950/40 border border-zinc-800/50 rounded-lg animate-in fade-in duration-200">
+                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slab-2/40 border border-rule/50 rounded-lg animate-in fade-in duration-200">
                                   <div className="space-y-1">
-                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                    <label className="text-[10px] uppercase font-bold text-mute">
                                       Timezone Override
                                     </label>
                                     <Input
                                       value={assignTimezoneOverride}
                                       onChange={(e) => setAssignTimezoneOverride(e.target.value)}
-                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs placeholder:text-zinc-600"
+                                      className="h-8 bg-slab border-rule text-text text-xs placeholder:text-faint"
                                       placeholder="e.g. Asia/Kolkata"
                                     />
                                   </div>
                                   <div className="space-y-1">
-                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                    <label className="text-[10px] uppercase font-bold text-mute">
                                       Start Time Override
                                     </label>
                                     <Input
                                       type="time"
                                       value={assignStartTimeOverride}
                                       onChange={(e) => setAssignStartTimeOverride(e.target.value)}
-                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                                      className="h-8 bg-slab border-rule text-text text-xs"
                                     />
                                   </div>
                                   <div className="space-y-1">
-                                    <label className="text-[10px] uppercase font-bold text-zinc-500">
+                                    <label className="text-[10px] uppercase font-bold text-mute">
                                       Window (mins)
                                     </label>
                                     <Input
                                       type="number"
                                       value={assignWindowOverride}
                                       onChange={(e) => setAssignWindowOverride(e.target.value)}
-                                      className="h-8 bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                                      className="h-8 bg-slab border-rule text-text text-xs"
                                       placeholder="e.g. 60"
                                     />
                                   </div>
@@ -688,7 +688,7 @@ export function Templates() {
                             <Button
                               onClick={handleAssign}
                               disabled={isAssigning || !selectedEmployeeName}
-                              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-1.5 h-auto rounded-lg"
+                              className="w-full bg-sel hover:bg-sel/90 text-white font-medium text-xs py-1.5 h-auto rounded-lg"
                             >
                               {isAssigning ? 'Assigning...' : 'Assign'}
                             </Button>
@@ -706,12 +706,12 @@ export function Templates() {
 
       {/* Create / Edit Form Sheet */}
       <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <SheetContent className="bg-[#09090b] border-zinc-800 w-[500px] sm:w-[640px] p-0 flex flex-col max-h-screen">
-          <SheetHeader className="p-6 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0">
-            <SheetTitle className="text-xl text-white">
+        <SheetContent className="bg-ink border-rule w-[500px] sm:w-[640px] p-0 flex flex-col max-h-screen">
+          <SheetHeader className="p-6 border-b border-rule/80 bg-slab/30 shrink-0">
+            <SheetTitle className="text-xl text-text">
               {editingTemplate ? 'Edit SOP Template' : 'Create SOP Template'}
             </SheetTitle>
-            <SheetDescription className="text-zinc-400 text-xs">
+            <SheetDescription className="text-mute text-xs">
               Define the template details, schedule configuration, and checklist items.
             </SheetDescription>
           </SheetHeader>
@@ -725,24 +725,24 @@ export function Templates() {
 
             {/* General Info */}
             <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">General Information</h3>
+              <h3 className="text-xs font-semibold text-mute uppercase tracking-wider">General Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Title <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Title <span className="text-red-500">*</span></label>
                   <Input
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. Daily Facility Inspection"
                   />
                   {formFieldErrors.title && <p className="text-red-500 text-[11px]">{formFieldErrors.title}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Department</label>
+                  <label className="text-xs font-medium text-mute">Department</label>
                   <Input
                     value={formDepartment}
                     onChange={(e) => setFormDepartment(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. Operations"
                   />
                 </div>
@@ -750,11 +750,11 @@ export function Templates() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Frequency Type <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Frequency Type <span className="text-red-500">*</span></label>
                   <select
                     value={formFrequencyType}
                     onChange={(e) => setFormFrequencyType(e.target.value as any)}
-                    className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-sm text-zinc-300 px-2 outline-none focus:border-zinc-700"
+                    className="w-full h-8 bg-slab border border-rule rounded-lg text-sm text-text px-2 outline-none focus:border-rule-2"
                   >
                     <option value="Daily">Daily</option>
                     <option value="Weekly">Weekly</option>
@@ -764,11 +764,11 @@ export function Templates() {
                   {formFieldErrors.frequency_type && <p className="text-red-500 text-[11px]">{formFieldErrors.frequency_type}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Owner Role</label>
+                  <label className="text-xs font-medium text-mute">Owner Role</label>
                   <Input
                     value={formOwnerRole}
                     onChange={(e) => setFormOwnerRole(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. Operator"
                   />
                 </div>
@@ -776,56 +776,56 @@ export function Templates() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Active From <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Active From <span className="text-red-500">*</span></label>
                   <Input
                     type="date"
                     value={formActiveFrom}
                     onChange={(e) => setFormActiveFrom(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                    className="bg-slab border-rule text-text"
                   />
                   {formFieldErrors.active_from && <p className="text-red-500 text-[11px]">{formFieldErrors.active_from}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Active To</label>
+                  <label className="text-xs font-medium text-mute">Active To</label>
                   <Input
                     type="date"
                     value={formActiveTo}
                     onChange={(e) => setFormActiveTo(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                    className="bg-slab border-rule text-text"
                   />
                 </div>
               </div>
             </div>
 
             {/* Schedule Info */}
-            <div className="space-y-4 pt-4 border-t border-zinc-800/80">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Schedule Configuration</h3>
+            <div className="space-y-4 pt-4 border-t border-rule/80">
+              <h3 className="text-xs font-semibold text-mute uppercase tracking-wider">Schedule Configuration</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Start Time <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Start Time <span className="text-red-500">*</span></label>
                   <Input
                     type="time"
                     value={formLocalStartTime}
                     onChange={(e) => setFormLocalStartTime(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                    className="bg-slab border-rule text-text"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Window (mins) <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Window (mins) <span className="text-red-500">*</span></label>
                   <Input
                     type="number"
                     value={formCompletionWindow}
                     onChange={(e) => setFormCompletionWindow(Number(e.target.value))}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                    className="bg-slab border-rule text-text"
                   />
                   {formFieldErrors.completion_window && <p className="text-red-500 text-[11px]">{formFieldErrors.completion_window}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400">Timezone <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Timezone <span className="text-red-500">*</span></label>
                   <Input
                     value={formScheduleTimezone}
                     onChange={(e) => setFormScheduleTimezone(e.target.value)}
-                    className="bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                    className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. UTC, Asia/Kolkata"
                   />
                   {formFieldErrors.schedule_timezone && <p className="text-red-500 text-[11px]">{formFieldErrors.schedule_timezone}</p>}
@@ -834,15 +834,15 @@ export function Templates() {
             </div>
 
             {/* Checklist Items */}
-            <div className="space-y-4 pt-4 border-t border-zinc-800/80">
+            <div className="space-y-4 pt-4 border-t border-rule/80">
               <div className="flex justify-between items-center">
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Checklist Items</h3>
+                <h3 className="text-xs font-semibold text-mute uppercase tracking-wider">Checklist Items</h3>
                 <Button
                   type="button"
                   onClick={addChecklistItem}
                   variant="outline"
                   size="sm"
-                  className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-1 hover:bg-zinc-800"
+                  className="bg-slab border-rule text-text gap-1 hover:bg-slab-2"
                 >
                   <Plus size={14} />
                   <span>Add Item</span>
@@ -854,15 +854,15 @@ export function Templates() {
 
               <div className="space-y-4">
                 {formChecklist.map((item, index) => (
-                  <div key={index} className="p-4 bg-zinc-950/40 border border-zinc-800/60 rounded-xl space-y-3">
+                  <div key={index} className="p-4 bg-slab-2/40 border border-rule/60 rounded-xl space-y-3">
                     <div className="flex justify-between items-center gap-2">
-                      <span className="text-xs font-mono text-zinc-500">#{index + 1}</span>
+                      <span className="text-xs font-mono text-mute">#{index + 1}</span>
                       <div className="flex items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-zinc-400 hover:text-zinc-200 disabled:opacity-30"
+                          className="h-7 w-7 text-mute hover:text-text disabled:opacity-30"
                           disabled={index === 0}
                           onClick={() => moveItem(index, 'up')}
                         >
@@ -872,7 +872,7 @@ export function Templates() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-zinc-400 hover:text-zinc-200 disabled:opacity-30"
+                          className="h-7 w-7 text-mute hover:text-text disabled:opacity-30"
                           disabled={index === formChecklist.length - 1}
                           onClick={() => moveItem(index, 'down')}
                         >
@@ -891,21 +891,21 @@ export function Templates() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-bold text-zinc-500">Description <span className="text-red-500">*</span></label>
+                      <label className="text-[10px] uppercase font-bold text-mute">Description <span className="text-red-500">*</span></label>
                       <Input
                         value={item.description}
                         onChange={(e) => updateChecklistItem(index, 'description', e.target.value)}
                         placeholder="e.g. Verify battery backup power is on"
-                        className="bg-zinc-900 border-zinc-800 text-zinc-100 text-sm"
+                        className="bg-slab border-rule text-text text-sm"
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-zinc-500">Type</label>
+                        <label className="text-[10px] uppercase font-bold text-mute">Type</label>
                         <select
                           value={item.item_type}
                           onChange={(e) => updateChecklistItem(index, 'item_type', e.target.value)}
-                          className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-1 outline-none focus:border-zinc-700"
+                          className="w-full h-8 bg-slab border border-rule rounded-lg text-xs text-text px-1 outline-none focus:border-rule-2"
                         >
                           <option value="Checkbox">Checkbox</option>
                           <option value="Numeric">Numeric</option>
@@ -913,20 +913,20 @@ export function Templates() {
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-zinc-500">Weight</label>
+                        <label className="text-[10px] uppercase font-bold text-mute">Weight</label>
                         <Input
                           type="number"
                           value={item.weight}
                           onChange={(e) => updateChecklistItem(index, 'weight', Number(e.target.value))}
-                          className="bg-zinc-900 border-zinc-800 text-zinc-100 text-xs"
+                          className="bg-slab border-rule text-text text-xs"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-zinc-500">Evidence</label>
+                        <label className="text-[10px] uppercase font-bold text-mute">Evidence</label>
                         <select
                           value={item.evidence_required || 'None'}
                           onChange={(e) => updateChecklistItem(index, 'evidence_required', e.target.value)}
-                          className="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-300 px-1 outline-none focus:border-zinc-700"
+                          className="w-full h-8 bg-slab border border-rule rounded-lg text-xs text-text px-1 outline-none focus:border-rule-2"
                         >
                           <option value="None">None</option>
                           <option value="Photo">Photo</option>
@@ -939,19 +939,19 @@ export function Templates() {
             </div>
           </form>
 
-          <div className="border-t border-zinc-800 p-4 bg-zinc-900/50 flex justify-end gap-2 shrink-0">
+          <div className="border-t border-rule p-4 bg-slab/50 flex justify-end gap-2 shrink-0">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setIsEditorOpen(false)}
-              className="text-zinc-400 hover:text-white"
+              className="text-mute hover:text-text"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
               disabled={isSubmitting}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm px-4 py-2 rounded-lg"
+              className="bg-sel hover:bg-sel/90 text-white font-medium text-sm px-4 py-2 rounded-lg"
             >
               {isSubmitting ? 'Saving...' : 'Save Template'}
             </Button>
