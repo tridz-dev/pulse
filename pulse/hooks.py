@@ -5,7 +5,7 @@ app_description = "Pulse tracks SOP execution across teams and converts daily op
 app_email = "pulse@tridz.com"
 app_license = "agpl-3.0"
 app_logo_url = "/assets/pulse/logo.svg"
-app_url = "pulse"
+app_url = "/pulse"
 
 # Apps
 # ------------------
