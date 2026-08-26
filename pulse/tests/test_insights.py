@@ -22,11 +22,17 @@ class TestScoreTrends(FrappeTestCase):
     PERIOD_B_DAY = "2026-02-09"
 
     def setUp(self):
+        from pulse.install import create_default_pulse_role_records, create_pulse_roles
+
+        create_pulse_roles()
+        create_default_pulse_role_records()
+
+        self._created_users: list[str] = []
         self._created_employees: list[str] = []
         self._created_templates: list[str] = []
         self._created_runs: list[str] = []
 
-        self.employee = self._create_employee("Trend Operator")
+        self.employee = self._create_employee("Trend Operator", "trend.operator@example.com")
         self.template = self._create_template("Trend Test Template")
 
         self._create_run(self.employee, "Passed", due_at=f"{self.PERIOD_A_DAY} 09:00:00")
@@ -43,13 +49,31 @@ class TestScoreTrends(FrappeTestCase):
         for emp_name in self._created_employees:
             if frappe.db.exists("Pulse Employee", emp_name):
                 frappe.delete_doc("Pulse Employee", emp_name, force=1, ignore_permissions=True)
+        for user_email in self._created_users:
+            if frappe.db.exists("User", user_email):
+                frappe.delete_doc("User", user_email, force=1, ignore_permissions=True)
         frappe.set_user("Administrator")
 
-    def _create_employee(self, name: str) -> str:
+    def _create_user(self, email: str) -> str:
+        if not frappe.db.exists("User", email):
+            frappe.get_doc({
+                "doctype": "User",
+                "email": email,
+                "first_name": email.split("@")[0],
+                "enabled": 1,
+                "user_type": "System User",
+                "send_welcome_email": 0,
+            }).insert(ignore_permissions=True)
+        self._created_users.append(email)
+        return email
+
+    def _create_employee(self, name: str, email: str) -> str:
+        user = self._create_user(email)
         emp = frappe.get_doc(
             {
                 "doctype": "Pulse Employee",
                 "employee_name": name,
+                "user": user,
                 "pulse_role": "Operator",
                 "is_active": 1,
             }

@@ -179,7 +179,14 @@ class TestPeopleCommands(FrappeTestCase):
 			"employee": emp.name,
 			"period_date": "2026-08-26",
 			"status": "Open",
-			"run_items": []
+			"run_items": [
+				{
+					"checklist_item": "Check item",
+					"item_type": "Checkbox",
+					"status": "Pending",
+					"weight": 1,
+				}
+			],
 		}).insert(ignore_permissions=True)
 		self._created_sop_runs.append(sop_run.name)
 		

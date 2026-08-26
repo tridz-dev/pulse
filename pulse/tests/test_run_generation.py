@@ -176,7 +176,15 @@ class TestRunGeneration(FrappeTestCase):
 		emp = self._create_employee("Generator Twice", user)
 		template = self._create_template("Generator Twice Template")
 		assignment_a = self._create_assignment(template, emp)
-		assignment_b = self._create_assignment(template, emp)
+		# A second assignment for the same employee+template must have a
+		# deliberately different schedule to coexist (SOP Assignment's
+		# uniqueness guard rejects an identical-schedule duplicate) - this
+		# still proves generation handles two independent assignments,
+		# each producing its own run_key, without relying on a scenario
+		# the assignment layer itself disallows.
+		assignment_b = self._create_assignment(
+			template, emp, local_start_time_override="09:00:00"
+		)
 
 		with patch("pulse.tasks.now_datetime", return_value=self.FIXED_NOW):
 			generate_daily_runs()
