@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Tridz and contributors
 # License: MIT
 
+import datetime
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from pulse.api.templates import create_template, update_template
@@ -203,5 +205,5 @@ class TestTemplateCommands(FrappeTestCase):
 		run_db_doc = frappe.get_doc("SOP Run", run_doc.name)
 		self.assertEqual(run_db_doc.template, doc.name)
 		# Verify snapshot/existing run data fields haven't changed/been mutated
-		self.assertEqual(run_db_doc.period_date, "2026-08-26")
+		self.assertEqual(run_db_doc.period_date, datetime.date(2026, 8, 26))
 		self.assertEqual(run_db_doc.status, "Open")
