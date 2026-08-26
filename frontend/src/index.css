@@ -1,11 +1,13 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: "Geist Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -40,80 +42,148 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Pulse status vocabulary — closed set, exposed as Tailwind utilities
+     (bg-pass, text-fail, border-waive, etc). See /DESIGN.md in pulse-design. */
+  --color-pass: var(--pass);
+  --color-risk: var(--risk);
+  --color-fail: var(--fail);
+  --color-waive: var(--waive);
+  --color-none: var(--none-status);
+  --color-sel: var(--sel);
+  --color-fail-bg: var(--fail-bg);
+  --color-fail-bd: var(--fail-bd);
+  --color-risk-bg: var(--risk-bg);
+  --color-risk-bd: var(--risk-bd);
+  --color-waive-bg: var(--waive-bg);
+  --color-waive-bd: var(--waive-bd);
+
+  /* Pulse surfaces/text — flat instrument-panel scale, distinct from the
+     shadcn background/card/muted triplet above so existing components keep
+     working while new Pulse components use these directly. */
+  --color-ink: var(--ink);
+  --color-slab: var(--slab);
+  --color-slab-2: var(--slab-2);
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+  --color-text: var(--text);
+  --color-mute: var(--mute);
+  --color-faint: var(--faint);
+
+  /* Flat 3px radius everywhere — no exceptions. See DESIGN.md "Do/Don't". */
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: var(--radius);
 }
 
 @layer base {
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /* ---- Pulse tokens (light) — source of truth: pulse-design/tokens/tokens.css ---- */
+    --ink: #F5F4F1;
+    --slab: #FFFFFF;
+    --slab-2: #F0EEEA;
+    --rule: #E3E0D9;
+    --rule-2: #D2CEC4;
+    --text: #1D1D1F;
+    --mute: #6B6A65;
+    --faint: #98958C;
+    --pass: #1E8E5C;
+    --risk: #B3760F;
+    --fail: #C93E4A;
+    --waive: #6552A0;
+    --none-status: #3A404D;
+    --sel: #4A5FC1;
+    --fail-bg: #FBEAEA;  --fail-bd: #EBC6C8;
+    --risk-bg: #FBF1DE;  --risk-bd: #EAD3A0;
+    --waive-bg: #F0EDF9; --waive-bd: #D6CEEC;
+
+    /* ---- shadcn semantic aliases, remapped onto Pulse tokens ---- */
+    --background: var(--ink);
+    --foreground: var(--text);
+    --card: var(--slab);
+    --card-foreground: var(--text);
+    --popover: var(--slab);
+    --popover-foreground: var(--text);
+    --primary: var(--text);
+    --primary-foreground: var(--ink);
+    --secondary: var(--slab-2);
+    --secondary-foreground: var(--text);
+    --muted: var(--slab-2);
+    --muted-foreground: var(--mute);
+    --accent: var(--slab-2);
+    --accent-foreground: var(--text);
+    --destructive: var(--fail);
+    --border: var(--rule);
+    --input: var(--rule-2);
+    --ring: var(--sel);
+    --chart-1: var(--pass);
+    --chart-2: var(--risk);
+    --chart-3: var(--fail);
+    --chart-4: var(--waive);
+    --chart-5: var(--sel);
+    --radius: 3px;
+    --sidebar: var(--slab);
+    --sidebar-foreground: var(--text);
+    --sidebar-primary: var(--sel);
+    --sidebar-primary-foreground: var(--ink);
+    --sidebar-accent: var(--slab-2);
+    --sidebar-accent-foreground: var(--text);
+    --sidebar-border: var(--rule);
+    --sidebar-ring: var(--sel);
   }
 
   .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.809 0.105 251.813);
-    --chart-2: oklch(0.623 0.214 259.815);
-    --chart-3: oklch(0.546 0.245 262.881);
-    --chart-4: oklch(0.488 0.243 264.376);
-    --chart-5: oklch(0.424 0.199 265.638);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    /* ---- Pulse tokens (dark, native) ---- */
+    --ink: #12141A;
+    --slab: #191C24;
+    --slab-2: #1F232C;
+    --rule: #262A34;
+    --rule-2: #313745;
+    --text: #E6E8EE;
+    --mute: #8A91A1;
+    --faint: #5C6474;
+    --pass: #3FA87B;
+    --risk: #E0A33C;
+    --fail: #E0555F;
+    --waive: #7C6FB0;
+    --none-status: #3A404D;
+    --sel: #6B7FD7;
+    --fail-bg: #2a1519;  --fail-bd: #4a2429;
+    --risk-bg: #2a2011;  --risk-bd: #463618;
+    --waive-bg: #1e1b2b; --waive-bd: #3a3355;
+
+    /* ---- shadcn semantic aliases, remapped onto Pulse tokens ---- */
+    --background: var(--ink);
+    --foreground: var(--text);
+    --card: var(--slab);
+    --card-foreground: var(--text);
+    --popover: var(--slab);
+    --popover-foreground: var(--text);
+    --primary: var(--text);
+    --primary-foreground: var(--ink);
+    --secondary: var(--slab-2);
+    --secondary-foreground: var(--text);
+    --muted: var(--slab-2);
+    --muted-foreground: var(--mute);
+    --accent: var(--slab-2);
+    --accent-foreground: var(--text);
+    --destructive: var(--fail);
+    --border: var(--rule);
+    --input: var(--rule-2);
+    --ring: var(--sel);
+    --chart-1: var(--pass);
+    --chart-2: var(--risk);
+    --chart-3: var(--fail);
+    --chart-4: var(--waive);
+    --chart-5: var(--sel);
+    --sidebar: var(--slab);
+    --sidebar-foreground: var(--text);
+    --sidebar-primary: var(--sel);
+    --sidebar-primary-foreground: var(--ink);
+    --sidebar-accent: var(--slab-2);
+    --sidebar-accent-foreground: var(--text);
+    --sidebar-border: var(--rule);
+    --sidebar-ring: var(--sel);
   }
 }
 
