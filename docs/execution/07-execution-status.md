@@ -142,6 +142,44 @@ sweep-and-delete before the run that finally went green. Any future bench
 session on this same disposable site should do the same sweep first if a
 run-generation test has ever errored on it before.
 
+## Manual test/demo environment
+
+`pulse-w1w5-verify` is now also seeded with a full manual-QA dataset and left
+running (http://localhost:8081, or `/pulse` for the app) — password
+`Demo@123` for every account, `Administrator` included:
+
+- 7 departments, a 5-level reporting hierarchy (Chairman → MD → Area
+  Manager → Supervisor → Operator), 6 SOP templates, 12 assignments, 19
+  users across every role (Executive/Area Manager/Supervisor/Operator).
+  `Administrator` and the two Executive logins (`chairman@pm.local`,
+  `md@pm.local`) see the whole org regardless of hierarchy position —
+  `get_scope_for_user` special-cases Administrator/Pulse Admin/Pulse
+  Executive to organisation-wide scope (`pulse/api/permissions.py:75`).
+- 842 historical runs over ~2.5 months (485 Passed, 351 Failed) plus 6 live
+  `Open`/`Pending` runs for today, generated through the real
+  `generate_daily_runs()` scheduler task so an operator login can actually
+  complete one end-to-end.
+- The QSR demo seeder (`pulse/demo/data.py`, `pulse/demo/seed.py`) predated
+  this session's scheduling rework and inserted runs with a no-longer-valid
+  `Closed` status and no `due_at`/`schedule_key`/`run_key` — invisible to
+  every due_at-scoped endpoint added since (Mission Control, failure list,
+  score trends). Modernized it to resolve real schedules via
+  `pulse.domain.scheduling.resolve_schedule`/`make_run_key` (same functions
+  the live scheduler uses) and to use the current
+  Open/In Progress/Completed/Locked + Pending/Passed/Failed vocabulary;
+  extended the historical window from 40 to 75 days.
+- Fixed a fresh-bench gotcha unrelated to any of the above: `setup_complete`
+  was `0` on this site, which makes Frappe redirect-loop `/app` and `/pulse`
+  back to `/setup-wizard` forever. Set `setup_complete=1` (System Settings +
+  db default) and cleared cache — resolved.
+- Known non-bug: `test_organisation_scope_returns_all_active_employees`
+  fails if the suite is run against this same bench while the demo data is
+  loaded — it asserts the org scope equals exactly its own two fixture
+  employees, which is trivially false once 19 real demo employees exist.
+  This is a test-isolation artifact of sharing one bench between the test
+  suite and manual QA data, not a product defect; re-run the suite on a
+  freshly seeded (demo-data-free) site for a clean signal.
+
 Two real bugs were caught and fixed during this session's review passes (not
 just style nits), both worth noting for anyone auditing the process:
 - S1-T02: two field names in the schedule schema diverged from the frozen
