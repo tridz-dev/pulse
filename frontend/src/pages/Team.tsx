@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Meter } from '@/components/ui/meter';
+import { formatScore, scoreTextClass } from '@/lib/score';
 import { Users, TrendingDown, Target, UsersRound } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -68,10 +70,10 @@ export function Team() {
 
   if (currentUser?.systemRole === 'Pulse User') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
-        <Users size={48} className="text-zinc-600 mb-4" />
-        <h3 className="text-base font-medium text-zinc-300">No Direct Reports</h3>
-        <p className="text-sm text-zinc-500 mt-1 text-center max-w-sm">
+      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-rule border-dashed bg-slab">
+        <Users size={48} className="text-faint mb-4" />
+        <h3 className="text-base font-medium text-text">No Direct Reports</h3>
+        <p className="text-sm text-mute mt-1 text-center max-w-sm">
           Your role does not have team visibility enabled.
         </p>
       </div>
@@ -82,8 +84,8 @@ export function Team() {
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">Team</h1>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-text">Team</h1>
+          <p className="text-mute text-sm mt-1">
             {showAllTeamsTab
               ? 'Your direct reports and organization-wide team view.'
               : 'Operational performance for your direct reports.'}
@@ -91,7 +93,7 @@ export function Team() {
         </div>
         <div className="flex items-center gap-2">
           {showAllTeamsTab && (
-            <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
+            <div className="flex gap-1 bg-slab-2 p-1 border border-rule">
               <Button
                 variant="ghost"
                 size="sm"
@@ -99,8 +101,8 @@ export function Team() {
                 className={cn(
                   'h-8 px-3 text-xs font-medium',
                   activeTab === 'my-team'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-sel text-sel'
+                    : 'text-mute hover:text-text'
                 )}
               >
                 My Team
@@ -112,15 +114,15 @@ export function Team() {
                 className={cn(
                   'h-8 px-3 text-xs font-medium',
                   activeTab === 'all-teams'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-sel text-sel'
+                    : 'text-mute hover:text-text'
                 )}
               >
                 All Teams
               </Button>
             </div>
           )}
-          <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
+          <div className="flex gap-1 bg-slab-2 p-1 border border-rule">
             {(['Day', 'Week', 'Month'] as const).map((p) => (
               <Button
                 key={p}
@@ -129,7 +131,7 @@ export function Team() {
                 onClick={() => setPeriodType(p)}
                 className={cn(
                   'h-8 px-3 text-xs font-medium',
-                  periodType === p ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                  periodType === p ? 'bg-sel text-sel' : 'text-mute hover:text-text'
                 )}
               >
                 {p}
@@ -143,68 +145,87 @@ export function Team() {
         <>
           {isLoadingMyTeam ? (
             <div className="space-y-4 mt-4">
-              <div className="h-10 bg-zinc-900 rounded-lg animate-pulse" />
-              <div className="h-40 bg-zinc-900 rounded-lg animate-pulse" />
+              <div className="h-10 bg-slab-2 animate-pulse" />
+              <div className="h-40 bg-slab-2 animate-pulse" />
             </div>
           ) : teamScores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
-              <Users size={48} className="text-zinc-600 mb-4" />
-              <h3 className="text-base font-medium text-zinc-300">No Team Members</h3>
-              <p className="text-sm text-zinc-500 mt-1">You don&apos;t have any active direct reports.</p>
+            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-rule border-dashed bg-slab">
+              <Users size={48} className="text-faint mb-4" />
+              <h3 className="text-base font-medium text-text">No Team Members</h3>
+              <p className="text-sm text-mute mt-1">You don&apos;t have any active direct reports.</p>
             </div>
           ) : (
-            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden">
+            <div className="mt-4 border border-rule bg-slab overflow-hidden">
               <Table>
-                <TableHeader className="bg-zinc-900/50">
-                  <TableRow className="border-zinc-800 hover:bg-transparent">
-                    <TableHead className="text-zinc-400 font-medium h-10 w-[250px]">Team Member</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10">Role</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Own Score</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Team Score</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Operational</TableHead>
+                <TableHeader className="bg-slab-2">
+                  <TableRow className="border-rule hover:bg-transparent">
+                    <TableHead className="text-mute font-medium h-10 w-[250px]">Team Member</TableHead>
+                    <TableHead className="text-mute font-medium h-10">Role</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Own Score</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Team Score</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Operational</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {teamScores.map((member) => (
                     <TableRow
                       key={member.employee}
-                      className="border-zinc-800 hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                      className="border-rule hover:bg-slab-2/60 transition-colors cursor-pointer"
                       onClick={() => navigate(`/operations/${member.employee}`)}
                     >
                       <TableCell className="py-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-md border border-zinc-700 bg-zinc-800 flex items-center justify-center text-xs text-zinc-300">
+                          <div className="h-8 w-8 border border-rule-2 bg-slab-2 flex items-center justify-center text-xs text-text">
                             {member.user?.name?.charAt(0) ?? '?'}
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-zinc-200 text-sm">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-sans font-medium text-text text-sm">
                               {member.user?.name ?? member.employee}
                             </span>
-                            <span className="text-[10px] text-zinc-500">
-                              {member.completed_items} / {member.total_items} checklist items
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[10px] text-mute">
+                                {member.completed_items} / {member.total_items} checklist items
+                              </span>
+                              {member.total_items > 0 && (
+                                <Meter
+                                  size="sm"
+                                  className="w-16"
+                                  segments={[
+                                    { value: member.completed_items, className: 'bg-pass' },
+                                    {
+                                      value: member.total_items - member.completed_items,
+                                      className: 'bg-slab-2',
+                                    },
+                                  ]}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="py-3">
                         <Badge
                           variant="outline"
-                          className="text-zinc-400 border-zinc-700 bg-zinc-900 font-mono text-[10px] uppercase"
+                          className="text-mute border-rule-2 bg-slab-2 font-mono text-[10px] uppercase"
                         >
                           {member.user?.role ?? member.employee}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-3 text-right">
-                        <ScoreDisplay score={member.own_score} />
+                        <ScoreDisplay score={member.own_score} total={member.total_items} />
                       </TableCell>
                       <TableCell className="py-3 text-right">
-                        <ScoreDisplay score={member.team_score} />
+                        <ScoreDisplay score={member.team_score} total={member.total_items} />
                       </TableCell>
                       <TableCell className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {member.combined_score < 0.5 && <TrendingDown size={14} className="text-rose-500" />}
-                          {member.combined_score >= 0.8 && <Target size={14} className="text-emerald-500" />}
-                          <ScoreDisplay score={member.combined_score} highlight />
+                          {member.total_items > 0 && member.combined_score < 0.5 && (
+                            <TrendingDown size={14} className="text-fail" />
+                          )}
+                          {member.total_items > 0 && member.combined_score >= 0.8 && (
+                            <Target size={14} className="text-pass" />
+                          )}
+                          <ScoreDisplay score={member.combined_score} total={member.total_items} highlight />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -220,42 +241,42 @@ export function Team() {
         <>
           {isLoadingAllTeams ? (
             <div className="space-y-4 mt-4">
-              <div className="h-10 bg-zinc-900 rounded-lg animate-pulse" />
-              <div className="h-40 bg-zinc-900 rounded-lg animate-pulse" />
+              <div className="h-10 bg-slab-2 animate-pulse" />
+              <div className="h-40 bg-slab-2 animate-pulse" />
             </div>
           ) : allTeamScores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-zinc-800/60 border-dashed rounded-lg bg-[#18181b]/50">
-              <UsersRound size={48} className="text-zinc-600 mb-4" />
-              <h3 className="text-base font-medium text-zinc-300">No Team Data</h3>
-              <p className="text-sm text-zinc-500 mt-1">No employees in scope for this period.</p>
+            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-rule border-dashed bg-slab">
+              <UsersRound size={48} className="text-faint mb-4" />
+              <h3 className="text-base font-medium text-text">No Team Data</h3>
+              <p className="text-sm text-mute mt-1">No employees in scope for this period.</p>
             </div>
           ) : (
-            <div className="mt-4 rounded-md border border-zinc-800 bg-[#18181b] overflow-hidden">
+            <div className="mt-4 border border-rule bg-slab overflow-hidden">
               <Table>
-                <TableHeader className="bg-zinc-900/50">
-                  <TableRow className="border-zinc-800 hover:bg-transparent">
-                    <TableHead className="text-zinc-400 font-medium h-10 w-[220px]">Name</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10">Role</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10">Department</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10">Branch</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Own Score</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Team Score</TableHead>
-                    <TableHead className="text-zinc-400 font-medium h-10 text-right">Combined</TableHead>
+                <TableHeader className="bg-slab-2">
+                  <TableRow className="border-rule hover:bg-transparent">
+                    <TableHead className="text-mute font-medium h-10 w-[220px]">Name</TableHead>
+                    <TableHead className="text-mute font-medium h-10">Role</TableHead>
+                    <TableHead className="text-mute font-medium h-10">Department</TableHead>
+                    <TableHead className="text-mute font-medium h-10">Branch</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Own Score</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Team Score</TableHead>
+                    <TableHead className="text-mute font-medium h-10 text-right">Combined</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {allTeamScores.map((member) => (
                     <TableRow
                       key={member.employee}
-                      className="border-zinc-800 hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                      className="border-rule hover:bg-slab-2/60 transition-colors cursor-pointer"
                       onClick={() => navigate(`/operations/${member.employee}`)}
                     >
                       <TableCell className="py-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-md border border-zinc-700 bg-zinc-800 flex items-center justify-center text-xs text-zinc-300">
+                          <div className="h-8 w-8 border border-rule-2 bg-slab-2 flex items-center justify-center text-xs text-text">
                             {member.user?.name?.charAt(0) ?? '?'}
                           </div>
-                          <span className="font-medium text-zinc-200 text-sm">
+                          <span className="font-sans font-medium text-text text-sm">
                             {member.user?.name ?? member.employee}
                           </span>
                         </div>
@@ -263,28 +284,32 @@ export function Team() {
                       <TableCell className="py-3">
                         <Badge
                           variant="outline"
-                          className="text-zinc-400 border-zinc-700 bg-zinc-900 font-mono text-[10px] uppercase"
+                          className="text-mute border-rule-2 bg-slab-2 font-mono text-[10px] uppercase"
                         >
                           {member.user?.role ?? member.employee}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-3 text-zinc-400 text-sm">
+                      <TableCell className="py-3 text-mute text-sm">
                         {member.department ?? '—'}
                       </TableCell>
-                      <TableCell className="py-3 text-zinc-400 text-sm">
+                      <TableCell className="py-3 text-mute text-sm">
                         {member.user?.branch ?? '—'}
                       </TableCell>
                       <TableCell className="py-3 text-right">
-                        <ScoreDisplay score={member.own_score} />
+                        <ScoreDisplay score={member.own_score} total={member.total_items} />
                       </TableCell>
                       <TableCell className="py-3 text-right">
-                        <ScoreDisplay score={member.team_score} />
+                        <ScoreDisplay score={member.team_score} total={member.total_items} />
                       </TableCell>
                       <TableCell className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {member.combined_score < 0.5 && <TrendingDown size={14} className="text-rose-500" />}
-                          {member.combined_score >= 0.8 && <Target size={14} className="text-emerald-500" />}
-                          <ScoreDisplay score={member.combined_score} highlight />
+                          {member.total_items > 0 && member.combined_score < 0.5 && (
+                            <TrendingDown size={14} className="text-fail" />
+                          )}
+                          {member.total_items > 0 && member.combined_score >= 0.8 && (
+                            <Target size={14} className="text-pass" />
+                          )}
+                          <ScoreDisplay score={member.combined_score} total={member.total_items} highlight />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -299,17 +324,19 @@ export function Team() {
   );
 }
 
-function ScoreDisplay({ score, highlight = false }: { score: number; highlight?: boolean }) {
-  const percentage = Math.round(score * 100);
-  let color = 'text-zinc-300';
-  if (highlight) {
-    if (score >= 0.8) color = 'text-emerald-400 font-bold';
-    else if (score >= 0.5) color = 'text-amber-400 font-medium';
-    else color = 'text-rose-400 font-medium';
-  } else {
-    if (score >= 0.8) color = 'text-emerald-500/80';
-    else if (score >= 0.5) color = 'text-amber-500/80';
-    else color = 'text-rose-500/80';
-  }
-  return <span className={color}>{percentage}%</span>;
+function ScoreDisplay({
+  score,
+  total,
+  highlight = false,
+}: {
+  score: number | null | undefined;
+  total?: number;
+  highlight?: boolean;
+}) {
+  const pct = score == null ? null : score * 100;
+  return (
+    <span className={cn(scoreTextClass(pct, total), highlight && 'font-semibold')}>
+      {formatScore(pct, total)}
+    </span>
+  );
 }

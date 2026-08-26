@@ -40,26 +40,26 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     return (
         <aside
             className={cn(
-                "flex flex-col h-full bg-[#18181b] border-r border-[#27272a]/50 shrink-0 transition-all duration-300",
+                "flex flex-col h-full bg-slab border-r border-rule shrink-0 transition-all duration-300",
                 collapsed ? "w-[52px]" : "w-[240px]"
             )}
         >
             {/* Workspace Header */}
-            <div className="h-12 flex items-center shrink-0 mt-2 mb-4 hover:bg-zinc-800/50 cursor-pointer mx-2 rounded-md transition-colors gap-2 px-2">
-                <div className="w-5 h-5 rounded-sm bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-inner flex-shrink-0">
+            <div className="h-12 flex items-center shrink-0 mt-2 mb-4 hover:bg-slab-2 cursor-pointer mx-2 rounded transition-colors gap-2 px-2">
+                <div className="w-5 h-5 rounded-sm bg-slab-2 flex items-center justify-center text-[10px] font-bold text-text flex-shrink-0">
                     P
                 </div>
-                {!collapsed && <span className="font-medium text-sm text-zinc-200 truncate">Pulse</span>}
+                {!collapsed && <span className="font-medium text-sm text-text truncate">Pulse</span>}
             </div>
 
             {!collapsed && (
                 <div className="px-3 mb-6">
-                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-zinc-400 bg-zinc-900/50 border border-zinc-800/80 rounded-md hover:bg-zinc-800 transition-colors shadow-sm">
-                        <Search size={14} className="text-zinc-500" />
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded hover:bg-slab-2 transition-colors">
+                        <Search size={14} className="text-mute" />
                         <span>Search...</span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-60">
-                            <kbd className="font-sans px-1 rounded bg-zinc-800 border border-zinc-700 text-[10px]">⌘</kbd>
-                            <kbd className="font-sans px-1 rounded bg-zinc-800 border border-zinc-700 text-[10px]">K</kbd>
+                            <kbd className="font-sans px-1 rounded bg-slab-2 border border-rule text-[10px]">⌘</kbd>
+                            <kbd className="font-sans px-1 rounded bg-slab-2 border border-rule text-[10px]">K</kbd>
                         </div>
                     </button>
                 </div>
@@ -68,7 +68,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             {/* Navigation Links */}
             <div className={cn("flex-1 overflow-y-auto scrollbar-none", collapsed ? "px-2 space-y-0.5" : "px-3 space-y-0.5")}>
                 {!collapsed && (
-                    <div className="px-2 mb-2 mt-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                    <div className="px-2 mb-2 mt-4 text-[11px] font-semibold text-faint uppercase tracking-wider">
                         Workspace
                     </div>
                 )}
@@ -84,18 +84,18 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                             to={item.path}
                             title={item.name}
                             className={cn(
-                                "flex items-center rounded-md text-sm transition-all duration-200 group relative",
+                                "flex items-center rounded text-sm transition-all duration-200 group relative",
                                 collapsed ? "justify-center p-2" : "gap-2.5 px-2 py-1.5",
                                 isActive
-                                    ? "bg-zinc-800/80 text-zinc-100 font-medium shadow-sm"
-                                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
+                                    ? "bg-slab-2 text-text font-medium border-l-2 border-l-sel"
+                                    : "text-mute hover:bg-slab-2 hover:text-text"
                             )}
                         >
                             <item.icon
                                 size={16}
                                 className={cn(
                                     "transition-colors flex-shrink-0",
-                                    isActive ? "text-indigo-400" : "text-zinc-500 group-hover:text-zinc-300"
+                                    isActive ? "text-text" : "text-mute group-hover:text-text"
                                 )}
                             />
                             {!collapsed && <span className="truncate">{item.name}</span>}
@@ -105,16 +105,17 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             </div>
 
             {/* Bottom Actions */}
-            <div className={cn("p-3 mt-auto shrink-0 border-t border-zinc-800/50 flex items-center gap-1", collapsed && "flex-col")}>
+            <div className={cn("p-3 mt-auto shrink-0 border-t border-rule flex items-center gap-1", collapsed && "flex-col")}>
                 <button
                     type="button"
                     onClick={onToggleCollapse}
-                    className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors flex items-center justify-center w-full"
+                    className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded transition-colors flex items-center justify-center w-full"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
                 </button>
-                <button className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors shrink-0" title="Notifications">
+                <button className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded transition-colors shrink-0" title="Notifications" aria-label="Notifications">
                     <Bell size={16} />
                 </button>
             </div>
