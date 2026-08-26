@@ -4,7 +4,7 @@
 from datetime import timedelta
 
 import frappe
-from frappe.utils import getdate, get_first_day, get_last_day, get_time_zone
+from frappe.utils import getdate, get_first_day, get_last_day, get_system_timezone
 
 from pulse.api.permissions import _get_system_role_for_employee, get_scope_for_user
 from pulse.domain.compliance import classify_runs
@@ -287,7 +287,7 @@ def _compliance_period_meta(date_str: str, period_type: str) -> dict:
 	"""Build the period block for the compliance score response contract."""
 	start_d, end_d = _period_range(date_str, period_type)
 	try:
-		tz = get_time_zone()
+		tz = get_system_timezone()
 	except Exception:
 		tz = "UTC"
 	return {
