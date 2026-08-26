@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Gauge } from '@/components/shared/Gauge';
-import { Network, ChevronRight, ChevronDown, Trophy, AlertTriangle, Clock } from 'lucide-react';
+import { Network, ChevronRight, ChevronDown, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -184,15 +184,15 @@ export function Operations() {
   const descendants = treeData ? getDescendants(treeData) : [];
   const descendantsWithScores = descendants.filter(d => {
     const s = d.score;
-    const scoreVal = s?.combinedScore ?? s?.combined_score;
+    const scoreVal = s?.combinedScore;
     return scoreVal !== undefined && scoreVal !== null;
   });
 
   let weakestNode: TreeNode | null = null;
   if (descendantsWithScores.length > 0) {
     weakestNode = descendantsWithScores.reduce((weakest, current) => {
-      const wScore = weakest.score.combinedScore ?? weakest.score.combined_score ?? 0;
-      const cScore = current.score.combinedScore ?? current.score.combined_score ?? 0;
+      const wScore = weakest.score.combinedScore ?? 0;
+      const cScore = current.score.combinedScore ?? 0;
       return cScore < wScore ? current : weakest;
     }, descendantsWithScores[0]);
   }
@@ -284,7 +284,7 @@ export function Operations() {
                 <div className="mt-4 pt-4 border-t border-zinc-800/80 flex items-center justify-between">
                   <span className="text-xs text-zinc-500">Score</span>
                   <Badge variant="outline" className="text-rose-400 bg-rose-400/10 border-rose-400/20 font-mono text-xs font-bold">
-                    {Math.round((weakestNode.score.combinedScore ?? weakestNode.score.combined_score ?? 0) * 100)}%
+                    {Math.round((weakestNode.score.combinedScore ?? 0) * 100)}%
                   </Badge>
                 </div>
               </Card>

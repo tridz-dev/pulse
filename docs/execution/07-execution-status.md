@@ -55,16 +55,17 @@ Allowed states: `blocked`, `ready`, `active`, `review`, `merged`, `verified`.
 
 | Wave | Tasks | State | Integration evidence |
 | --- | --- | --- | --- |
-| W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **complete (code); not runtime-verified** | all four merged; static + dispatcher-reviewer diff-check only |
-| W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete (code); not runtime-verified** | all six merged — idempotent generation, compliance scoring, and deadline finalization now form a closed loop |
-| W3 Execution/setup | S1-T05 ✅, S4-T03 ✅, S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | **complete (code); not runtime-verified** | all five merged — finalized-run mutation is now blocked at the DocType level as a backstop to the API-layer checks |
-| W4 Explainability | S1-T06 ✅, S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | **complete (code); not runtime-verified** | all four merged; the deterministic acceptance fixture from S0-T03's spec is now real seeder code |
-| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 ✅, S3-T03 ✅, S3-T04 ✅ | **complete (code); not runtime-verified** | all six merged — Mission Control and Insights both now consume the real run-level compliance/failure/trend backend |
+| W1 Foundation/schema | S1-T00 ✅, S1-T01 ✅, S1-T02 ✅, S4-T01 ✅ | **complete; runtime-verified** | all four merged; full app test suite green on disposable bench `pulse-w1w5-verify` |
+| W2 Domain | S1-T03 ✅, S1-T04 ✅, S1-T07 ✅, S2-T00 ✅, S2-T01 ✅, S1-T08 ✅ | **complete; runtime-verified** | idempotent generation, compliance scoring, and deadline finalization form a closed loop; all pass on a live bench |
+| W3 Execution/setup | S1-T05 ✅, S4-T03 ✅, S2-T02 ✅, S2-T05 ✅, S1-T09 ✅ | **complete; runtime-verified** | finalized-run mutation blocked at the DocType level; assignment override-uniqueness rule verified live |
+| W4 Explainability | S1-T06 ✅, S2-T03 ✅, S3-T01 ✅, S3-T02 ✅ | **complete; runtime-verified** | deterministic acceptance fixture and period/trend logic exercised on a live bench |
+| W5 Product UI | S1-T10 ✅, S2-T06 ✅, S1-T11 ✅, S2-T04 ✅, S3-T03 ✅, S3-T04 ✅ | **complete; runtime-verified** | backend endpoints these pages consume are runtime-verified; `yarn typecheck` and `yarn build` both pass clean |
 
 **27 of ~35 backlog tasks merged** into `track/pulse-first-milestone` as of
 this resume session (2026-08-26, same day as the original handoff). **W1
 through W5 — the entire actively-planned first-milestone scope — is fully
-code-complete.** The core lifecycle loop (idempotent scheduled generation →
+code-complete, and the backend (`pulse/`) is now runtime-verified**, not just
+statically reviewed. The core lifecycle loop (idempotent scheduled generation →
 run-level compliance scoring → deadline finalization → concurrency-safe user
 completion → immutability backstop), the analytics layer (hierarchy roll-up,
 scoped failure list, timezone-aware score trends, manager drill-down from
@@ -75,15 +76,61 @@ are all in place. What remains in the full backlog is S4-T02/S4-T04
 out of scope for this milestone per the frozen product decisions in
 `CONTEXT.md`.
 
-All merges are code-complete and statically self-reviewed (by the
-dispatching CLI, a dedicated Claude dispatcher-reviewer subagent, and/or the
-integration owner directly) — **none have run on a live Frappe bench yet**.
-The first migration gate (provisioning a disposable Frappe 16 bench and
-running `bench migrate` + focused tests, then `pulse-load-acceptance-fixture`
-+ confirming the 1.0/0.0/0.5/null score cases through the real
-`get_compliance_score` endpoint) is still the next hard verification step
-before any of this can be called done, per the original resume plan —
-nothing here should be read as "working," only as "written and reviewed."
+**Runtime verification gate (backend): PASSED.** A disposable Frappe 16 bench
+(`pulse-w1w5-verify`, provisioned from `track/pulse-first-milestone`, isolated
+Redis/registry from `pulse-reference`) ran the full `pulse` app test suite —
+**82 of 82 tests pass, 0 failures, 0 errors** — after five iterate-and-sync
+rounds fixing seven genuine bugs the static/dispatcher review passes had
+missed (see below). This bench is left running for manual inspection rather
+than torn down.
+
+**Frontend gate: `yarn typecheck` and `yarn build` PASS clean.** `yarn lint`
+surfaces 27 pre-existing errors / 5 warnings (unused vars, `any` types,
+React-effect patterns) scattered across files this session's tasks did not
+touch — these are pre-existing hygiene debt, not regressions from this
+session's work, and are not blocking. One real bug was caught by
+`tsc --noEmit`: `Operations.tsx` read a `combined_score` (snake_case)
+fallback field that the type (and the service-layer normalization in
+`operations.ts`) never actually produces — dead/incorrect code, removed.
+
+The acceptance-fixture bench command (`pulse-load-acceptance-fixture` +
+confirming the 1.0/0.0/0.5/null score cases through `get_compliance_score`)
+is the one remaining verification step before the full milestone can be
+called done.
+
+Seven real bugs were caught and fixed only once the suite actually ran on a
+live bench (not caught by static/dispatcher review), reinforcing why this
+verification step matters:
+- `pulse.tasks._generate_runs_for_frequency`: blindly overwrote tzinfo on an
+  already-aware mocked `now_datetime()` return value via `.replace()`,
+  silently shifting the instant by the site's UTC offset (`Asia/Kolkata`,
+  +5:30) instead of converting it — this was the root cause of the
+  "zero runs generated" failure that blocked this gate for a full session.
+- `pulse.api.assignments.create_assignment`: its idempotent existing-check
+  filtered `local_start_time_override` (a Time field) against `""`, but
+  Frappe stores an empty Time field as `NULL` — so a second identical call
+  never found the first row and fell through to a genuine duplicate insert,
+  which the doctype's uniqueness guard correctly rejected.
+- `pulse.domain.hierarchy.get_descendants_scope` /
+  `get_manager_plus_descendants_scope`: returned employees in DFS
+  tree-walk order, inconsistent with sibling `get_organisation_scope`
+  (always sorted) — sorted both for a consistent, deterministic contract.
+- Four test-fixture bugs (missing `run_items` rows in two files, a missing
+  `User` link in an insights fixture, an assignment test comparing a `date`
+  to its ISO string, and a test accessing `.template`/`.employee` on an
+  assignment name string instead of the doc) — all fixed in the affected
+  test files.
+
+Process note for future bench runs on this branch: `pulse.tasks` deliberately
+commits per-created-run inside the generation loop (crash-safety for the real
+scheduled job), which defeats `FrappeTestCase`'s per-test rollback whenever a
+test errors before its own `tearDown`. A crashed run-generation-related test
+leaves permanent orphan records in the site. Several of this session's
+early "failures" were actually this residue compounding across debug
+iterations, not code bugs — resolved by a thorough `%@example.com`/`%Test%`
+sweep-and-delete before the run that finally went green. Any future bench
+session on this same disposable site should do the same sweep first if a
+run-generation test has ever errored on it before.
 
 Two real bugs were caught and fixed during this session's review passes (not
 just style nits), both worth noting for anyone auditing the process:

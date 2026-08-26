@@ -7,7 +7,7 @@ import { getDemoStatus, installDemoData } from '@/services/demo';
 import { getFailureList } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2, AlertTriangle, Clock, XCircle, ChevronRight } from 'lucide-react';
+import { Target, Users, Activity, Calendar, TrendingUp, Database, Loader2, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Gauge } from '@/components/shared/Gauge';
 import {
   Sheet,
