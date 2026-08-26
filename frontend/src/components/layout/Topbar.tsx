@@ -1,5 +1,6 @@
 import { useAuth } from '@/store/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { useLocation } from 'react-router-dom';
 
 export function Topbar() {
@@ -18,7 +19,8 @@ export function Topbar() {
         <span className="text-sm font-semibold text-zinc-200">{pageName}</span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
         <Avatar className="h-6 w-6 rounded-sm border border-zinc-700">
           <AvatarImage src={currentUser?.avatarUrl} />
           <AvatarFallback className="text-[10px] bg-indigo-900 text-indigo-100 rounded-sm">
