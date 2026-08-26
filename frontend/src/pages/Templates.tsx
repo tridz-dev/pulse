@@ -56,11 +56,11 @@ export function Templates() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
-          <p className="text-zinc-400 text-sm mt-1">Master definitions of all operational checklists.</p>
+          <p className="text-mute text-sm mt-1">Master definitions of all operational checklists.</p>
         </div>
         <Button
           variant="outline"
-          className="bg-zinc-900 border-zinc-800 text-zinc-300 gap-2 hover:bg-zinc-800"
+          className="bg-slab border-rule text-text gap-2 hover:bg-slab-2"
         >
           <LayoutList size={16} />
           <span>Create Template</span>
@@ -70,7 +70,7 @@ export function Templates() {
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-zinc-900 rounded-xl animate-pulse" />
+            <div key={i} className="h-48 bg-slab rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -78,28 +78,28 @@ export function Templates() {
           {templates.map((template) => (
             <Card
               key={template.name}
-              className="bg-[#141415] border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer group"
+              className="bg-slab border-rule hover:border-rule-2 transition-colors cursor-pointer group"
               onClick={() => handleViewTemplate(template)}
             >
               <CardHeader className="pb-3">
-                <div className="flex justify-between items-start mb-2 text-zinc-500">
-                  <FileText size={20} className="group-hover:text-indigo-400 transition-colors" />
+                <div className="flex justify-between items-start mb-2 text-faint">
+                  <FileText size={20} className="group-hover:text-text transition-colors" />
                   <Badge
                     variant="outline"
-                    className="text-[10px] uppercase border-zinc-800 text-zinc-500"
+                    className="text-[10px] uppercase border-rule text-faint"
                   >
                     {template.frequency_type ?? '—'}
                   </Badge>
                 </div>
-                <CardTitle className="text-lg text-zinc-200 group-hover:text-white transition-colors">
+                <CardTitle className="text-lg text-text group-hover:text-white transition-colors">
                   {template.title}
                 </CardTitle>
-                <CardDescription className="text-xs text-zinc-500 font-mono">
+                <CardDescription className="text-xs text-faint font-mono">
                   ID: {template.name} • Dept: {template.department ?? 'General'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 text-xs text-zinc-500">
+                <div className="flex items-center gap-4 text-xs text-faint">
                   <div className="flex items-center gap-1.5">
                     <Clock size={14} className="opacity-60" />
                     <span>Active</span>
@@ -109,7 +109,7 @@ export function Templates() {
                     <span>{template.owner_role ?? '—'}s</span>
                   </div>
                   <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight size={16} className="text-zinc-400" />
+                    <ChevronRight size={16} className="text-mute" />
                   </div>
                 </div>
               </CardContent>
@@ -119,12 +119,12 @@ export function Templates() {
       )}
 
       <Sheet open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
-        <SheetContent className="bg-[#09090b] border-zinc-800 w-[500px] sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
+        <SheetContent className="bg-ink border-rule w-[500px] sm:w-[640px] p-0 flex flex-col print:w-full print:h-full print:p-0 print:border-none">
           {selectedTemplate && (
             <>
-              <SheetHeader className="p-8 border-b border-zinc-800/80 bg-zinc-900/30 shrink-0 print:bg-white print:border-black">
+              <SheetHeader className="p-8 border-b border-rule bg-slab/30 shrink-0 print:bg-white print:border-black">
                 <div className="flex justify-between items-start print:hidden">
-                  <div className="flex items-center gap-3 text-indigo-400 mb-4 bg-indigo-500/10 px-3 py-1.5 rounded-full border border-indigo-500/20 w-fit">
+                  <div className="flex items-center gap-3 text-faint mb-4 bg-transparent px-3 py-1.5 rounded-[var(--radius)] border-rule w-fit">
                     <ClipboardCheck size={18} />
                     <span className="text-xs font-bold uppercase tracking-widest">Master Protocol</span>
                   </div>
@@ -132,7 +132,7 @@ export function Templates() {
                     onClick={handlePrint}
                     variant="outline"
                     size="sm"
-                    className="bg-zinc-900 border-zinc-800 text-zinc-400 gap-2 hover:text-white"
+                    className="bg-slab border-rule text-mute gap-2 hover:text-white"
                   >
                     <Printer size={14} />
                     <span>Print Task Sheet</span>
@@ -142,7 +142,7 @@ export function Templates() {
                   <SheetTitle className="text-2xl text-white print:text-black print:text-3xl">
                     {selectedTemplate.title}
                   </SheetTitle>
-                  <SheetDescription className="text-zinc-400 print:text-zinc-500 flex items-center gap-3">
+                  <SheetDescription className="text-mute print:text-zinc-500 flex items-center gap-3">
                     <span>Frequency: {selectedTemplate.frequency_type ?? '—'}</span>
                     <span>•</span>
                     <span>Target: {selectedTemplate.owner_role ?? '—'}</span>
@@ -156,13 +156,13 @@ export function Templates() {
                 {isSheetLoading ? (
                   <div className="space-y-4 animate-pulse">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="h-12 bg-zinc-900 rounded-lg" />
+                      <div key={i} className="h-12 bg-slab rounded-lg" />
                     ))}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-6 print:gap-0">
                     <div className="print:hidden">
-                      <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+                      <h4 className="text-xs font-semibold text-faint uppercase tracking-widest mb-4">
                         Inspection Checklist
                       </h4>
                     </div>
@@ -170,25 +170,25 @@ export function Templates() {
                       {templateItems.map((item, index) => (
                         <div
                           key={item.name ?? index}
-                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-zinc-900/50 transition-colors border border-transparent hover:border-zinc-800/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
+                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-slab/50 transition-colors border border-transparent hover:border-rule/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
                         >
-                          <div className="w-6 h-6 rounded-md border-2 border-zinc-800 mt-0.5 flex items-center justify-center shrink-0 group-hover:border-zinc-700 print:border-zinc-300">
-                            <span className="text-[10px] text-zinc-600 font-mono print:hidden">
+                          <div className="w-6 h-6 rounded-md border-2 border-rule mt-0.5 flex items-center justify-center shrink-0 group-hover:border-rule-2 print:border-zinc-300">
+                            <span className="text-[10px] text-mute font-mono print:hidden">
                               {index + 1}
                             </span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <p className="text-sm font-medium text-zinc-200 print:text-black print:text-lg italic">
+                            <p className="text-sm font-medium text-text print:text-black print:text-lg italic">
                               {item.description}
                             </p>
                             <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
                               <Badge
                                 variant="outline"
-                                className="text-[9px] h-4 px-1 border-zinc-800 text-zinc-600 uppercase"
+                                className="text-[9px] h-4 px-1 border-rule text-mute uppercase"
                               >
                                 {item.item_type}
                               </Badge>
-                              <span className="text-[10px] text-zinc-700 font-mono italic">
+                              <span className="text-[10px] text-faint font-mono italic">
                                 Weight: {item.weight}
                               </span>
                             </div>
@@ -197,19 +197,19 @@ export function Templates() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-8 pt-8 border-t border-zinc-800/50 print:mt-12 print:border-black/10">
+                    <div className="mt-8 pt-8 border-t border-rule/50 print:mt-12 print:border-black/10">
                       <div className="grid grid-cols-2 gap-8">
                         <div className="flex flex-col gap-2">
-                          <span className="text-[10px] text-zinc-600 uppercase tracking-widest">
+                          <span className="text-[10px] text-mute uppercase tracking-widest">
                             Authorized By
                           </span>
-                          <div className="h-10 border-b border-zinc-800/80 print:border-black/20"></div>
+                          <div className="h-10 border-b border-rule/80 print:border-black/20"></div>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <span className="text-[10px] text-zinc-600 uppercase tracking-widest">
+                          <span className="text-[10px] text-mute uppercase tracking-widest">
                             Inspection Date
                           </span>
-                          <div className="h-10 border-b border-zinc-800/80 print:border-black/20"></div>
+                          <div className="h-10 border-b border-rule/80 print:border-black/20"></div>
                         </div>
                       </div>
                     </div>
