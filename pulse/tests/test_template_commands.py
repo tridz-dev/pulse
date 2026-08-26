@@ -184,7 +184,15 @@ class TestTemplateCommands(FrappeTestCase):
 			"employee": employee.name,
 			"period_date": "2026-08-26",
 			"status": "Open",
-			"run_items": []
+			"run_items": [
+				{
+					"checklist_item": "Test step",
+					"weight": 1.0,
+					"item_type": "Checkbox",
+					"status": "Pending",
+					"evidence_required": "None",
+				}
+			],
 		}).insert(ignore_permissions=True)
 		self._created_sop_runs.append(run_doc.name)
 

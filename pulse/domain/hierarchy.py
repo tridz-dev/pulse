@@ -24,7 +24,7 @@ def get_descendants_scope(employee_name: str) -> list[str]:
 	children = _children_by_manager()
 	result: list[str] = []
 	_walk_descendants(employee_name, children, result, set())
-	return result
+	return sorted(result)
 
 
 def get_manager_plus_descendants_scope(employee_name: str) -> list[str]:
@@ -35,7 +35,7 @@ def get_manager_plus_descendants_scope(employee_name: str) -> list[str]:
 	if employee_name in _active_employee_names():
 		result.append(employee_name)
 	_walk_descendants(employee_name, children, result, set())
-	return result
+	return sorted(result)
 
 
 def get_organisation_scope() -> list[str]:

@@ -144,7 +144,10 @@ def create_assignment(
             "employee": employee,
             "is_active": 1,
             "schedule_timezone_override": tz or "",
-            "local_start_time_override": start or "",
+            # Time fields store an empty value as NULL, not "" - matching
+            # against "" here would never find the row a prior insert of
+            # the same "no override" case actually created.
+            "local_start_time_override": ["is", "not set"] if not start else start,
             "completion_window_minutes_override": window if window is not None else 0,
         },
         pluck="name",

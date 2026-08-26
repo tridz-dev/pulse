@@ -143,15 +143,16 @@ class TestDeadlineFinalization(FrappeTestCase):
         run_item_status: str = "Pending",
     ) -> str:
         unique = uuid.uuid4().hex
+        assignment_doc = frappe.get_doc("SOP Assignment", assignment)
         run = frappe.get_doc({
             "doctype": "SOP Run",
-            "template": assignment.template,
-            "employee": assignment.employee,
+            "template": assignment_doc.template,
+            "employee": assignment_doc.employee,
             "period_date": due_at.date(),
             "status": status,
             "compliance_result": compliance_result,
             "completed_at": completed_at,
-            "assignment": assignment.name,
+            "assignment": assignment_doc.name,
             "schedule_key": f"test-key-{unique}",
             "run_key": f"test-run-key-{unique}",
             "opens_at": due_at - datetime.timedelta(hours=1),
