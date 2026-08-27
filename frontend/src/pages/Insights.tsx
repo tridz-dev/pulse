@@ -63,7 +63,8 @@ import {
 } from 'recharts';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { scoreStatus, formatScore } from '@/lib/score';
+import { scoreStatus, scoreBgClass, formatScore } from '@/lib/score';
+import { Meter } from '@/components/ui/meter';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -286,9 +287,9 @@ export function Insights() {
                     <TableCell className="text-text font-medium">{row.user?.name}</TableCell>
                     <TableCell className="text-mute">{row.user?.role ?? '—'}</TableCell>
                     <TableCell className="text-mute">{row.user?.branch ?? '—'}</TableCell>
-                    <TableCell className="text-right font-mono text-mute">{formatScore((row.own_score ?? 0) * 100)}</TableCell>
-                    <TableCell className="text-right font-mono text-mute">{formatScore((row.team_score ?? 0) * 100)}</TableCell>
-                    <TableCell className="text-right font-mono font-medium text-text">{formatScore((row.combined_score ?? 0) * 100)}</TableCell>
+                    <TableCell className="text-right"><ScoreCell pct={(row.own_score ?? 0) * 100} /></TableCell>
+                    <TableCell className="text-right"><ScoreCell pct={(row.team_score ?? 0) * 100} /></TableCell>
+                    <TableCell className="text-right"><ScoreCell pct={(row.combined_score ?? 0) * 100} emphasize /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -360,16 +361,30 @@ export function Insights() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-mute uppercase">Dept Avg</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-2">
                 <div className="text-2xl font-bold font-mono text-text">{formatScore(deptAvg * 100)}</div>
+                <Meter
+                  size="sm"
+                  segments={[
+                    { value: Math.max(0, Math.min(100, deptAvg * 100)), className: scoreBgClass(deptAvg * 100, 100) },
+                    { value: 100 - Math.max(0, Math.min(100, deptAvg * 100)), className: 'bg-slab-2' },
+                  ]}
+                />
               </CardContent>
             </Card>
             <Card className="bg-slab border-rule">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs text-mute uppercase">Branch Avg</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-2">
                 <div className="text-2xl font-bold font-mono text-text">{formatScore(branchAvg * 100)}</div>
+                <Meter
+                  size="sm"
+                  segments={[
+                    { value: Math.max(0, Math.min(100, branchAvg * 100)), className: scoreBgClass(branchAvg * 100, 100) },
+                    { value: 100 - Math.max(0, Math.min(100, branchAvg * 100)), className: 'bg-slab-2' },
+                  ]}
+                />
               </CardContent>
             </Card>
             <Card className="bg-slab border-rule">
@@ -441,7 +456,17 @@ export function Insights() {
                       onClick={() => navigate(`/operations/${p.employee}`)}
                     >
                       <span className="text-sm font-medium text-text">{p.employee_name}</span>
-                      <span className="text-sm font-bold font-mono text-pass">{formatScore(p.combined_score * 100)}</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-sm font-bold font-mono text-pass">{formatScore(p.combined_score * 100)}</span>
+                        <Meter
+                          size="sm"
+                          className="w-16"
+                          segments={[
+                            { value: Math.max(0, Math.min(100, p.combined_score * 100)), className: 'bg-pass' },
+                            { value: 100 - Math.max(0, Math.min(100, p.combined_score * 100)), className: 'bg-slab-2' },
+                          ]}
+                        />
+                      </div>
                     </div>
                   ))}
                   {performers.top.length === 0 && (
@@ -467,7 +492,17 @@ export function Insights() {
                       onClick={() => navigate(`/operations/${p.employee}`)}
                     >
                       <span className="text-sm font-medium text-text">{p.employee_name}</span>
-                      <span className="text-sm font-bold font-mono text-fail">{formatScore(p.combined_score * 100)}</span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-sm font-bold font-mono text-fail">{formatScore(p.combined_score * 100)}</span>
+                        <Meter
+                          size="sm"
+                          className="w-16"
+                          segments={[
+                            { value: Math.max(0, Math.min(100, p.combined_score * 100)), className: 'bg-fail' },
+                            { value: 100 - Math.max(0, Math.min(100, p.combined_score * 100)), className: 'bg-slab-2' },
+                          ]}
+                        />
+                      </div>
                     </div>
                   ))}
                   {performers.bottom.length === 0 && (
@@ -610,6 +645,25 @@ export function Insights() {
           </Card>
         </>
       )}
+    </div>
+  );
+}
+
+function ScoreCell({ pct, emphasize = false }: { pct: number; emphasize?: boolean }) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <span className={`font-mono text-sm ${emphasize ? 'font-medium text-text' : 'text-mute'}`}>
+        {formatScore(pct)}
+      </span>
+      <Meter
+        size="sm"
+        className="w-12"
+        segments={[
+          { value: clamped, className: scoreBgClass(pct, 100) },
+          { value: 100 - clamped, className: 'bg-slab-2' },
+        ]}
+      />
     </div>
   );
 }

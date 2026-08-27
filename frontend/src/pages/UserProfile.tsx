@@ -18,6 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
+import { Meter } from '@/components/ui/meter';
 import {
   BarChart,
   Bar,
@@ -31,7 +32,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { ScoreBreakdown } from '@/components/shared/ScoreBreakdown';
-import { scoreStatus, scoreTextClass, formatScore } from '@/lib/score';
+import { scoreStatus, scoreTextClass, scoreBgClass, formatScore } from '@/lib/score';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -164,7 +165,7 @@ export function UserProfile() {
                 onClick={() => setPeriodType(p)}
                 className={cn(
                   'h-8 px-3 text-xs font-medium transition-all',
-                  periodType === p ? 'bg-slab text-text shadow-sm' : 'text-mute hover:text-text hover:bg-slab/50'
+                  periodType === p ? 'bg-slab text-text' : 'text-mute hover:text-text hover:bg-slab/50'
                 )}
               >
                 {p}
@@ -221,8 +222,18 @@ export function UserProfile() {
               </CardTitle>
               <Target className="h-4 w-4 text-mute" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-2">
               <div className="text-lg font-mono font-semibold text-mute">{formatScore(personalPct)}</div>
+              {eligibleRuns > 0 && (
+                <Meter
+                  size="sm"
+                  className="w-full"
+                  segments={[
+                    { value: passedRuns, className: scoreBgClass(personalPct, eligibleRuns) },
+                    { value: eligibleRuns - passedRuns, className: 'bg-slab-2' },
+                  ]}
+                />
+              )}
               <p className="text-[10px] text-mute mt-1 font-mono uppercase">
                 {passedRuns} / {eligibleRuns} Runs
               </p>
@@ -239,10 +250,26 @@ export function UserProfile() {
                 <Activity className="h-4 w-4 text-mute" />
               )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-2">
               <div className="text-lg font-mono font-semibold text-mute">
                 {teamData.length > 0 ? formatScore(inheritedPct) : recentRuns.length}
               </div>
+              {teamData.length > 0 && (
+                <Meter
+                  size="sm"
+                  className="w-full"
+                  segments={[
+                    {
+                      value: Math.max(0, Math.min(100, inheritedPct ?? 0)),
+                      className: scoreBgClass(inheritedPct, 100),
+                    },
+                    {
+                      value: 100 - Math.max(0, Math.min(100, inheritedPct ?? 0)),
+                      className: 'bg-slab-2',
+                    },
+                  ]}
+                />
+              )}
               <p className="text-[10px] text-mute mt-1 font-mono uppercase">
                 {teamData.length > 0 ? 'Team-Inclusive Score' : "Today's Schedule"}
               </p>

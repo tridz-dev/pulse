@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User } from '@/types';
 import { getCurrentEmployee } from '@/services/auth';
+import { auth as frappeAuth } from '@/lib/frappe-sdk';
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
   refetch: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(true);
           await load();
           setIsLoading(false);
+        },
+        logout: async () => {
+          await frappeAuth.logout();
+          window.location.href = '/login';
         },
       }}
     >

@@ -22,7 +22,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Meter } from '@/components/ui/meter';
-import { formatScore, scoreTextClass } from '@/lib/score';
+import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatScore, scoreTextClass, scoreBgClass } from '@/lib/score';
 import { Users, TrendingDown, Target, UsersRound, Settings, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -186,56 +187,6 @@ export function Team() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(showAllTeamsTab || showSetupTab) && (
-            <div className="flex gap-1 bg-slab-2 p-1 border border-rule">
-              {showAllTeamsTab && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActiveTab('my-team')}
-                    className={cn(
-                      'h-8 px-3 text-xs font-medium',
-                      activeTab === 'my-team'
-                        ? 'bg-sel text-sel'
-                        : 'text-mute hover:text-text'
-                    )}
-                  >
-                    My Team
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setActiveTab('all-teams')}
-                    className={cn(
-                      'h-8 px-3 text-xs font-medium',
-                      activeTab === 'all-teams'
-                        ? 'bg-sel text-sel'
-                        : 'text-mute hover:text-text'
-                    )}
-                  >
-                    All Teams
-                  </Button>
-                </>
-              )}
-              {showSetupTab && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('setup')}
-                  className={cn(
-                    'h-8 px-3 text-xs font-medium gap-1.5',
-                    activeTab === 'setup'
-                      ? 'bg-sel text-sel'
-                      : 'text-mute hover:text-text'
-                  )}
-                >
-                  <Settings size={12} />
-                  Setup
-                </Button>
-              )}
-            </div>
-          )}
           {activeTab !== 'setup' && (
             <div className="flex gap-1 bg-slab-2 p-1 border border-rule">
               {(['Day', 'Week', 'Month'] as const).map((p) => (
@@ -246,7 +197,7 @@ export function Team() {
                   onClick={() => setPeriodType(p)}
                   className={cn(
                     'h-8 px-3 text-xs font-medium',
-                    periodType === p ? 'bg-sel text-sel' : 'text-mute hover:text-text'
+                    periodType === p ? 'bg-slab text-text' : 'text-mute hover:text-text'
                   )}
                 >
                   {p}
@@ -256,6 +207,27 @@ export function Team() {
           )}
         </div>
       </div>
+
+      {(showAllTeamsTab || showSetupTab) && (
+        <TabsList>
+          {showAllTeamsTab && (
+            <>
+              <TabsTrigger active={activeTab === 'my-team'} onClick={() => setActiveTab('my-team')}>
+                My Team
+              </TabsTrigger>
+              <TabsTrigger active={activeTab === 'all-teams'} onClick={() => setActiveTab('all-teams')}>
+                All Teams
+              </TabsTrigger>
+            </>
+          )}
+          {showSetupTab && (
+            <TabsTrigger active={activeTab === 'setup'} onClick={() => setActiveTab('setup')}>
+              <Settings size={12} />
+              Setup
+            </TabsTrigger>
+          )}
+        </TabsList>
+      )}
 
       {activeTab === 'my-team' && (
         <>
@@ -661,9 +633,25 @@ function ScoreDisplay({
   highlight?: boolean;
 }) {
   const pct = score == null ? null : score * 100;
+  const hasData = total !== undefined && total > 0 && pct != null;
+  const clamped = hasData ? Math.max(0, Math.min(100, pct as number)) : 0;
   return (
-    <span className={cn(scoreTextClass(pct, total), highlight && 'font-semibold')}>
-      {formatScore(pct, total)}
-    </span>
+    <div className="flex flex-col items-end gap-1">
+      <span className={cn('font-mono text-sm', scoreTextClass(pct, total), highlight && 'font-semibold')}>
+        {formatScore(pct, total)}
+      </span>
+      <Meter
+        size="sm"
+        className="w-12"
+        segments={
+          hasData
+            ? [
+                { value: clamped, className: scoreBgClass(pct, total) },
+                { value: 100 - clamped, className: 'bg-slab-2' },
+              ]
+            : [{ value: 1, className: 'bg-none' }]
+        }
+      />
+    </div>
   );
 }

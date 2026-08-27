@@ -211,15 +211,15 @@ export function Operations() {
           <h1 className="text-3xl font-semibold tracking-tight text-text">Mission Control</h1>
           <p className="text-mute text-sm mt-1">Hierarchical roll-up of organizational execution.</p>
         </div>
-        <div className="flex items-center gap-1 bg-slab p-1 rounded border border-rule shrink-0 self-start sm:self-center">
+        <div className="flex items-center gap-1 bg-slab p-1 rounded-sm border border-rule shrink-0 self-start sm:self-center">
           {(['Day', 'Week', 'Month'] as const).map((p) => (
             <button
               key={p}
               type="button"
               onClick={() => setPeriodType(p)}
               className={
-                'h-8 px-3 text-xs font-medium transition-all rounded ' +
-                (periodType === p ? 'bg-slab-2 text-text shadow-sm' : 'text-faint hover:text-mute hover:bg-slab-2')
+                'h-8 px-3 text-xs font-medium transition-all rounded-sm ' +
+                (periodType === p ? 'bg-slab-2 text-text' : 'text-faint hover:text-mute hover:bg-slab-2')
               }
             >
               {p}

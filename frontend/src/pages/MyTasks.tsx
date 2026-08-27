@@ -285,7 +285,7 @@ function ChecklistRunner({
         </div>
         {!isReadOnly && (
           <div className="p-6 border-t border-rule bg-ink/50 sticky bottom-0">
-            <Button className="w-full bg-sel hover:bg-sel/90 text-white" onClick={completeRunHandler}>
+            <Button className="w-full bg-slab-2 border border-rule-2 hover:bg-slab text-text" onClick={completeRunHandler}>
               Submit & Close Checklist
             </Button>
           </div>

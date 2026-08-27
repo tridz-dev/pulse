@@ -45,8 +45,8 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
             )}
         >
             {/* Workspace Header */}
-            <div className="h-12 flex items-center shrink-0 mt-2 mb-4 hover:bg-slab-2 cursor-pointer mx-2 rounded transition-colors gap-2 px-2">
-                <div className="w-5 h-5 rounded-sm bg-slab-2 flex items-center justify-center text-[10px] font-bold text-text flex-shrink-0">
+            <div className="h-12 flex items-center shrink-0 mt-2 mb-4 hover:bg-slab-2 cursor-pointer mx-2 rounded-sm transition-colors gap-2 px-2">
+                <div className="w-5 h-5 rounded-sm bg-slab-2 flex items-center justify-center text-[10px] font-mono font-bold text-text flex-shrink-0">
                     P
                 </div>
                 {!collapsed && <span className="font-medium text-sm text-text truncate">Pulse</span>}
@@ -54,12 +54,12 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
 
             {!collapsed && (
                 <div className="px-3 mb-6">
-                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded hover:bg-slab-2 transition-colors">
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded-sm hover:bg-slab-2 transition-colors">
                         <Search size={14} className="text-mute" />
                         <span>Search...</span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-60">
-                            <kbd className="font-sans px-1 rounded bg-slab-2 border border-rule text-[10px]">⌘</kbd>
-                            <kbd className="font-sans px-1 rounded bg-slab-2 border border-rule text-[10px]">K</kbd>
+                            <kbd className="font-mono px-1 rounded-sm bg-slab-2 border border-rule text-[10px]">⌘</kbd>
+                            <kbd className="font-mono px-1 rounded-sm bg-slab-2 border border-rule text-[10px]">K</kbd>
                         </div>
                     </button>
                 </div>
@@ -84,7 +84,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                             to={item.path}
                             title={item.name}
                             className={cn(
-                                "flex items-center rounded text-sm transition-all duration-200 group relative",
+                                "flex items-center rounded-sm text-sm transition-all duration-200 group relative",
                                 collapsed ? "justify-center p-2" : "gap-2.5 px-2 py-1.5",
                                 isActive
                                     ? "bg-slab-2 text-text font-medium border-l-2 border-l-sel"
@@ -109,13 +109,13 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                 <button
                     type="button"
                     onClick={onToggleCollapse}
-                    className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded transition-colors flex items-center justify-center w-full"
+                    className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded-sm transition-colors flex items-center justify-center w-full"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                     aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
                 </button>
-                <button className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded transition-colors shrink-0" title="Notifications" aria-label="Notifications">
+                <button className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded-sm transition-colors shrink-0" title="Notifications" aria-label="Notifications">
                     <Bell size={16} />
                 </button>
             </div>

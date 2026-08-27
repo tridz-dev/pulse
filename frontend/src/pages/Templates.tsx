@@ -340,7 +340,7 @@ export function Templates() {
     <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">SOP Templates</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-text">SOP Templates</h1>
           <p className="text-mute text-sm mt-1">Master definitions of all operational checklists.</p>
         </div>
         {canEdit && (
@@ -379,7 +379,7 @@ export function Templates() {
                     {template.frequency_type ?? '—'}
                   </Badge>
                 </div>
-                <CardTitle className="text-lg text-text group-hover:text-white transition-colors">
+                <CardTitle className="text-lg text-text transition-colors">
                   {template.title}
                 </CardTitle>
                 <CardDescription className="text-xs text-faint font-mono">
@@ -422,7 +422,7 @@ export function Templates() {
                         onClick={() => handleOpenEdit(selectedTemplate)}
                         variant="outline"
                         size="sm"
-                        className="bg-slab border-rule text-mute gap-2 hover:text-white"
+                        className="bg-slab border-rule text-mute gap-2 hover:text-text"
                       >
                         <Pencil size={14} />
                         <span>Edit</span>
@@ -432,7 +432,7 @@ export function Templates() {
                       onClick={handlePrint}
                       variant="outline"
                       size="sm"
-                      className="bg-slab border-rule text-mute gap-2 hover:text-white"
+                      className="bg-slab border-rule text-mute gap-2 hover:text-text"
                     >
                       <Printer size={14} />
                       <span>Print Task Sheet</span>
@@ -440,7 +440,7 @@ export function Templates() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <SheetTitle className="text-2xl text-white print:text-black print:text-3xl">
+                  <SheetTitle className="text-2xl text-text print:text-black print:text-3xl">
                     {selectedTemplate.title}
                   </SheetTitle>
                   <SheetDescription className="text-mute print:text-zinc-500 flex items-center gap-3">
@@ -567,7 +567,7 @@ export function Templates() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeactivate(assignment.name)}
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-950/20 px-2.5 py-1 h-auto rounded-lg text-xs"
+                                  className="text-fail hover:bg-fail-bg px-2.5 py-1 h-auto rounded-lg text-xs"
                                 >
                                   Deactivate
                                 </Button>
@@ -688,7 +688,7 @@ export function Templates() {
                             <Button
                               onClick={handleAssign}
                               disabled={isAssigning || !selectedEmployeeName}
-                              className="w-full bg-sel hover:bg-sel/90 text-white font-medium text-xs py-1.5 h-auto rounded-lg"
+                              className="w-full bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-xs py-1.5 h-auto rounded-lg"
                             >
                               {isAssigning ? 'Assigning...' : 'Assign'}
                             </Button>
@@ -718,7 +718,7 @@ export function Templates() {
 
           <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
             {formError && (
-              <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-lg text-red-200 text-xs">
+              <div className="p-3 bg-fail-bg border border-fail-bd rounded-lg text-fail text-xs">
                 {formError}
               </div>
             )}
@@ -728,14 +728,14 @@ export function Templates() {
               <h3 className="text-xs font-semibold text-mute uppercase tracking-wider">General Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Title <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Title <span className="text-fail">*</span></label>
                   <Input
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
                     className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. Daily Facility Inspection"
                   />
-                  {formFieldErrors.title && <p className="text-red-500 text-[11px]">{formFieldErrors.title}</p>}
+                  {formFieldErrors.title && <p className="text-fail text-[11px]">{formFieldErrors.title}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-mute">Department</label>
@@ -750,7 +750,7 @@ export function Templates() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Frequency Type <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Frequency Type <span className="text-fail">*</span></label>
                   <select
                     value={formFrequencyType}
                     onChange={(e) => setFormFrequencyType(e.target.value as any)}
@@ -761,7 +761,7 @@ export function Templates() {
                     <option value="Monthly">Monthly</option>
                     <option value="Custom">Custom</option>
                   </select>
-                  {formFieldErrors.frequency_type && <p className="text-red-500 text-[11px]">{formFieldErrors.frequency_type}</p>}
+                  {formFieldErrors.frequency_type && <p className="text-fail text-[11px]">{formFieldErrors.frequency_type}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-mute">Owner Role</label>
@@ -776,14 +776,14 @@ export function Templates() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Active From <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Active From <span className="text-fail">*</span></label>
                   <Input
                     type="date"
                     value={formActiveFrom}
                     onChange={(e) => setFormActiveFrom(e.target.value)}
                     className="bg-slab border-rule text-text"
                   />
-                  {formFieldErrors.active_from && <p className="text-red-500 text-[11px]">{formFieldErrors.active_from}</p>}
+                  {formFieldErrors.active_from && <p className="text-fail text-[11px]">{formFieldErrors.active_from}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-mute">Active To</label>
@@ -802,7 +802,7 @@ export function Templates() {
               <h3 className="text-xs font-semibold text-mute uppercase tracking-wider">Schedule Configuration</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Start Time <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Start Time <span className="text-fail">*</span></label>
                   <Input
                     type="time"
                     value={formLocalStartTime}
@@ -811,24 +811,24 @@ export function Templates() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Window (mins) <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Window (mins) <span className="text-fail">*</span></label>
                   <Input
                     type="number"
                     value={formCompletionWindow}
                     onChange={(e) => setFormCompletionWindow(Number(e.target.value))}
                     className="bg-slab border-rule text-text"
                   />
-                  {formFieldErrors.completion_window && <p className="text-red-500 text-[11px]">{formFieldErrors.completion_window}</p>}
+                  {formFieldErrors.completion_window && <p className="text-fail text-[11px]">{formFieldErrors.completion_window}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-mute">Timezone <span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-mute">Timezone <span className="text-fail">*</span></label>
                   <Input
                     value={formScheduleTimezone}
                     onChange={(e) => setFormScheduleTimezone(e.target.value)}
                     className="bg-slab border-rule text-text placeholder:text-faint"
                     placeholder="e.g. UTC, Asia/Kolkata"
                   />
-                  {formFieldErrors.schedule_timezone && <p className="text-red-500 text-[11px]">{formFieldErrors.schedule_timezone}</p>}
+                  {formFieldErrors.schedule_timezone && <p className="text-fail text-[11px]">{formFieldErrors.schedule_timezone}</p>}
                 </div>
               </div>
             </div>
@@ -849,7 +849,7 @@ export function Templates() {
                 </Button>
               </div>
               {formFieldErrors.checklist && (
-                <p className="text-red-500 text-[11px]">{formFieldErrors.checklist}</p>
+                <p className="text-fail text-[11px]">{formFieldErrors.checklist}</p>
               )}
 
               <div className="space-y-4">
@@ -882,7 +882,7 @@ export function Templates() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-red-400 hover:text-red-300 disabled:opacity-30 hover:bg-red-950/20"
+                          className="h-7 w-7 text-fail hover:bg-fail-bg disabled:opacity-30"
                           disabled={formChecklist.length <= 1}
                           onClick={() => removeChecklistItem(index)}
                         >
@@ -891,7 +891,7 @@ export function Templates() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-bold text-mute">Description <span className="text-red-500">*</span></label>
+                      <label className="text-[10px] uppercase font-bold text-mute">Description <span className="text-fail">*</span></label>
                       <Input
                         value={item.description}
                         onChange={(e) => updateChecklistItem(index, 'description', e.target.value)}
@@ -951,7 +951,7 @@ export function Templates() {
             <Button
               onClick={handleSave}
               disabled={isSubmitting}
-              className="bg-sel hover:bg-sel/90 text-white font-medium text-sm px-4 py-2 rounded-lg"
+              className="bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-sm px-4 py-2 rounded-lg"
             >
               {isSubmitting ? 'Saving...' : 'Save Template'}
             </Button>

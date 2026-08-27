@@ -1,10 +1,19 @@
 import { useAuth } from '@/store/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import { LogOut } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export function Topbar() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const location = useLocation();
 
   const pathParts = location.pathname.split('/').filter(Boolean);
@@ -20,17 +29,39 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <ThemeToggle />
-        <Avatar className="h-6 w-6 rounded-sm border border-rule">
-          <AvatarImage src={currentUser?.avatarUrl} />
-          <AvatarFallback className="text-[10px] bg-slab-2 text-text rounded-sm">
-            {currentUser?.name?.charAt(0) ?? '?'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col items-start translate-y-[-1px] text-left">
-          <span className="text-xs font-medium leading-none text-text">{currentUser?.name}</span>
-          <span className="text-[10px] leading-none text-faint mt-1">{currentUser?.role}</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-sm px-1.5 py-1 -mx-1.5 hover:bg-slab-2 transition-colors outline-none">
+            <Avatar className="h-6 w-6 rounded-sm border border-rule">
+              <AvatarImage src={currentUser?.avatarUrl} />
+              <AvatarFallback className="text-[10px] bg-slab-2 text-text rounded-sm">
+                {currentUser?.name?.charAt(0) ?? '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-start translate-y-[-1px] text-left">
+              <span className="text-xs font-medium leading-none text-text">{currentUser?.name}</span>
+              <span className="text-[10px] leading-none text-faint mt-1">{currentUser?.role}</span>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-56 bg-slab border-rule">
+            <DropdownMenuLabel className="text-mute font-mono text-[10px] uppercase tracking-wide">
+              Theme
+            </DropdownMenuLabel>
+            <div className="px-1.5 py-1">
+              <ThemeToggle />
+            </div>
+            <DropdownMenuSeparator className="bg-rule" />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                void logout();
+              }}
+              className="text-fail data-[variant=destructive]:text-fail"
+            >
+              <LogOut size={14} />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

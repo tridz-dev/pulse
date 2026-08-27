@@ -110,7 +110,7 @@ export function InsightsFiltersBar({
             className={cn(
               'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
               dateRange.preset === id
-                ? 'bg-sel text-ink'
+                ? 'bg-slab text-text'
                 : 'text-mute hover:bg-slab hover:text-text'
             )}
           >

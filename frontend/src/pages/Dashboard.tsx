@@ -9,6 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Target, Users, Activity, Calendar, TrendingUp, Database, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
+import { Gauge } from '@/components/ui/gauge';
+
+// Hero metric display: 'ledger' (big number, default) or 'arc' (Core · optional
+// hero-arc variant per pulse_design/DESIGN.md). Exactly one hero per page either way.
+const HERO_VARIANT: 'ledger' | 'arc' = 'arc';
+import { Meter } from '@/components/ui/meter';
 import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
 import {
   Sheet,
@@ -30,7 +36,7 @@ import {
 } from 'recharts';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { scoreStatus, scoreTextClass, formatScore } from '@/lib/score';
+import { scoreStatus, scoreTextClass, scoreBgClass, formatScore } from '@/lib/score';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -244,7 +250,7 @@ export function Dashboard() {
               className={cn(
                 'h-8 px-3 text-xs font-medium transition-all',
                 periodType === p
-                  ? 'bg-slab text-text shadow-sm'
+                  ? 'bg-slab text-text'
                   : 'text-mute hover:text-text hover:bg-slab/50'
               )}
             >
@@ -286,6 +292,8 @@ export function Dashboard() {
                     {`${periodType} KPI`}
                   </span>
                 </div>
+              ) : HERO_VARIANT === 'arc' ? (
+                <Gauge value={heroPct} label={`${periodType} KPI`} className="w-[180px] shrink-0" />
               ) : (
                 <Ledger value={heroPct} label={`${periodType} KPI`} />
               )}
@@ -333,8 +341,18 @@ export function Dashboard() {
                   </CardTitle>
                   <Target className="h-4 w-4 text-mute" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex flex-col gap-2">
                   <div className="text-lg font-mono font-semibold text-mute">{formatScore(ownPct, 100)}</div>
+                  {totalItems > 0 && (
+                    <Meter
+                      size="sm"
+                      className="w-full"
+                      segments={[
+                        { value: Math.max(0, Math.min(100, ownPct ?? 0)), className: scoreBgClass(ownPct, 100) },
+                        { value: 100 - Math.max(0, Math.min(100, ownPct ?? 0)), className: 'bg-slab-2' },
+                      ]}
+                    />
+                  )}
                   <p className="text-[10px] text-mute mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
                 </CardContent>
               </Card>
@@ -349,10 +367,26 @@ export function Dashboard() {
                     <Activity className="h-4 w-4 text-mute" />
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex flex-col gap-2">
                   <div className="text-lg font-mono font-semibold text-mute">
                     {teamData.length > 0 ? formatScore(Math.round(teamScore * 100), 100) : completedItems}
                   </div>
+                  {teamData.length > 0 && (
+                    <Meter
+                      size="sm"
+                      className="w-full"
+                      segments={[
+                        {
+                          value: Math.max(0, Math.min(100, Math.round(teamScore * 100))),
+                          className: scoreBgClass(Math.round(teamScore * 100), 100),
+                        },
+                        {
+                          value: 100 - Math.max(0, Math.min(100, Math.round(teamScore * 100))),
+                          className: 'bg-slab-2',
+                        },
+                      ]}
+                    />
+                  )}
                   <p className="text-[10px] text-mute mt-1 font-mono uppercase">
                     {teamData.length > 0 ? 'Direct Reports Avg' : 'Items Completed'}
                   </p>
