@@ -241,7 +241,7 @@ def get_failure_analytics(manager_employee: str, date: str | None = None):
 			missed_count[key] = missed_count.get(key, 0) + 1
 		# Also count Pending on past runs as missed
 		run_doc = frappe.db.get_value("SOP Run", run_name, ["period_date", "status"], as_dict=True)
-		if run_doc and run_doc.period_date < date_str and run_doc.status != "Open":
+		if run_doc and getdate(run_doc.period_date) < end_d and run_doc.status != "Open":
 			items_pending = frappe.get_all(
 				"SOP Run Item",
 				filters={"parent": run_name, "status": "Pending"},
