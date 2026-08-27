@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, X } from 'lucide-react';
@@ -128,20 +129,22 @@ export function InsightsFiltersBar({
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-          <DropdownMenuLabel>Filter by department</DropdownMenuLabel>
-          {departments.map((d) => (
-            <DropdownMenuCheckboxItem
-              key={d}
-              checked={selectedDepts.includes(d)}
-              onSelect={(e) => e.preventDefault()}
-              onCheckedChange={() => toggleDepartment(d)}
-            >
-              {d}
-            </DropdownMenuCheckboxItem>
-          ))}
-          {departments.length === 0 && (
-            <div className="px-2 py-4 text-center text-xs text-faint">No departments</div>
-          )}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Filter by department</DropdownMenuLabel>
+            {departments.map((d) => (
+              <DropdownMenuCheckboxItem
+                key={d}
+                checked={selectedDepts.includes(d)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={() => toggleDepartment(d)}
+              >
+                {d}
+              </DropdownMenuCheckboxItem>
+            ))}
+            {departments.length === 0 && (
+              <div className="px-2 py-4 text-center text-xs text-faint">No departments</div>
+            )}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -154,20 +157,22 @@ export function InsightsFiltersBar({
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-          <DropdownMenuLabel>Filter by branch</DropdownMenuLabel>
-          {branches.map((b) => (
-            <DropdownMenuCheckboxItem
-              key={b}
-              checked={selectedBranches.includes(b)}
-              onSelect={(e) => e.preventDefault()}
-              onCheckedChange={() => toggleBranch(b)}
-            >
-              {b}
-            </DropdownMenuCheckboxItem>
-          ))}
-          {branches.length === 0 && (
-            <div className="px-2 py-4 text-center text-xs text-faint">No branches</div>
-          )}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Filter by branch</DropdownMenuLabel>
+            {branches.map((b) => (
+              <DropdownMenuCheckboxItem
+                key={b}
+                checked={selectedBranches.includes(b)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={() => toggleBranch(b)}
+              >
+                {b}
+              </DropdownMenuCheckboxItem>
+            ))}
+            {branches.length === 0 && (
+              <div className="px-2 py-4 text-center text-xs text-faint">No branches</div>
+            )}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 

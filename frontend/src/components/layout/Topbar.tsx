@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
@@ -43,23 +44,27 @@ export function Topbar() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-56 bg-slab border-rule">
-            <DropdownMenuLabel className="text-mute font-mono text-[10px] uppercase tracking-wide">
-              Theme
-            </DropdownMenuLabel>
-            <div className="px-1.5 py-1">
-              <ThemeToggle />
-            </div>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-mute font-mono text-[10px] uppercase tracking-wide">
+                Theme
+              </DropdownMenuLabel>
+              <div className="px-1.5 py-1">
+                <ThemeToggle />
+              </div>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator className="bg-rule" />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                void logout();
-              }}
-              className="text-fail data-[variant=destructive]:text-fail"
-            >
-              <LogOut size={14} />
-              Log out
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  void logout();
+                }}
+                className="text-fail data-[variant=destructive]:text-fail"
+              >
+                <LogOut size={14} />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
