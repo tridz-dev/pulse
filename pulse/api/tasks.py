@@ -116,10 +116,11 @@ def update_run_item(run_item_name: str, status: str, notes: str | None = None, n
 					pass
 			if evidence is not None:
 				# Validate evidence file (Finding 1: file-type validation; Finding 2: ownership check)
-				file_doc = frappe.db.get_value("File", {"file_url": evidence}, ["file_name", "owner", "attached_to_doctype", "attached_to_name"], as_dict=True)
+				# Finding 2 fix: add owner to filter for deterministic lookup when users upload identical files
+				file_doc = frappe.db.get_value("File", {"file_url": evidence, "owner": frappe.session.user}, ["name", "file_name", "attached_to_doctype", "attached_to_name"], as_dict=True)
 
 				if not file_doc:
-					frappe.throw(f"Evidence file not found: {evidence}")
+					frappe.throw("Evidence file not found or not owned by current user.")
 
 				# Validate file extension is an image (pragmatic check: filename extension, not full MIME-sniffing)
 				_, ext = os.path.splitext(file_doc.get("file_name") or "")
@@ -128,14 +129,19 @@ def update_run_item(run_item_name: str, status: str, notes: str | None = None, n
 				if ext not in allowed_extensions:
 					frappe.throw(f"Evidence file must be an image. Received: {ext if ext else 'no extension'}")
 
-				# Validate file ownership: must be uploaded by current user
-				if file_doc.get("owner") != frappe.session.user:
-					frappe.throw("Evidence file must be uploaded by the current user.")
-
 				# Validate file is not attached to a different document
+				# Finding 1 fix: check against SOP Run (parent) instead of SOP Run Item (child row)
 				if file_doc.get("attached_to_doctype") and file_doc.get("attached_to_name"):
-					if file_doc.get("attached_to_doctype") != "SOP Run Item" or file_doc.get("attached_to_name") != run_item_name:
+					if file_doc.get("attached_to_doctype") != "SOP Run" or file_doc.get("attached_to_name") != run_name:
 						frappe.throw("Evidence file is already attached to a different document.")
+
+				# Finding 1 fix: attach the file to the parent SOP Run so managers can view it
+				# Only update if not already attached to this run (idempotent)
+				if not (file_doc.get("attached_to_doctype") == "SOP Run" and file_doc.get("attached_to_name") == run_name):
+					frappe.db.set_value("File", file_doc.get("name"), {
+						"attached_to_doctype": "SOP Run",
+						"attached_to_name": run_name
+					})
 
 				row.evidence = evidence
 			if status == "Completed":

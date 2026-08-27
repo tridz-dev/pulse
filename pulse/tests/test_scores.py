@@ -265,3 +265,174 @@ class TestComplianceScoreAPI(FrappeTestCase):
 
 		self.assertEqual(result["eligible_runs"], 0)
 		self.assertIsNone(result["score"])
+
+
+class TestEvidenceRequirement(FrappeTestCase):
+	"""Tests for evidence-required guard clause in complete_run."""
+
+	TEST_DATE = "2026-01-20"
+
+	def setUp(self):
+		from pulse.install import create_default_pulse_role_records, create_pulse_roles
+
+		create_pulse_roles()
+		create_default_pulse_role_records()
+
+		self._created_users: list[str] = []
+		self._created_employees: list[str] = []
+		self._created_departments: list[str] = []
+		self._created_templates: list[str] = []
+		self._created_runs: list[str] = []
+
+	def tearDown(self):
+		for run_name in self._created_runs:
+			if frappe.db.exists("SOP Run", run_name):
+				frappe.delete_doc("SOP Run", run_name, force=1, ignore_permissions=True)
+		for template_name in self._created_templates:
+			if frappe.db.exists("SOP Template", template_name):
+				frappe.delete_doc("SOP Template", template_name, force=1, ignore_permissions=True)
+		for emp_name in self._created_employees:
+			if frappe.db.exists("Pulse Employee", emp_name):
+				frappe.delete_doc("Pulse Employee", emp_name, force=1, ignore_permissions=True)
+		for user_email in self._created_users:
+			if frappe.db.exists("User", user_email):
+				frappe.delete_doc("User", user_email, force=1, ignore_permissions=True)
+		for dept_name in self._created_departments:
+			if frappe.db.exists("Pulse Department", dept_name):
+				frappe.delete_doc("Pulse Department", dept_name, force=1, ignore_permissions=True)
+		frappe.set_user("Administrator")
+
+	def _create_user(self, email: str, roles: list[str] | None = None) -> str:
+		if not frappe.db.exists("User", email):
+			user = frappe.get_doc({
+				"doctype": "User",
+				"email": email,
+				"first_name": email.split("@")[0],
+				"enabled": 1,
+				"user_type": "System User",
+				"send_welcome_email": 0,
+			}).insert(ignore_permissions=True)
+		else:
+			user = frappe.get_doc("User", email)
+		if roles:
+			user.add_roles(*roles)
+		self._created_users.append(email)
+		return email
+
+	def _create_employee(
+		self,
+		name: str,
+		user: str,
+		pulse_role: str = "Operator",
+		reports_to: str | None = None,
+	) -> str:
+		emp = frappe.get_doc({
+			"doctype": "Pulse Employee",
+			"employee_name": name,
+			"user": user,
+			"pulse_role": pulse_role,
+			"reports_to": reports_to,
+			"is_active": 1,
+		}).insert(ignore_permissions=True)
+		self._created_employees.append(emp.name)
+		return emp.name
+
+	def _create_template_with_evidence_required(self, title: str) -> str:
+		"""Create a template with one checklist item requiring evidence (Photo)."""
+		template = frappe.get_doc({
+			"doctype": "SOP Template",
+			"title": title,
+			"frequency_type": "Daily",
+			"active_from": "2026-01-01",
+			"is_active": 1,
+			"checklist_items": [
+				{
+					"description": "Task requiring photo evidence",
+					"sequence": 1,
+					"weight": 1.0,
+					"item_type": "Checkbox",
+					"evidence_required": "Photo",
+				}
+			],
+		}).insert(ignore_permissions=True)
+		self._created_templates.append(template.name)
+		return template.name
+
+	def _create_run_with_evidence_required(
+		self,
+		employee: str,
+		template: str,
+		item_status: str = "Completed",
+		evidence: str | None = None,
+	) -> str:
+		"""Create a SOP Run with one item requiring evidence."""
+		run = frappe.get_doc({
+			"doctype": "SOP Run",
+			"template": template,
+			"employee": employee,
+			"period_date": self.TEST_DATE,
+			"status": "In Progress",
+			"due_at": f"{self.TEST_DATE} 23:59:59",
+			"run_items": [
+				{
+					"checklist_item": "Task requiring photo evidence",
+					"item_type": "Checkbox",
+					"status": item_status,
+					"weight": 1.0,
+					"evidence_required": "Photo",
+					"evidence": evidence,
+				}
+			],
+		}).insert(ignore_permissions=True)
+		self._created_runs.append(run.name)
+		return run.name
+
+	def test_complete_run_fails_when_evidence_required_but_missing(self):
+		"""complete_run() raises when a required-evidence item lacks evidence."""
+		from pulse.api.tasks import complete_run
+		from frappe.exceptions import ValidationError
+
+		user = self._create_user("evidence.required@example.com", roles=["Pulse User"])
+		emp = self._create_employee("Evidence Required Operator", user)
+		template = self._create_template_with_evidence_required("Evidence Test Template")
+
+		# Create run with completed item but NO evidence
+		run_name = self._create_run_with_evidence_required(
+			employee=emp,
+			template=template,
+			item_status="Completed",
+			evidence=None,  # Missing evidence
+		)
+
+		frappe.set_user(user)
+
+		# Should raise ValidationError because evidence is required but not provided
+		self.assertRaises(
+			ValidationError,
+			complete_run,
+			run_name
+		)
+
+	def test_complete_run_succeeds_when_evidence_provided(self):
+		"""complete_run() succeeds when required-evidence item has evidence."""
+		from pulse.api.tasks import complete_run
+
+		user = self._create_user("evidence.provided@example.com", roles=["Pulse User"])
+		emp = self._create_employee("Evidence Provided Operator", user)
+		template = self._create_template_with_evidence_required("Evidence Test Template 2")
+
+		# Create run with completed item AND evidence
+		run_name = self._create_run_with_evidence_required(
+			employee=emp,
+			template=template,
+			item_status="Completed",
+			evidence="/private/files/sample-evidence.jpg",  # Evidence is provided
+		)
+
+		frappe.set_user(user)
+
+		# Should succeed because evidence is provided
+		result = complete_run(run_name)
+
+		self.assertEqual(result["status"], "Completed")
+		self.assertIn(result["compliance_result"], ["Passed", "Failed"])
