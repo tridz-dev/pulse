@@ -10,10 +10,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
-export function Topbar() {
+interface TopbarProps {
+  onOpenMobileNav?: () => void;
+}
+
+export function Topbar({ onOpenMobileNav }: TopbarProps) {
   const { currentUser, logout } = useAuth();
   const location = useLocation();
 
@@ -24,6 +28,15 @@ export function Topbar() {
   return (
     <header className="h-12 w-full flex items-center justify-between px-6 border-b border-rule bg-slab backdrop-blur-md sticky top-0 z-10">
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenMobileNav}
+          className="md:hidden p-3 -ml-3 mr-1 text-mute hover:text-text hover:bg-slab-2 rounded transition-colors"
+          title="Open navigation"
+          aria-label="Open navigation"
+        >
+          <Menu size={18} />
+        </button>
         <span className="text-sm font-medium text-mute hidden sm:block">Pulse</span>
         <span className="text-mute hidden sm:block">/</span>
         <span className="text-sm font-semibold text-text">{pageName}</span>
@@ -31,7 +44,7 @@ export function Topbar() {
 
       <div className="flex items-center gap-4">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 rounded-sm px-1.5 py-1 -mx-1.5 hover:bg-slab-2 transition-colors outline-none">
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-sm px-1.5 py-2 md:py-1 -mx-1.5 hover:bg-slab-2 transition-colors outline-none">
             <Avatar className="h-6 w-6 rounded-sm border border-rule">
               <AvatarImage src={currentUser?.avatarUrl} />
               <AvatarFallback className="text-[10px] bg-slab-2 text-text rounded-sm">

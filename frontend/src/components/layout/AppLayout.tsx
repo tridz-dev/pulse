@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { Sheet, SheetContent } from '../ui/sheet';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 
 export function AppLayout() {
     const { currentUser, isLoading } = useAuth();
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    // Separate axis from `sidebarCollapsed`: mobile drawer visibility, not the desktop icon-rail width.
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
     if (isLoading) {
         return (
@@ -37,12 +40,26 @@ export function AppLayout() {
 
     return (
         <div className="h-screen w-full flex overflow-hidden bg-ink text-text font-sans selection:bg-sel/30">
-            {/* Sidebar */}
-            <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+            {/* Sidebar — inline on md+, hidden below md (drawer takes over) */}
+            <div className="hidden md:flex">
+                <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+            </div>
+
+            {/* Mobile off-canvas drawer */}
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                <SheetContent side="left" className="p-0 md:hidden" showCloseButton={false}>
+                    <Sidebar
+                        collapsed={false}
+                        forceExpanded
+                        onToggleCollapse={() => {}}
+                        onNavigate={() => setMobileNavOpen(false)}
+                    />
+                </SheetContent>
+            </Sheet>
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative border-l border-rule bg-ink">
-                <Topbar />
+                <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
                 <main className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10 scrollbar-thin scrollbar-thumb-slab-2 scrollbar-track-transparent">
                     <div className="max-w-6xl mx-auto h-full">
                         <Outlet />

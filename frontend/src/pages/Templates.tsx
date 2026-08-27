@@ -356,13 +356,13 @@ export function Templates() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-48 bg-slab rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
             <Card
               key={template.name}
@@ -499,7 +499,7 @@ export function Templates() {
                       ))}
                     </div>
                     <div className="mt-8 pt-8 border-t border-rule/50 print:mt-12 print:border-black/10">
-                      <div className="grid grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                         <div className="flex flex-col gap-2">
                           <span className="text-[10px] text-mute uppercase tracking-widest">
                             Authorized By
@@ -899,7 +899,7 @@ export function Templates() {
                         className="bg-slab border-rule text-text text-sm"
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase font-bold text-mute">Type</label>
                         <select

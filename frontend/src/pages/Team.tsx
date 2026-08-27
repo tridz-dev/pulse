@@ -196,7 +196,7 @@ export function Team() {
                   size="sm"
                   onClick={() => setPeriodType(p)}
                   className={cn(
-                    'h-8 px-3 text-xs font-medium',
+                    'h-10 md:h-8 px-3 text-xs font-medium',
                     periodType === p ? 'bg-slab text-text' : 'text-mute hover:text-text'
                   )}
                 >

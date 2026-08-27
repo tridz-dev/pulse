@@ -33,7 +33,7 @@ function TabsTrigger({ className, active, ...props }: TabsTriggerProps) {
       aria-selected={active}
       data-slot="tabs-trigger"
       className={cn(
-        "flex items-center gap-1.5 h-8 -mb-px px-0.5 text-xs font-medium border-b-2 transition-colors",
+        "flex items-center gap-1.5 h-10 md:h-8 -mb-px px-0.5 text-xs font-medium border-b-2 transition-colors",
         active
           ? "border-text text-text"
           : "border-transparent text-mute hover:text-text",
