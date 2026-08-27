@@ -48,13 +48,14 @@ export async function getRunDetails(runName: string): Promise<RunDetailsResponse
 export async function updateRunItem(
   runItemName: string,
   status: string,
-  options?: { notes?: string; numeric_value?: number }
+  options?: { notes?: string; numeric_value?: number; evidence?: string }
 ): Promise<void> {
   await call.post('pulse.api.tasks.update_run_item', {
     run_item_name: runItemName,
     status,
     notes: options?.notes,
     numeric_value: options?.numeric_value,
+    evidence: options?.evidence,
   });
 }
 

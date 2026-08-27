@@ -2,10 +2,12 @@
 # License: MIT
 
 import frappe
+from frappe import _
 from frappe.utils import getdate
 
-from pulse.api.permissions import get_scope_for_user
+from pulse.api.permissions import get_scope_for_user, _get_employee_for_user
 from pulse.api.scores import _calculate_score_snapshot, _period_range
+from pulse.domain.escalation import resolve_escalation_target
 
 
 def _employee_dict(emp_name: str) -> dict | None:
@@ -271,3 +273,139 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 	]
 
 	return {"items": items, "page": page, "page_size": page_size, "total": total}
+
+
+def _check_corrective_action_write_permission():
+	"""Only roles with create/write permission on Corrective Action may mutate."""
+	user = frappe.session.user
+	if user == "Administrator":
+		return
+	roles = frappe.get_roles(user)
+	if "Pulse Admin" in roles or "Pulse Leader" in roles or "Pulse Manager" in roles:
+		return
+	frappe.throw(
+		_("Not permitted. Only Pulse Admin, Pulse Leader, or Pulse Manager can create Corrective Actions."),
+		frappe.PermissionError,
+	)
+
+
+@frappe.whitelist()
+def create_corrective_action_for_run(
+	run_name: str,
+	description: str,
+	priority: str = "Medium",
+	assigned_to: str | None = None,
+) -> str:
+	"""Create a Corrective Action for a failed SOP Run (manager-initiated).
+
+	This is the whitelisted API for manager follow-up work. A manager identifies a
+	failed SOP run that requires corrective action and uses this endpoint to create
+	and track the resolution loop. The corrective action is linked back to the source
+	run, satisfying the domain contract: "Manager work can be traced back to the
+	failed SOP run."
+
+	Args:
+		run_name: Name of the SOP Run (must exist and have compliance_result = "Failed").
+		description: Required description of the corrective action needed.
+		priority: Optional priority level (Low, Medium, High, Critical). Defaults to "Medium".
+		assigned_to: Optional Pulse Employee to assign the corrective action to. If not
+			provided, defaults to the employee's escalation target (their direct manager,
+			via resolve_escalation_target()). If no escalation target exists, assignment
+			is required and the function will fail.
+
+	Returns:
+		The name of the newly created Corrective Action document.
+
+	Raises:
+		frappe.PermissionError: If the caller does not have create permission on Corrective Action.
+		frappe.DoesNotExistError: If the SOP Run does not exist or is not failed.
+		frappe.ValidationError: If the assigned_to employee cannot be resolved.
+	"""
+	_check_corrective_action_write_permission()
+
+	if not run_name:
+		frappe.throw(_("SOP Run name is required."))
+	if not description:
+		frappe.throw(_("Description is required."))
+
+	# Verify the run exists and is failed
+	run_row = frappe.db.get_value(
+		"SOP Run",
+		run_name,
+		["name", "employee", "compliance_result"],
+		as_dict=True,
+	)
+	if not run_row:
+		frappe.throw(
+			_("SOP Run '{0}' does not exist.").format(run_name),
+			frappe.DoesNotExistError,
+		)
+	if run_row["compliance_result"] != "Failed":
+		frappe.throw(
+			_(
+				"Corrective action can only be created for failed SOP runs. Run '{0}' has "
+				"compliance result '{1}'."
+			).format(run_name, run_row["compliance_result"]),
+		)
+
+	# Verify the caller has permission to create work for this employee
+	failed_employee = run_row["employee"]
+	scope = get_scope_for_user(frappe.session.user)
+	if failed_employee not in scope:
+		frappe.throw(
+			_(
+				"Not permitted. Employee '{0}' (from run '{1}') is outside your scope."
+			).format(failed_employee, run_name),
+			frappe.PermissionError,
+		)
+
+	# Determine who should be assigned this action
+	if not assigned_to:
+		# Default to the employee's escalation target (direct manager)
+		assigned_to = resolve_escalation_target(failed_employee)
+		if not assigned_to:
+			frappe.throw(
+				_(
+					"Cannot auto-assign corrective action: employee '{0}' has no active manager "
+					"or escalation target. Please specify assigned_to explicitly."
+				).format(failed_employee),
+			)
+	else:
+		# Verify the provided assignee exists and is active
+		if not frappe.db.exists("Pulse Employee", {"name": assigned_to, "is_active": 1}):
+			frappe.throw(
+				_("Assigned employee '{0}' does not exist or is inactive.").format(assigned_to),
+				frappe.DoesNotExistError,
+			)
+
+	# Determine who is raising this (the calling manager/leader)
+	raised_by = _get_employee_for_user(frappe.session.user)
+	if not raised_by:
+		frappe.throw(
+			_("Current user is not linked to a Pulse Employee. Cannot raise corrective action."),
+		)
+
+	# Validate priority
+	valid_priorities = ["Low", "Medium", "High", "Critical"]
+	if priority not in valid_priorities:
+		frappe.throw(
+			_("Priority must be one of {0}. Got '{1}'.").format(
+				", ".join(valid_priorities), priority
+			),
+		)
+
+	# Create the Corrective Action
+	doc = frappe.get_doc(
+		{
+			"doctype": "Corrective Action",
+			"run": run_name,
+			"description": description,
+			"status": "Open",
+			"assigned_to": assigned_to,
+			"raised_by": raised_by,
+			"priority": priority,
+		}
+	)
+	doc.insert(ignore_permissions=True)
+
+	return doc.name

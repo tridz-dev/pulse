@@ -6,11 +6,12 @@ import type { SOPRunItem } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Meter } from '@/components/ui/meter';
-import { CheckCircle2, CheckSquare, Lock } from 'lucide-react';
+import { CheckCircle2, CheckSquare, Lock, Upload, CheckCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { CheckboxRow } from '@/components/ui/checkbox-row';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/store/ToastContext';
+import { file } from '@/lib/frappe-sdk';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -152,6 +153,15 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
 
 type ItemRow = SOPRunItem & { templateItem?: { description: string; weight: number } };
 
+interface UploadState {
+  [itemId: string]: {
+    isUploading?: boolean;
+    hasEvidence?: boolean;
+    evidenceUrl?: string;
+    error?: string;
+  };
+}
+
 function ChecklistRunner({
   runId,
   open,
@@ -168,10 +178,24 @@ function ChecklistRunner({
     template: { title?: string; department?: string };
     items: ItemRow[];
   } | null>(null);
+  const [uploadStates, setUploadStates] = useState<UploadState>({});
 
   useEffect(() => {
     if (open && runId) {
-      getRunDetails(runId).then(setDetails);
+      getRunDetails(runId).then((data) => {
+        setDetails(data);
+        // Initialize upload states with existing evidence
+        const initialStates: UploadState = {};
+        (data.items || []).forEach((item) => {
+          if (item.evidence) {
+            initialStates[item.name] = {
+              hasEvidence: true,
+              evidenceUrl: item.evidence,
+            };
+          }
+        });
+        setUploadStates(initialStates);
+      });
     }
   }, [runId, open]);
 
@@ -188,6 +212,64 @@ function ChecklistRunner({
       };
     });
     await updateRunItem(itemId, newStatus);
+  };
+
+  const handleEvidenceUpload = async (itemId: string, selectedFile: File) => {
+    if (details?.run.status !== 'Open' && details?.run.status !== 'In Progress') return;
+
+    setUploadStates((prev) => ({
+      ...prev,
+      [itemId]: { isUploading: true, error: undefined },
+    }));
+
+    try {
+      const response = await file.uploadFile(selectedFile, {
+        isPrivate: true,
+      });
+
+      // Extract file URL from response
+      const fileUrl = response.data?.message?.file_url || response.data?.message;
+
+      if (!fileUrl) {
+        throw new Error('No file URL returned from upload');
+      }
+
+      // Update run item with evidence
+      await updateRunItem(itemId, details.items.find((i) => i.name === itemId)?.status || 'Pending', {
+        evidence: fileUrl,
+      });
+
+      setUploadStates((prev) => ({
+        ...prev,
+        [itemId]: {
+          isUploading: false,
+          hasEvidence: true,
+          evidenceUrl: fileUrl,
+          error: undefined,
+        },
+      }));
+
+      showToast({
+        variant: 'pass',
+        title: 'Photo attached',
+        description: 'Evidence has been uploaded successfully.',
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload file';
+      setUploadStates((prev) => ({
+        ...prev,
+        [itemId]: {
+          isUploading: false,
+          error: errorMessage,
+        },
+      }));
+
+      showToast({
+        variant: 'fail',
+        title: 'Upload failed',
+        description: errorMessage,
+      });
+    }
   };
 
   const { showToast } = useToast();
@@ -258,29 +340,86 @@ function ChecklistRunner({
         </div>
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           <div className="space-y-4">
-            {details.items.map((item) => (
-              <div
-                key={item.name}
-                className={`p-4 rounded-[var(--radius)] border ${
-                  item.status === 'Completed'
-                    ? 'bg-sel/5 border-sel/20'
-                    : 'bg-slab-2/50 border-rule'
-                } transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
-              >
-                <CheckboxRow
-                  checked={item.status === 'Completed'}
-                  disabled={isReadOnly}
-                  onCheckedChange={() => toggleItem(item.name, item.status)}
-                  label={item.template_item?.description ?? item.checklist_item}
-                  secondary={
-                    (item.template_item?.weight ?? item.weight) > 1
-                      ? `Weight: ${item.template_item?.weight ?? item.weight}`
-                      : undefined
-                  }
-                  className={item.status === 'Completed' ? 'text-mute line-through opacity-70' : ''}
-                />
-              </div>
-            ))}
+            {details.items.map((item) => {
+              const needsEvidence =
+                item.evidence_required && item.evidence_required !== 'None';
+              const uploadState = uploadStates[item.name];
+              const hasEvidenceAttached = uploadState?.hasEvidence || uploadState?.evidenceUrl;
+
+              return (
+                <div
+                  key={item.name}
+                  className={`p-4 rounded-[var(--radius)] border ${
+                    item.status === 'Completed'
+                      ? 'bg-sel/5 border-sel/20'
+                      : 'bg-slab-2/50 border-rule'
+                  } transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <CheckboxRow
+                        checked={item.status === 'Completed'}
+                        disabled={isReadOnly}
+                        onCheckedChange={() => toggleItem(item.name, item.status)}
+                        label={item.template_item?.description ?? item.checklist_item}
+                        secondary={
+                          (item.template_item?.weight ?? item.weight) > 1
+                            ? `Weight: ${item.template_item?.weight ?? item.weight}`
+                            : undefined
+                        }
+                        className={item.status === 'Completed' ? 'text-mute line-through opacity-70' : ''}
+                      />
+                    </div>
+                    {needsEvidence && !isReadOnly && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <label className="relative inline-flex">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const uploadFile = e.currentTarget.files?.[0];
+                              if (uploadFile) {
+                                handleEvidenceUpload(item.name, uploadFile);
+                              }
+                              // Reset input so same file can be selected again
+                              e.currentTarget.value = '';
+                            }}
+                            disabled={uploadState?.isUploading}
+                            className="hidden"
+                          />
+                          <div
+                            className={`h-7 px-2 rounded-[var(--radius)] border flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                              hasEvidenceAttached
+                                ? 'bg-pass/10 text-pass border-pass/20'
+                                : 'border-rule text-mute hover:bg-slab-2'
+                            } ${uploadState?.isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={(e) => {
+                              if (uploadState?.isUploading) {
+                                e.preventDefault();
+                              }
+                            }}
+                          >
+                            {hasEvidenceAttached ? (
+                              <CheckCircle size={14} />
+                            ) : (
+                              <Upload size={14} />
+                            )}
+                          </div>
+                        </label>
+                        {uploadState?.error && (
+                          <span
+                            className="text-xs text-risk"
+                            title={uploadState.error}
+                          >
+                            !
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
         {!isReadOnly && (

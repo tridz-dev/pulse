@@ -93,7 +93,7 @@ def get_run_details(run_name: str):
 
 
 @frappe.whitelist()
-def update_run_item(run_item_name: str, status: str, notes: str | None = None, numeric_value: str | None = None):
+def update_run_item(run_item_name: str, status: str, notes: str | None = None, numeric_value: str | None = None, evidence: str | None = None):
 	"""Toggle item Pending/Completed. Validates ownership of parent run."""
 	item = frappe.get_doc("SOP Run Item", run_item_name)
 	run_name = item.get("parent")
@@ -113,6 +113,8 @@ def update_run_item(run_item_name: str, status: str, notes: str | None = None, n
 					row.numeric_value = float(numeric_value)
 				except (TypeError, ValueError):
 					pass
+			if evidence is not None:
+				row.evidence = evidence
 			if status == "Completed":
 				row.completed_at = now()
 			break
@@ -159,6 +161,14 @@ def complete_run(run_name: str):
 		frappe.throw("Run is not in a state that can be completed.")
 
 	run = frappe.get_doc("SOP Run", run_name)
+
+	# Check that all items requiring evidence have evidence attached and are completed
+	for row in run.run_items or []:
+		if row.evidence_required and row.evidence_required != "None":
+			if not row.evidence:
+				frappe.throw(f"Cannot complete run: checklist item '{row.checklist_item}' requires evidence but none is attached.")
+			if row.status != "Completed":
+				frappe.throw(f"Cannot complete run: checklist item '{row.checklist_item}' requires evidence and must be marked Completed.")
 
 	current_time = now()
 	run.completed_at = current_time
