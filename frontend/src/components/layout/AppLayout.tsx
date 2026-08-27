@@ -47,7 +47,11 @@ export function AppLayout() {
 
             {/* Mobile off-canvas drawer */}
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                <SheetContent side="left" className="p-0 md:hidden" showCloseButton={false}>
+                <SheetContent
+                    side="left"
+                    className="p-0 md:hidden data-[side=left]:w-[240px] data-[side=left]:max-w-[240px] data-[side=left]:sm:max-w-[240px]"
+                    showCloseButton={false}
+                >
                     <Sidebar
                         collapsed={false}
                         forceExpanded
