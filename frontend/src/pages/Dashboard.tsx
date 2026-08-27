@@ -7,7 +7,7 @@ import { getDemoStatus, installDemoData } from '@/services/demo';
 import { getFailureList, getComplianceScore } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Users, Activity, Calendar, TrendingUp, Database, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Target, Users, Activity, Calendar, TrendingUp, TrendingDown, Database, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
 import { Gauge } from '@/components/ui/gauge';
 
@@ -44,6 +44,15 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** A date that falls inside the immediately preceding period, for a real trend comparison. */
+function getPreviousPeriodDateISO(periodType: 'Day' | 'Week' | 'Month'): string {
+  const d = new Date();
+  if (periodType === 'Day') d.setDate(d.getDate() - 1);
+  else if (periodType === 'Week') d.setDate(d.getDate() - 7);
+  else d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; end: string } {
@@ -94,6 +103,7 @@ export function Dashboard() {
   const { currentUser, refetch } = useAuth();
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [heroScore, setHeroScore] = useState<ComplianceScoreResponse | null>(null);
+  const [prevHeroScore, setPrevHeroScore] = useState<ComplianceScoreResponse | null>(null);
   const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
   const [teamData, setTeamData] = useState<TeamScoreItem[]>([]);
   const [analytics, setAnalytics] = useState<{ id: string; taskName: string; templateName: string; misses: number }[]>([]);
@@ -120,10 +130,18 @@ export function Dashboard() {
         setPersonalScore(personal);
         // Manager-facing hero gauge defaults to inherited (team) health; individual
         // contributors have no team to inherit from, so their hero is their personal score.
+        const heroScope = isManager ? 'inherited' : 'personal';
         const hero = isManager
           ? await getComplianceScore(currentUser.id, 'inherited', today, periodType)
           : personal;
         setHeroScore(hero);
+
+        // Real trend: same scope, immediately preceding period. Never fabricated —
+        // if the prior period has no eligible runs, the comparison stays null and
+        // the UI shows "no data" rather than inventing a number.
+        const prevDate = getPreviousPeriodDateISO(periodType);
+        const prevHero = await getComplianceScore(currentUser.id, heroScope, prevDate, periodType);
+        setPrevHeroScore(prevHero);
 
         if (isManager) {
           const team = await getTeamScores(currentUser.id, today, periodType);
@@ -196,6 +214,8 @@ export function Dashboard() {
   // genuinely null score (zero eligible runs) must stay null so it renders
   // the "no data" state rather than a misleading red 0%.
   const heroPct = heroScore?.score != null ? Math.round(heroScore.score * 100) : null;
+  const prevHeroPct = prevHeroScore?.score != null ? Math.round(prevHeroScore.score * 100) : null;
+  const trendDelta = heroPct != null && prevHeroPct != null ? heroPct - prevHeroPct : null;
   const ownPct = personalScore?.score != null ? Math.round(personalScore.score * 100) : null;
   const totalItems = personalScore?.eligible_runs ?? 0;
   const completedItems = personalScore?.passed_runs ?? 0;
@@ -337,10 +357,17 @@ export function Dashboard() {
                     <span className="text-[10px] text-mute font-mono uppercase tracking-widest font-bold">
                       Trend
                     </span>
-                    <div className="flex items-center gap-1.5 text-pass mt-1">
-                      <TrendingUp size={16} />
-                      <span className="text-sm font-bold font-mono">+14.2%</span>
-                    </div>
+                    {trendDelta === null ? (
+                      <span className="text-sm font-bold font-mono text-faint mt-1">—</span>
+                    ) : (
+                      <div className={cn('flex items-center gap-1.5 mt-1', trendDelta > 0 ? 'text-pass' : trendDelta < 0 ? 'text-fail' : 'text-mute')}>
+                        {trendDelta > 0 ? <TrendingUp size={16} /> : trendDelta < 0 ? <TrendingDown size={16} /> : null}
+                        <span className="text-sm font-bold font-mono">
+                          {trendDelta > 0 ? '+' : ''}
+                          {trendDelta}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="w-px h-8 bg-rule" />
                   <div className="flex flex-col">

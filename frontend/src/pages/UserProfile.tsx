@@ -14,6 +14,7 @@ import {
   Users,
   Activity,
   TrendingUp,
+  TrendingDown,
   ArrowLeft,
   AlertCircle,
 } from 'lucide-react';
@@ -42,6 +43,15 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** A date that falls inside the immediately preceding period, for a real trend comparison. */
+function getPreviousPeriodDateISO(periodType: 'Day' | 'Week' | 'Month'): string {
+  const d = new Date();
+  if (periodType === 'Day') d.setDate(d.getDate() - 1);
+  else if (periodType === 'Week') d.setDate(d.getDate() - 7);
+  else d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pass: 'EXCEPTIONAL',
   risk: 'STABLE',
@@ -56,6 +66,7 @@ export function UserProfile() {
   const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
   const [inheritedScore, setInheritedScore] = useState<ComplianceScoreResponse | null>(null);
+  const [prevInheritedScore, setPrevInheritedScore] = useState<ComplianceScoreResponse | null>(null);
   const [teamData, setTeamData] = useState<(ScoreSnapshot & { user: User })[]>([]);
   const [recentRuns, setRecentRuns] = useState<RunListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,12 +81,15 @@ export function UserProfile() {
         const overview = await getOperationsOverview(userId, today, periodType);
         if (overview?.user) setUser(overview.user as User);
 
-        const [personal, inherited] = await Promise.all([
+        const prevDate = getPreviousPeriodDateISO(periodType);
+        const [personal, inherited, prevInherited] = await Promise.all([
           getComplianceScore(userId, 'personal', today, periodType),
           getComplianceScore(userId, 'inherited', today, periodType),
+          getComplianceScore(userId, 'inherited', prevDate, periodType),
         ]);
         setPersonalScore(personal);
         setInheritedScore(inherited);
+        setPrevInheritedScore(prevInherited);
 
         // NOTE: getTeamScores remains on the legacy path here. It is used only
         // to render the per-subordinate bar chart below (name + score per
@@ -123,6 +137,8 @@ export function UserProfile() {
   // collapse null to 0 anywhere below — it must reach <Ledger> as null so it
   // can render its distinct "no data" state.
   const inheritedPct = inheritedScore?.score != null ? Math.round(inheritedScore.score * 100) : null;
+  const prevInheritedPct = prevInheritedScore?.score != null ? Math.round(prevInheritedScore.score * 100) : null;
+  const trendDelta = inheritedPct != null && prevInheritedPct != null ? inheritedPct - prevInheritedPct : null;
   const personalPct = personalScore?.score != null ? Math.round(personalScore.score * 100) : null;
   const passedRuns = personalScore?.passed_runs ?? 0;
   const eligibleRuns = personalScore?.eligible_runs ?? 0;
@@ -194,10 +210,17 @@ export function UserProfile() {
                 <span className="text-[10px] text-mute font-mono uppercase tracking-widest font-bold">
                   Execution Trend
                 </span>
-                <div className="flex items-center gap-1.5 text-pass mt-1">
-                  <TrendingUp size={16} />
-                  <span className="text-sm font-bold font-mono">+14.2%</span>
-                </div>
+                {trendDelta === null ? (
+                  <span className="text-sm font-bold font-mono text-faint mt-1">—</span>
+                ) : (
+                  <div className={cn('flex items-center gap-1.5 mt-1', trendDelta > 0 ? 'text-pass' : trendDelta < 0 ? 'text-fail' : 'text-mute')}>
+                    {trendDelta > 0 ? <TrendingUp size={16} /> : trendDelta < 0 ? <TrendingDown size={16} /> : null}
+                    <span className="text-sm font-bold font-mono">
+                      {trendDelta > 0 ? '+' : ''}
+                      {trendDelta}%
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="w-px h-8 bg-rule" />
               <div className="flex flex-col">

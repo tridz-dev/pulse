@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Meter } from "@/components/ui/meter"
+import { scoreStatus } from "@/lib/score"
 
 interface GaugeProps extends React.ComponentPropsWithoutRef<"div"> {
   value: number | null
@@ -25,13 +26,12 @@ function Gauge({ value, label, segments, className, ...props }: GaugeProps) {
   const isNoData = value === null
   const clamped = isNoData ? 0 : Math.max(0, Math.min(100, value))
 
-  const strokeVar = isNoData
-    ? "var(--faint)"
-    : clamped >= 80
-      ? "var(--pass)"
-      : clamped >= 50
-        ? "var(--risk)"
-        : "var(--fail)"
+  // Derived from the same scoreStatus() thresholds used everywhere else in the
+  // app — never a locally-duplicated cutoff, or this arc would silently drift
+  // out of sync with the Team table, Ledger, and every other score display.
+  const status = isNoData ? "none" : scoreStatus(clamped, 100)
+  const strokeVar =
+    status === "none" ? "var(--faint)" : status === "pass" ? "var(--pass)" : status === "risk" ? "var(--risk)" : "var(--fail)"
 
   const resolvedSegments =
     segments ??

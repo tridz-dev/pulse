@@ -8,8 +8,8 @@ export type ScoreStatus = "pass" | "risk" | "fail" | "none"
 
 export function scoreStatus(score: number | null | undefined, total?: number): ScoreStatus {
   if (score == null || (total !== undefined && total <= 0)) return "none"
-  if (score >= 80) return "pass"
-  if (score >= 50) return "risk"
+  if (score >= 85) return "pass"
+  if (score >= 20) return "risk"
   return "fail"
 }
 
