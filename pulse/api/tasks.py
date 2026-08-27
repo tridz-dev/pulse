@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Tridz and contributors
 # License: MIT
 
+import os
 import frappe
 from frappe.utils import getdate, now
 
@@ -114,6 +115,28 @@ def update_run_item(run_item_name: str, status: str, notes: str | None = None, n
 				except (TypeError, ValueError):
 					pass
 			if evidence is not None:
+				# Validate evidence file (Finding 1: file-type validation; Finding 2: ownership check)
+				file_doc = frappe.db.get_value("File", {"file_url": evidence}, ["file_name", "owner", "attached_to_doctype", "attached_to_name"], as_dict=True)
+
+				if not file_doc:
+					frappe.throw(f"Evidence file not found: {evidence}")
+
+				# Validate file extension is an image (pragmatic check: filename extension, not full MIME-sniffing)
+				_, ext = os.path.splitext(file_doc.get("file_name") or "")
+				ext = ext.lower()
+				allowed_extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
+				if ext not in allowed_extensions:
+					frappe.throw(f"Evidence file must be an image. Received: {ext if ext else 'no extension'}")
+
+				# Validate file ownership: must be uploaded by current user
+				if file_doc.get("owner") != frappe.session.user:
+					frappe.throw("Evidence file must be uploaded by the current user.")
+
+				# Validate file is not attached to a different document
+				if file_doc.get("attached_to_doctype") and file_doc.get("attached_to_name"):
+					if file_doc.get("attached_to_doctype") != "SOP Run Item" or file_doc.get("attached_to_name") != run_item_name:
+						frappe.throw("Evidence file is already attached to a different document.")
+
 				row.evidence = evidence
 			if status == "Completed":
 				row.completed_at = now()
