@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { Sheet, SheetContent } from '../ui/sheet';
@@ -10,6 +10,20 @@ export function AppLayout() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     // Separate axis from `sidebarCollapsed`: mobile drawer visibility, not the desktop icon-rail width.
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+    // If the viewport crosses the md breakpoint while the drawer is open (e.g. rotating a
+    // tablet, or resizing a dev window), close it — otherwise its modal backdrop stays
+    // mounted over the now-visible desktop layout even though the drawer panel itself
+    // is `md:hidden`, blocking the first click until the backdrop's own dismiss logic
+    // catches up.
+    useEffect(() => {
+        const query = window.matchMedia('(min-width: 768px)');
+        const handleChange = (e: MediaQueryListEvent) => {
+            if (e.matches) setMobileNavOpen(false);
+        };
+        query.addEventListener('change', handleChange);
+        return () => query.removeEventListener('change', handleChange);
+    }, []);
 
     if (isLoading) {
         return (

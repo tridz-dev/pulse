@@ -203,6 +203,21 @@ export function Dashboard() {
     ? teamData.reduce((sum, t) => sum + (t.combined_score ?? 0), 0) / teamData.length
     : 0;
   const heroStatus = scoreStatus(heroPct, 100);
+  const isManager = !!currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole);
+
+  // Real composition (passed/failed/pending), not a naive percentage split — the hero
+  // number must explain itself via the same three counts quoted in the sentence below it.
+  const heroPassed = heroScore?.passed_runs ?? 0;
+  const heroFailed = heroScore?.failed_runs ?? 0;
+  const heroEligible = heroScore?.eligible_runs ?? 0;
+  const heroPending = Math.max(0, heroEligible - heroPassed - heroFailed);
+  const heroSegments = heroEligible > 0
+    ? [
+        { value: heroPassed, className: 'bg-pass' },
+        { value: heroFailed, className: 'bg-fail' },
+        ...(heroPending > 0 ? [{ value: heroPending, className: 'bg-slab-2' }] : []),
+      ]
+    : undefined;
 
   const barChartData = teamData.map((t) => ({
     name: t.user?.name?.split(' ')[0] ?? t.user?.id ?? '',
@@ -293,9 +308,9 @@ export function Dashboard() {
                   </span>
                 </div>
               ) : HERO_VARIANT === 'arc' ? (
-                <Gauge value={heroPct} label={`${periodType} KPI`} className="w-[180px] shrink-0" />
+                <Gauge value={heroPct} label={`${periodType} KPI`} segments={heroSegments} className="w-[180px] shrink-0" />
               ) : (
-                <Ledger value={heroPct} label={`${periodType} KPI`} />
+                <Ledger value={heroPct} label={`${periodType} KPI`} segments={heroSegments} />
               )}
 
               <div className="flex flex-col justify-center gap-6 flex-1">
@@ -305,6 +320,12 @@ export function Dashboard() {
                     Your overall performance rating based on {completedItems} completed tasks and team roll-ups for
                     this {periodType.toLowerCase()}.
                   </p>
+                  {heroEligible > 0 && (
+                    <p className="text-[10px] font-mono uppercase tracking-wide text-faint mt-2">
+                      {heroPassed} passed · {heroFailed} failed
+                      {heroPending > 0 ? ` · ${heroPending} pending` : ''} · {heroEligible} total
+                    </p>
+                  )}
                   {currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole) && (
                     <span className="text-xs text-sel font-medium inline-flex items-center gap-1 mt-3 group-hover:text-sel/80 transition-colors">
                       View failing runs in scope ({failures.length}) <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
@@ -334,28 +355,35 @@ export function Dashboard() {
               </div>
             </Card>
             <div className="flex flex-col gap-4">
-              <Card className="bg-slab border-rule flex-1">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
-                    Own Execution
-                  </CardTitle>
-                  <Target className="h-4 w-4 text-mute" />
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                  <div className="text-lg font-mono font-semibold text-mute">{formatScore(ownPct, 100)}</div>
-                  {totalItems > 0 && (
-                    <Meter
-                      size="sm"
-                      className="w-full"
-                      segments={[
-                        { value: Math.max(0, Math.min(100, ownPct ?? 0)), className: scoreBgClass(ownPct, 100) },
-                        { value: 100 - Math.max(0, Math.min(100, ownPct ?? 0)), className: 'bg-slab-2' },
-                      ]}
-                    />
-                  )}
-                  <p className="text-[10px] text-mute mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
-                </CardContent>
-              </Card>
+              {/* For an individual contributor the hero above IS their personal score
+                  (heroScore === personalScore) — showing it again here as "Own Execution"
+                  is the same fact in a second chart type, not new information. Only
+                  managers, whose hero is the team-inherited score, get a distinct
+                  personal number worth a second card. */}
+              {isManager && (
+                <Card className="bg-slab border-rule flex-1">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
+                      Own Execution
+                    </CardTitle>
+                    <Target className="h-4 w-4 text-mute" />
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-2">
+                    <div className="text-lg font-mono font-semibold text-mute">{formatScore(ownPct, 100)}</div>
+                    {totalItems > 0 && (
+                      <Meter
+                        size="sm"
+                        className="w-full"
+                        segments={[
+                          { value: Math.max(0, Math.min(100, ownPct ?? 0)), className: scoreBgClass(ownPct, 100) },
+                          { value: 100 - Math.max(0, Math.min(100, ownPct ?? 0)), className: 'bg-slab-2' },
+                        ]}
+                      />
+                    )}
+                    <p className="text-[10px] text-mute mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
+                  </CardContent>
+                </Card>
+              )}
               <Card className="bg-slab border-rule flex-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">

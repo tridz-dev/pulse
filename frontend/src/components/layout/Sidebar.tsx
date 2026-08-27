@@ -44,6 +44,7 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
 
     return (
         <aside
+            aria-label="Primary navigation"
             className={cn(
                 "flex flex-col h-full bg-slab border-r border-rule shrink-0 transition-all duration-300",
                 isCollapsed ? "w-[52px]" : "w-[240px]"
