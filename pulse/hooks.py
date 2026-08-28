@@ -129,6 +129,7 @@ permission_query_conditions = {
 	"SOP Run": "pulse.api.permissions.sop_run_conditions",
 	"Score Snapshot": "pulse.api.permissions.score_snapshot_conditions",
 	"Corrective Action": "pulse.api.permissions.corrective_action_conditions",
+	"Pulse Employee": "pulse.api.permissions.pulse_employee_conditions",
 }
 
 # Document Events

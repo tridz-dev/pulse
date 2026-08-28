@@ -11,6 +11,10 @@ export function AppLayout() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     // Separate axis from `sidebarCollapsed`: mobile drawer visibility, not the desktop icon-rail width.
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    // Owned here (not inside CommandSearch) so the sidebar's search button can explicitly
+    // open the dialog instead of toggling it via a synthetic Cmd/Ctrl+K keyboard event.
+    const [searchOpen, setSearchOpen] = useState(false);
+    const openSearch = () => setSearchOpen(true);
 
     // If the viewport crosses the md breakpoint while the drawer is open (e.g. rotating a
     // tablet, or resizing a dev window), close it — otherwise its modal backdrop stays
@@ -57,11 +61,15 @@ export function AppLayout() {
         // eslint-disable-next-line no-restricted-syntax -- text-selection highlight, the in-spec use of --sel, not a status/card fill
         <div className="h-screen w-full flex overflow-hidden bg-ink text-text font-sans selection:bg-sel/30">
             {/* Global Cmd/Ctrl+K search shortcut — active regardless of sidebar collapse state */}
-            <CommandSearch />
+            <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
             {/* Sidebar — inline on md+, hidden below md (drawer takes over) */}
             <div className="hidden md:flex">
-                <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />
+                <Sidebar
+                    collapsed={sidebarCollapsed}
+                    onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
+                    onOpenSearch={openSearch}
+                />
             </div>
 
             {/* Mobile off-canvas drawer */}
@@ -76,6 +84,7 @@ export function AppLayout() {
                         forceExpanded
                         onToggleCollapse={() => {}}
                         onNavigate={() => setMobileNavOpen(false)}
+                        onOpenSearch={openSearch}
                     />
                 </SheetContent>
             </Sheet>

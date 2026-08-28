@@ -230,8 +230,13 @@ export function Dashboard() {
   const totalItems = personalScore?.eligible_runs ?? 0;
   const completedItems = personalScore?.passed_runs ?? 0;
   const teamScore = teamData.length > 0
-    ? teamData.reduce((sum, t) => sum + (t.combined_score ?? 0), 0) / teamData.length
-    : 0;
+    ? (() => {
+        const validScores = teamData.filter(t => t.combined_score != null);
+        return validScores.length > 0
+          ? validScores.reduce((sum, t) => sum + t.combined_score!, 0) / validScores.length
+          : null;
+      })()
+    : null;
   const heroStatus = scoreStatus(heroPct, 100);
   const isManager = !!currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole);
 
@@ -249,11 +254,13 @@ export function Dashboard() {
       ]
     : undefined;
 
-  const barChartData = teamData.map((t) => ({
-    name: t.user?.name?.split(' ')[0] ?? t.user?.id ?? '',
-    score: Math.round((t.combined_score ?? 0) * 100),
-    role: t.user?.role,
-  }));
+  const barChartData = teamData
+    .filter(t => t.combined_score != null)
+    .map((t) => ({
+      name: t.user?.name?.split(' ')[0] ?? t.user?.id ?? '',
+      score: Math.round(t.combined_score! * 100),
+      role: t.user?.role,
+    }));
 
   const showLoadDemoCard = demoStatus?.can_load_demo && !demoStatus?.has_demo_data;
 
@@ -341,7 +348,7 @@ export function Dashboard() {
                   )}
                   {currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole) && (
                     <span className="text-xs text-sel font-medium inline-flex items-center gap-1 mt-3 group-hover:text-sel transition-colors">
-                      View failing runs in scope ({failures.length}) <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                      View failing runs in scope ({heroFailed}) <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
                   )}
                 </div>
@@ -395,10 +402,10 @@ export function Dashboard() {
               )}
               <Card className="bg-slab border-rule flex-1 p-4">
                 <StatTile
-                  value={teamData.length > 0 ? Math.round(teamScore * 100) : completedItems}
+                  value={teamData.length > 0 ? (teamScore !== null ? Math.round(teamScore * 100) : null) : completedItems}
                   label={teamData.length > 0 ? 'Team Roll-up' : 'Activity'}
                   description={teamData.length > 0 ? 'Direct Reports Avg' : 'Items Completed'}
-                  segments={teamData.length > 0 ? [
+                  segments={teamData.length > 0 && teamScore !== null ? [
                     {
                       value: Math.max(0, Math.min(100, Math.round(teamScore * 100))),
                       className: scoreBgClass(Math.round(teamScore * 100), 100),

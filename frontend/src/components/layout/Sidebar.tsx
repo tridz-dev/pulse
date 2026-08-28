@@ -37,9 +37,12 @@ interface SidebarProps {
     forceExpanded?: boolean;
     /** Called after a nav link is clicked — used to close the mobile drawer on navigation. */
     onNavigate?: () => void;
+    /** Explicitly opens the global command search dialog (owned by AppLayout). Always opens —
+     * never toggles — so clicking this button while the dialog is already open is a no-op. */
+    onOpenSearch: () => void;
 }
 
-export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, onNavigate }: SidebarProps) {
+export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, onNavigate, onOpenSearch }: SidebarProps) {
     const { currentUser, logout } = useAuth();
     const location = useLocation();
     const isCollapsed = forceExpanded ? false : collapsed;
@@ -73,15 +76,13 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
                 <div className="px-3 mb-6">
                     {/* The real search affordance is the global Cmd/Ctrl+K shortcut (registered in
                         CommandSearch, mounted in AppLayout) so it keeps working even when this
-                        button disappears at collapsed width. This button just dispatches the same
-                        shortcut for discoverability when the sidebar is expanded. */}
+                        button disappears at collapsed width. This button explicitly opens the
+                        same dialog (via the shared `open` state owned by AppLayout) for
+                        discoverability when the sidebar is expanded — it always opens, never
+                        toggles, so clicking it while the dialog is already open is a no-op. */}
                     <button
                         type="button"
-                        onClick={() => {
-                            window.dispatchEvent(
-                                new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
-                            );
-                        }}
+                        onClick={onOpenSearch}
                         className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded-sm hover:bg-slab-2 transition-colors"
                         aria-label="Search tasks, people, and operations"
                     >
@@ -187,11 +188,17 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
                     <button
                         type="button"
                         onClick={onToggleCollapse}
-                        className="p-2 text-mute hover:text-text hover:bg-slab-2 rounded-sm transition-colors flex items-center justify-center w-full"
+                        className={cn(
+                            "text-mute hover:text-text hover:bg-slab-2 rounded-sm transition-colors flex items-center w-full",
+                            isCollapsed
+                                ? "justify-center p-2"
+                                : "gap-2.5 px-2 py-1.5"
+                        )}
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
                         {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+                        {!isCollapsed && <span className="text-sm">Collapse</span>}
                     </button>
                 )}
             </div>

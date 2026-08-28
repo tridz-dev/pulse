@@ -64,6 +64,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { scoreStatus, scoreBgClass, formatScore } from '@/lib/score';
+import { isPartialBucket } from '@/lib/chart-helpers';
 import { Meter } from '@/components/ui/meter';
 import { PageShell, PageHeader } from '@/components/shared/page-shell';
 import { StatTile } from '@/components/shared/stat-tile';
@@ -104,6 +105,48 @@ function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: 
     );
   }
   return null;
+}
+
+interface DotProps {
+  cx?: number;
+  cy?: number;
+  payload?: { date?: string; [key: string]: unknown };
+}
+
+function OrgScoreTrendDot({ cx, cy, payload }: DotProps) {
+  const today = todayISO();
+  const isPartial = payload?.date ? isPartialBucket(payload.date as string, today) : false;
+
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill="var(--mute)"
+      stroke={isPartial ? 'var(--mute)' : 'none'}
+      strokeWidth={isPartial ? 2 : 0}
+      strokeDasharray={isPartial ? '2 2' : 'none'}
+      opacity={isPartial ? 0.6 : 1}
+    />
+  );
+}
+
+function CompletionTrendDot({ cx, cy, payload }: DotProps) {
+  const today = todayISO();
+  const isPartial = payload?.date ? isPartialBucket(payload.date as string, today) : false;
+
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill="var(--mute)"
+      stroke={isPartial ? 'var(--mute)' : 'none'}
+      strokeWidth={isPartial ? 2 : 0}
+      strokeDasharray={isPartial ? '2 2' : 'none'}
+      opacity={isPartial ? 0.6 : 1}
+    />
+  );
 }
 
 export function Insights() {
@@ -336,7 +379,7 @@ export function Insights() {
                     <XAxis dataKey="date" tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
                     <YAxis domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                     <Tooltip content={<TrendTooltip />} />
-                    <Line type="monotone" dataKey="pct" stroke="var(--mute)" strokeWidth={2} dot={false} connectNulls={false} />
+                    <Line type="monotone" dataKey="pct" stroke="var(--mute)" strokeWidth={2} dot={<OrgScoreTrendDot />} connectNulls={false} />
                   </LineChart>
                 </ResponsiveContainer>
                 <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-mute px-4 pb-4 shrink-0">
@@ -380,7 +423,7 @@ export function Insights() {
                     <XAxis dataKey="date" tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
                     <YAxis domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                     <Tooltip contentStyle={{ backgroundColor: 'var(--slab)', border: '1px solid var(--rule)', borderRadius: 8, color: 'var(--text)' }} />
-                    <Area type="monotone" dataKey="pct" stroke="var(--mute)" fill="url(#complGrad)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="pct" stroke="var(--mute)" fill="url(#complGrad)" strokeWidth={2} dot={<CompletionTrendDot />} />
                   </AreaChart>
                 </ResponsiveContainer>
               </ChartFrame>

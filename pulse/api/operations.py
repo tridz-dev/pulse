@@ -39,6 +39,16 @@ def _employee_dict(emp_name: str) -> dict | None:
 @frappe.whitelist()
 def get_operations_overview(top_employee: str, date: str | None = None, period_type: str = "Day"):
 	"""Build the full hierarchy tree with scores for the Operations page."""
+	# Verify the caller has permission to view this employee's subtree
+	scope = get_scope_for_user(frappe.session.user)
+	if top_employee not in scope:
+		frappe.throw(
+			_(
+				"Not permitted. Employee '{0}' is outside your scope."
+			).format(top_employee),
+			frappe.PermissionError,
+		)
+
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 
 	def build_tree(emp_name: str):
@@ -66,6 +76,16 @@ def get_operations_overview(top_employee: str, date: str | None = None, period_t
 @frappe.whitelist()
 def get_user_run_breakdown(employee: str, date: str | None = None, period_type: str = "Day"):
 	"""Detailed run breakdown grouped by template for the ScoreBreakdown sheet."""
+	# Verify the caller has permission to view this employee's data
+	scope = get_scope_for_user(frappe.session.user)
+	if employee not in scope:
+		frappe.throw(
+			_(
+				"Not permitted. Employee '{0}' is outside your scope."
+			).format(employee),
+			frappe.PermissionError,
+		)
+
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 	start_d, end_d = _period_range(date_str, period_type or "Day")
 
@@ -163,6 +183,16 @@ def get_user_run_breakdown(employee: str, date: str | None = None, period_type: 
 @frappe.whitelist()
 def get_hierarchy_breakdown(top_employee: str, date: str | None = None, period_type: str = "Day"):
 	"""Full hierarchy with per-user breakdown (heavy endpoint)."""
+	# Verify the caller has permission to view this employee's subtree
+	scope = get_scope_for_user(frappe.session.user)
+	if top_employee not in scope:
+		frappe.throw(
+			_(
+				"Not permitted. Employee '{0}' is outside your scope."
+			).format(top_employee),
+			frappe.PermissionError,
+		)
+
 	date_str = (getdate(date) if date else getdate()).strftime("%Y-%m-%d")
 
 	def build_node(emp_name: str):

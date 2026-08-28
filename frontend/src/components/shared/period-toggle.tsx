@@ -37,9 +37,9 @@ export function PeriodToggle({
           type="button"
           onClick={() => onChange(period)}
           className={cn(
-            "font-mono text-[10.5px] uppercase tracking-[0.09em] py-1 px-3 rounded-[1px] transition-colors font-medium leading-none",
+            "font-mono text-[10.5px] uppercase tracking-[0.09em] py-1 px-3 rounded-[var(--radius)] transition-colors font-medium leading-none",
             value === period
-              ? "bg-sel text-text"
+              ? "bg-sel text-ink"
               : "text-mute hover:text-text hover:bg-slab/50"
           )}
         >

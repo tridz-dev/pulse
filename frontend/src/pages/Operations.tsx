@@ -575,20 +575,17 @@ function OperationNode({
   const totalItems = node.score?.total_items ?? node.score?.totalGeneratedItems ?? 0;
   const completedItems = node.score?.completed_items ?? node.score?.completedItems ?? 0;
   const scorePercentage = Math.round(combinedScore * 100);
-  const status = scoreStatus(scorePercentage);
+  const status = scoreStatus(scorePercentage, totalItems);
 
   // Prefer real composition counts (completed vs remaining) when available,
-  // falling back to a synthetic 2-segment score split otherwise.
+  // falling back to a synthetic 2-segment score split otherwise, or grey no-data when totalItems === 0.
   const meter =
     totalItems > 0
       ? [
           { value: completedItems, className: 'bg-pass' },
           { value: Math.max(totalItems - completedItems, 0), className: 'bg-fail' },
         ]
-      : [
-          { value: scorePercentage, className: 'bg-pass' },
-          { value: 100 - scorePercentage, className: 'bg-fail' },
-        ];
+      : [{ value: 1, className: 'bg-none' }];
 
   const rowLevel: 0 | 1 = level > 0 ? 1 : 0;
 
