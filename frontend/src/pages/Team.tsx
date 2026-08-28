@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store/AuthContext';
+import { usePeriodScope } from '@/hooks/usePeriodScope';
 import { getTeamScores, getAllTeamScores } from '@/services/scores';
 import type { TeamScoreItem, AllTeamScoreItem } from '@/services/scores';
 import {
@@ -37,10 +38,6 @@ function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 const PULSE_ROLES = ['Operator', 'Supervisor', 'Area Manager', 'Executive'] as const;
 
 type TabId = 'my-team' | 'all-teams' | 'setup';
@@ -48,8 +45,8 @@ type TabId = 'my-team' | 'all-teams' | 'setup';
 export function Team() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const scope = usePeriodScope();
   const [activeTab, setActiveTab] = useState<TabId>('my-team');
-  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [teamScores, setTeamScores] = useState<TeamScoreItem[]>([]);
   const [allTeamScores, setAllTeamScores] = useState<AllTeamScoreItem[]>([]);
   const [isLoadingMyTeam, setIsLoadingMyTeam] = useState(true);
@@ -82,24 +79,24 @@ export function Team() {
         return;
       }
       setIsLoadingMyTeam(true);
-      const data = await getTeamScores(currentUser.id, todayISO(), periodType);
+      const data = await getTeamScores(currentUser.id, scope.refDate, scope.legacyPeriodType);
       setTeamScores(data);
       setIsLoadingMyTeam(false);
     }
     fetchMyTeam();
-  }, [currentUser, periodType]);
+  }, [currentUser, scope.refDate, scope.legacyPeriodType]);
 
   useEffect(() => {
     if (!showAllTeamsTab || activeTab !== 'all-teams') return;
     async function fetchAllTeams() {
       if (!currentUser) return;
       setIsLoadingAllTeams(true);
-      const data = await getAllTeamScores(currentUser.id, todayISO(), periodType);
+      const data = await getAllTeamScores(currentUser.id, scope.refDate, scope.legacyPeriodType);
       setAllTeamScores(data);
       setIsLoadingAllTeams(false);
     }
     fetchAllTeams();
-  }, [currentUser, periodType, activeTab, showAllTeamsTab]);
+  }, [currentUser, scope.refDate, scope.legacyPeriodType, activeTab, showAllTeamsTab]);
 
   async function refreshSetupData() {
     setIsLoadingSetup(true);
@@ -189,7 +186,7 @@ export function Team() {
             ? 'Your direct reports and organization-wide team view.'
             : 'Operational performance for your direct reports.'
         }
-        action={activeTab !== 'setup' && <PeriodToggle value={periodType} onChange={setPeriodType} />}
+        action={activeTab !== 'setup' && <PeriodToggle value={scope.legacyPeriodType} onChange={scope.setPeriodType} />}
       />
 
       {(showAllTeamsTab || showSetupTab) && (

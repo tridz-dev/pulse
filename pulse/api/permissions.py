@@ -6,7 +6,6 @@
 import frappe
 
 from pulse.domain.hierarchy import (
-	HierarchyCycleError,
 	get_descendants_scope,
 	get_manager_plus_descendants_scope,
 	get_organisation_scope,
@@ -188,3 +187,18 @@ def pulse_employee_conditions(user: str | None = None, doctype: str | None = Non
 		return f" `tabPulse Employee`.name in ({','.join(frappe.db.escape(e) for e in subs)}) "
 	# Pulse User: own only
 	return f" `tabPulse Employee`.name = {frappe.db.escape(emp)} "
+
+
+def pulse_notification_conditions(user: str | None = None, doctype: str | None = None) -> str:
+	"""Restrict Pulse Notification to the caller's own rows only — notifications are
+	always self-scoped (a manager does not see their reports' notifications), unlike
+	the hierarchy-scoped doctypes above."""
+	user = user or frappe.session.user
+	if frappe.session.user == "Administrator" or "Pulse Admin" in frappe.get_roles(user):
+		return ""
+
+	emp = _get_employee_for_user(user)
+	if not emp:
+		return " 1 = 0 "
+
+	return f" `tabPulse Notification`.recipient = {frappe.db.escape(emp)} "

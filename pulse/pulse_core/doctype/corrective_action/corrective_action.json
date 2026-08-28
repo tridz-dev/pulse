@@ -12,7 +12,10 @@
   "assigned_to",
   "raised_by",
   "priority",
+  "escalated",
   "resolution",
+  "waive_reason",
+  "defer_until",
   "resolved_at",
   "evidence"
  ],
@@ -43,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nIn Progress\nResolved\nClosed",
+   "options": "Open\nIn Progress\nResolved\nClosed\nWaived",
    "reqd": 1
   },
   {
@@ -67,9 +70,25 @@
    "options": "Low\nMedium\nHigh\nCritical"
   },
   {
+   "default": "0",
+   "fieldname": "escalated",
+   "fieldtype": "Check",
+   "label": "Escalated"
+  },
+  {
    "fieldname": "resolution",
    "fieldtype": "Small Text",
    "label": "Resolution"
+  },
+  {
+   "fieldname": "waive_reason",
+   "fieldtype": "Small Text",
+   "label": "Waive Reason"
+  },
+  {
+   "fieldname": "defer_until",
+   "fieldtype": "Datetime",
+   "label": "Defer Until"
   },
   {
    "fieldname": "resolved_at",

@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe.utils import get_system_timezone, getdate, now, now_datetime
 
+from pulse.domain.escalation import resolve_escalation_target
 from pulse.domain.scheduling import make_run_key, resolve_schedule
 
 
@@ -257,6 +258,87 @@ def finalize_overdue_runs(evaluation_instant=None):
 		run.compliance_result = "Failed"
 		run.flags.ignore_validate_update_after_submit = True
 		run.save()
+
+		# T1 — Notify operator (run.employee) that run is overdue and marked Failed
+		try:
+			# Resolve operator's user and email
+			operator_user = frappe.db.get_value(
+				"Pulse Employee",
+				run.employee,
+				"user",
+			)
+			operator_email = None
+			if operator_user:
+				operator_email = frappe.db.get_value("User", operator_user, "email")
+
+			# Create in-app notification for operator
+			frappe.get_doc({
+				"doctype": "Pulse Notification",
+				"recipient": run.employee,
+				"kind": "Run Overdue",
+				"title": f"{run.template_title_snapshot} — overdue, marked Failed.",
+				"reference_doctype": "SOP Run",
+				"reference_name": run.name,
+			}).insert(ignore_permissions=True)
+
+			# Send email to operator if email found
+			if operator_email:
+				frappe.sendmail(
+					recipients=[operator_email],
+					subject=f"Overdue: {run.template_title_snapshot}",
+					message=f"Your {run.template_title_snapshot} checklist was due at {run.due_at} and has not been completed. It is now marked Failed.",
+				)
+			else:
+				frappe.logger("scheduler").warning(
+					f"Could not resolve email for operator {run.employee} on overdue run {run.name}"
+				)
+		except Exception as e:
+			# Log notification failure but do not crash the finalizer
+			frappe.logger("scheduler").error(
+				f"Notification insert/send failed for overdue run {run.name}: {str(e)}"
+			)
+
+		# T2 — Notify escalation target (manager) if resolved
+		target = resolve_escalation_target(run.employee)
+		if target:
+			try:
+				# Resolve target's user and email
+				target_user = frappe.db.get_value(
+					"Pulse Employee",
+					target,
+					"user",
+				)
+				target_email = None
+				if target_user:
+					target_email = frappe.db.get_value("User", target_user, "email")
+
+				# Create in-app notification for escalation target
+				frappe.get_doc({
+					"doctype": "Pulse Notification",
+					"recipient": target,
+					"kind": "Escalation",
+					"title": f"{run.employee_name_snapshot} missed {run.template_title_snapshot}.",
+					"reference_doctype": "SOP Run",
+					"reference_name": run.name,
+				}).insert(ignore_permissions=True)
+
+				# Send email to target if email found
+				if target_email:
+					frappe.sendmail(
+						recipients=[target_email],
+						subject=f"Failed: {run.employee_name_snapshot}'s {run.template_title_snapshot}",
+						message=f"{run.employee_name_snapshot} did not complete {run.template_title_snapshot} by {run.due_at}. Run: {run.name}.",
+					)
+				else:
+					frappe.logger("scheduler").warning(
+						f"Could not resolve email for escalation target {target} on overdue run {run.name}"
+					)
+			except Exception as e:
+				# Log notification failure but do not crash the finalizer
+				frappe.logger("scheduler").error(
+					f"Escalation notification insert/send failed for run {run.name}: {str(e)}"
+				)
+
 	frappe.db.commit()
 
 

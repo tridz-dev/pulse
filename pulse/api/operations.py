@@ -241,6 +241,9 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 	                "due_at": <datetime>,
 	                "status": <SOP Run status>,
 	                "compliance_result": "Failed",
+	                "has_corrective_action": <bool>,
+	                "corrective_action": <CA name or null>,
+	                "corrective_action_status": <CA status or null>,
 	            },
 	            ...
 	        ],
@@ -287,6 +290,21 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 		limit_page_length=page_size,
 	)
 
+	# Batched lookup of Corrective Actions linked to the runs on this page, so the
+	# frontend can tell "has any CA been created for this run" without an N+1 query.
+	run_names = [row["name"] for row in rows]
+	ca_by_run = {}
+	if run_names:
+		ca_rows = frappe.get_all(
+			"Corrective Action",
+			filters={"run": ["in", run_names]},
+			fields=["run", "name", "status"],
+		)
+		for ca_row in ca_rows:
+			# If a run somehow has more than one CA, keep the first one encountered;
+			# this endpoint only needs a representative CA for the linkage indicator.
+			ca_by_run.setdefault(ca_row["run"], ca_row)
+
 	items = [
 		{
 			"run": row["name"],
@@ -298,6 +316,9 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 			"due_at": row["due_at"],
 			"status": row["status"],
 			"compliance_result": row["compliance_result"],
+			"has_corrective_action": row["name"] in ca_by_run,
+			"corrective_action": ca_by_run.get(row["name"], {}).get("name"),
+			"corrective_action_status": ca_by_run.get(row["name"], {}).get("status"),
 		}
 		for row in rows
 	]
@@ -407,6 +428,14 @@ def create_corrective_action_for_run(
 				_("Assigned employee '{0}' does not exist or is inactive.").format(assigned_to),
 				frappe.DoesNotExistError,
 			)
+		# Verify the assignee is within the caller's scope — a manager may only
+		# hand off corrective work to someone they can already see, not to an
+		# arbitrary employee elsewhere in the org.
+		if assigned_to not in scope:
+			frappe.throw(
+				_("Not permitted. Employee '{0}' is outside your scope.").format(assigned_to),
+				frappe.PermissionError,
+			)
 
 	# Determine who is raising this (the calling manager/leader)
 	raised_by = _get_employee_for_user(frappe.session.user)
@@ -437,5 +466,51 @@ def create_corrective_action_for_run(
 		}
 	)
 	doc.insert(ignore_permissions=True)
+
+	# T3 — Notify assigned_to employee that CA was assigned
+	try:
+		# Fetch run's template title
+		run_template_title = frappe.db.get_value(
+			"SOP Run",
+			run_name,
+			"template_title_snapshot",
+		)
+
+		# Resolve assigned_to employee's user and email
+		assigned_to_user = frappe.db.get_value(
+			"Pulse Employee",
+			assigned_to,
+			"user",
+		)
+		assigned_to_email = None
+		if assigned_to_user:
+			assigned_to_email = frappe.db.get_value("User", assigned_to_user, "email")
+
+		# Create in-app notification for assigned_to
+		frappe.get_doc({
+			"doctype": "Pulse Notification",
+			"recipient": assigned_to,
+			"kind": "CA Assigned",
+			"title": f"New corrective action assigned — {run_template_title}.",
+			"reference_doctype": "Corrective Action",
+			"reference_name": doc.name,
+		}).insert(ignore_permissions=True)
+
+		# Send email to assigned_to if email found
+		if assigned_to_email:
+			frappe.sendmail(
+				recipients=[assigned_to_email],
+				subject=f"Corrective action assigned: {run_template_title}",
+				message=f"You've been assigned a corrective action on run {run_name}: {description}",
+			)
+		else:
+			frappe.logger("operations").warning(
+				f"Could not resolve email for assigned_to {assigned_to} on corrective action {doc.name}"
+			)
+	except Exception as e:
+		# Log notification failure but do not crash the operation
+		frappe.logger("operations").error(
+			f"Notification insert/send failed for corrective action {doc.name}: {str(e)}"
+		)
 
 	return doc.name

@@ -1,0 +1,154 @@
+# Copyright (c) 2026, Tridz and contributors
+# License: MIT
+
+import frappe
+from frappe import _
+
+from pulse.api.permissions import _get_employee_for_user
+
+
+@frappe.whitelist()
+def list_notifications(unread_only: bool = False, page: int = 1, page_size: int = 20) -> dict:
+	"""Return paginated Pulse Notifications for the caller's own Pulse Employee record only.
+
+	Notifications are always self-scoped: a manager does not see their reports'
+	notifications, only their own. There is no organisation/subtree scoping here, unlike
+	Corrective Action or SOP Run.
+
+	Args:
+		unread_only: If true, only return notifications where is_read = 0.
+		page: Page number (1-indexed).
+		page_size: Number of items per page.
+
+	Returns:
+		{
+			"items": [
+				{
+					"name": <Pulse Notification name>,
+					"kind": <str>,
+					"title": <str>,
+					"referenceDoctype": <str or null>,
+					"referenceName": <str or null>,
+					"isRead": <bool>,
+					"createdAt": <datetime>,
+				}, ...
+			],
+			"unreadCount": <int>,
+			"page": <int>,
+			"page_size": <int>,
+			"total": <int>,
+		}
+	"""
+	page = int(page) or 1
+	page_size = int(page_size) or 20
+
+	employee = _get_employee_for_user()
+	if not employee:
+		return {"items": [], "unreadCount": 0, "page": page, "page_size": page_size, "total": 0}
+
+	filters = {"recipient": employee}
+	if frappe.utils.cint(unread_only):
+		filters["is_read"] = 0
+
+	total = frappe.db.count("Pulse Notification", filters=filters)
+	unread_count = frappe.db.count("Pulse Notification", filters={"recipient": employee, "is_read": 0})
+
+	rows = frappe.get_all(
+		"Pulse Notification",
+		filters=filters,
+		fields=[
+			"name",
+			"kind",
+			"title",
+			"reference_doctype",
+			"reference_name",
+			"is_read",
+			"creation",
+		],
+		order_by="creation desc",
+		limit_start=(page - 1) * page_size,
+		limit_page_length=page_size,
+	)
+
+	items = []
+	for row in rows:
+		items.append({
+			"name": row["name"],
+			"kind": row["kind"],
+			"title": row["title"],
+			"referenceDoctype": row.get("reference_doctype"),
+			"referenceName": row.get("reference_name"),
+			"isRead": bool(row["is_read"]),
+			"createdAt": row["creation"],
+		})
+
+	return {
+		"items": items,
+		"unreadCount": unread_count,
+		"page": page,
+		"page_size": page_size,
+		"total": total,
+	}
+
+
+@frappe.whitelist()
+def mark_notification_read(name: str) -> dict:
+	"""Marks one Pulse Notification as read. Caller must be its recipient.
+
+	Args:
+		name: Name of the Pulse Notification to mark read.
+
+	Returns:
+		{"name": <name>, "isRead": True}
+
+	Raises:
+		frappe.DoesNotExistError: If the notification does not exist.
+		frappe.PermissionError: If the caller is not the notification's recipient.
+	"""
+	if not name:
+		frappe.throw(_("Notification name is required."))
+
+	employee = _get_employee_for_user()
+	notif = frappe.get_doc("Pulse Notification", name)
+	if not notif:
+		frappe.throw(
+			_("Pulse Notification '{0}' does not exist.").format(name),
+			frappe.DoesNotExistError,
+		)
+
+	if not employee or notif.recipient != employee:
+		frappe.throw(
+			_("Not permitted. Notification '{0}' is not yours.").format(name),
+			frappe.PermissionError,
+		)
+
+	if not notif.is_read:
+		notif.is_read = 1
+		notif.save(ignore_permissions=True)
+
+	return {"name": notif.name, "isRead": True}
+
+
+@frappe.whitelist()
+def mark_all_notifications_read() -> dict:
+	"""Convenience bulk action for the bell's "mark all read" affordance.
+
+	Marks all of the caller's own unread notifications as read.
+
+	Returns:
+		{"updated": <int>}
+	"""
+	employee = _get_employee_for_user()
+	if not employee:
+		return {"updated": 0}
+
+	unread_names = frappe.get_all(
+		"Pulse Notification",
+		filters={"recipient": employee, "is_read": 0},
+		pluck="name",
+	)
+
+	for name in unread_names:
+		frappe.db.set_value("Pulse Notification", name, "is_read", 1, update_modified=False)
+
+	return {"updated": len(unread_names)}

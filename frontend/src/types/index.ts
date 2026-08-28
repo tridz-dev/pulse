@@ -100,12 +100,14 @@ export interface CorrectiveAction {
   run: string;
   run_item_ref?: string;
   description: string;
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed' | 'Waived';
   assigned_to: string;
   raised_by?: string;
   priority?: string;
   resolution?: string;
   resolved_at?: string;
+  waive_reason?: string;
+  defer_until?: string;
 }
 
 export interface RunItemDetail {
@@ -174,6 +176,9 @@ export interface FailureItem {
   due_at: string;
   status: string;
   compliance_result: string;
+  has_corrective_action?: boolean;
+  corrective_action?: string | null;
+  corrective_action_status?: string | null;
 }
 
 export interface FailureListResponse {

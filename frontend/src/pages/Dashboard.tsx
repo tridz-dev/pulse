@@ -5,6 +5,7 @@ import { getTeamScores, getFailureAnalytics } from '@/services/scores';
 import type { TeamScoreItem } from '@/services/scores';
 import { getDemoStatus, installDemoData } from '@/services/demo';
 import { getFailureList, getComplianceScore } from '@/services/operations';
+import { usePeriodScope } from '@/hooks/usePeriodScope';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, TrendingUp, TrendingDown, Database, AlertTriangle, ChevronRight } from 'lucide-react';
@@ -47,40 +48,6 @@ function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/** A date that falls inside the immediately preceding period, for a real trend comparison. */
-function getPreviousPeriodDateISO(periodType: 'Day' | 'Week' | 'Month'): string {
-  const d = new Date();
-  if (periodType === 'Day') d.setDate(d.getDate() - 1);
-  else if (periodType === 'Week') d.setDate(d.getDate() - 7);
-  else d.setMonth(d.getMonth() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; end: string } {
-  const today = new Date();
-  const formatStr = (d: Date) => d.toISOString().slice(0, 10);
-  
-  if (periodType === 'Day') {
-    const s = formatStr(today);
-    return { start: s, end: s };
-  }
-  if (periodType === 'Week') {
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const start = new Date(today.setDate(diff));
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return { start: formatStr(start), end: formatStr(end) };
-  }
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return { start: formatStr(start), end: formatStr(end) };
-}
-
 function getOverdueDuration(dueAtString: string): string {
   if (!dueAtString) return 'Overdue';
   // Standardize timestamp separator to avoid safari parse issues
@@ -106,7 +73,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function Dashboard() {
   const { currentUser, refetch } = useAuth();
-  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
+  const scope = usePeriodScope();
   const [heroScore, setHeroScore] = useState<ComplianceScoreResponse | null>(null);
   const [prevHeroScore, setPrevHeroScore] = useState<ComplianceScoreResponse | null>(null);
   const [personalScore, setPersonalScore] = useState<ComplianceScoreResponse | null>(null);
@@ -132,35 +99,32 @@ export function Dashboard() {
       if (!currentUser) return;
       setIsLoading(true);
       setLoadError(null);
-      const today = todayISO();
       const isManager = !!currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole);
       try {
-        const personal = await getComplianceScore(currentUser.id, 'personal', today, periodType);
+        const personal = await getComplianceScore(currentUser.id, 'personal', scope.refDate, scope.legacyPeriodType);
         setPersonalScore(personal);
         // Manager-facing hero gauge defaults to inherited (team) health; individual
         // contributors have no team to inherit from, so their hero is their personal score.
         const heroScope = isManager ? 'inherited' : 'personal';
         const hero = isManager
-          ? await getComplianceScore(currentUser.id, 'inherited', today, periodType)
+          ? await getComplianceScore(currentUser.id, 'inherited', scope.refDate, scope.legacyPeriodType)
           : personal;
         setHeroScore(hero);
 
         // Real trend: same scope, immediately preceding period. Never fabricated —
         // if the prior period has no eligible runs, the comparison stays null and
         // the UI shows "no data" rather than inventing a number.
-        const prevDate = getPreviousPeriodDateISO(periodType);
-        const prevHero = await getComplianceScore(currentUser.id, heroScope, prevDate, periodType);
+        const prevHero = await getComplianceScore(currentUser.id, heroScope, scope.previousRefDate, scope.legacyPeriodType);
         setPrevHeroScore(prevHero);
 
         if (isManager) {
-          const team = await getTeamScores(currentUser.id, today, periodType);
+          const team = await getTeamScores(currentUser.id, scope.refDate, scope.legacyPeriodType);
           setTeamData(team);
-          const analyticsData = await getFailureAnalytics(currentUser.id, today);
+          const analyticsData = await getFailureAnalytics(currentUser.id, scope.refDate);
           setAnalytics(analyticsData.mostMissedTasks ?? []);
 
           setIsFailuresLoading(true);
-          const range = getPeriodRange(periodType);
-          const failData = await getFailureList(range.start, range.end, 1, 50);
+          const failData = await getFailureList(scope.range.start, scope.range.end, 1, 50);
           setFailures(failData.items ?? []);
           setIsFailuresLoading(false);
         } else {
@@ -175,7 +139,7 @@ export function Dashboard() {
       setIsLoading(false);
     }
     loadStats();
-  }, [currentUser, periodType, retryToken]);
+  }, [currentUser, scope.periodType, scope.legacyPeriodType, scope.refDate, scope.previousRefDate, scope.range, retryToken]);
 
   const handleLoadDemo = async () => {
     setDemoLoading(true);
@@ -288,7 +252,7 @@ export function Dashboard() {
         subtitle={currentUser.systemRole === 'Pulse User'
           ? 'Your performance overview.'
           : 'High-level metrics and performance roll-ups.'}
-        action={<PeriodToggle value={periodType} onChange={setPeriodType} />}
+        action={<PeriodToggle value={scope.periodType as 'Day' | 'Week' | 'Month'} onChange={scope.setPeriodType} />}
       />
 
       {isLoading ? (
@@ -324,13 +288,13 @@ export function Dashboard() {
                 <div className="flex flex-col items-center justify-center gap-2 w-[180px] shrink-0">
                   <span className="font-mono text-2xl text-faint">—</span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-                    {`${periodType} KPI`}
+                    {`${scope.legacyPeriodType} KPI`}
                   </span>
                 </div>
               ) : HERO_VARIANT === 'arc' ? (
-                <Gauge value={heroPct} label={`${periodType} KPI`} segments={heroSegments} className="w-[180px] shrink-0" />
+                <Gauge value={heroPct} label={`${scope.legacyPeriodType} KPI`} segments={heroSegments} className="w-[180px] shrink-0" />
               ) : (
-                <Ledger value={heroPct} label={`${periodType} KPI`} segments={heroSegments} />
+                <Ledger value={heroPct} label={`${scope.legacyPeriodType} KPI`} segments={heroSegments} />
               )}
 
               <div className="flex flex-col justify-center gap-6 flex-1">
@@ -338,7 +302,7 @@ export function Dashboard() {
                   <h2 className="text-2xl font-bold text-text tracking-tight">Execution Health</h2>
                   <p className="text-sm text-mute mt-2 max-w-sm leading-relaxed">
                     Your overall performance rating based on {completedItems} completed tasks and team roll-ups for
-                    this {periodType.toLowerCase()}.
+                    this {scope.periodType.toLowerCase()}.
                   </p>
                   {heroEligible > 0 && (
                     <p className="text-[10px] font-mono uppercase tracking-wide text-faint mt-2">
@@ -426,7 +390,7 @@ export function Dashboard() {
                 <div>
                   <CardTitle className="text-base text-text">Execution by Group</CardTitle>
                   <CardDescription className="text-xs">
-                    Performance aggregated for the selected {periodType.toLowerCase()}.
+                    Performance aggregated for the selected {scope.periodType.toLowerCase()}.
                   </CardDescription>
                 </div>
                 <Calendar className="h-4 w-4 text-mute" />
@@ -493,7 +457,7 @@ export function Dashboard() {
             </Card>
           )}
 
-          {analytics.length > 0 && periodType === 'Day' && (
+          {analytics.length > 0 && scope.periodType === 'Day' && (
             <Card className="bg-slab border-rule">
               <CardHeader>
                 <CardTitle className="text-base text-text">Organization-wide Failure Points</CardTitle>
@@ -534,7 +498,7 @@ export function Dashboard() {
                   Active Failure Points
                 </SheetTitle>
                 <SheetDescription className="text-mute font-mono text-xs uppercase tracking-widest mt-0.5">
-                  Failed SOP runs in visible scope • {periodType}
+                  Failed SOP runs in visible scope • {scope.periodType}
                 </SheetDescription>
               </div>
               <StatusChip status="fail" className="ml-auto font-mono">

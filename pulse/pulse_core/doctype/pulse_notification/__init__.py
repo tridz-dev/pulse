@@ -1,0 +1,1 @@
+# Pulse Notification doctype

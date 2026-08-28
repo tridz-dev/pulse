@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/store/AuthContext';
+import { useToast } from '@/store/ToastContext';
 import { getOperationsOverview, getFailureList, getComplianceScore } from '@/services/operations';
+import {
+  updateCorrectiveAction,
+  escalateCorrectiveAction,
+  createCorrectiveActionForRun,
+  listCorrectiveActions,
+} from '@/services/correctiveActions';
+import { usePeriodScope } from '@/hooks/usePeriodScope';
 import type { TreeNode } from '@/services/operations';
 import type { FailureItem, ComplianceScoreResponse } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +16,23 @@ import { StatusChip } from '@/components/ui/status-chip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Ledger } from '@/components/ui/ledger';
-import { Network, Trophy } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Network, Trophy, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TreeRow, TreeRowGroup } from '@/components/ui/tree-row';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -17,32 +40,7 @@ import { scoreStatus } from '@/lib/score';
 import { PageShell, PageHeader } from '@/components/shared/page-shell';
 import { PeriodToggle } from '@/components/shared/period-toggle';
 import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; end: string } {
-  const today = new Date();
-  const formatStr = (d: Date) => d.toISOString().slice(0, 10);
-
-  if (periodType === 'Day') {
-    const s = formatStr(today);
-    return { start: s, end: s };
-  }
-  if (periodType === 'Week') {
-    const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const start = new Date(today);
-    start.setDate(diff);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return { start: formatStr(start), end: formatStr(end) };
-  }
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return { start: formatStr(start), end: formatStr(end) };
-}
+import { ImpactStrip } from '@/components/shared/impact-strip';
 
 function getOverdueDuration(dueAtString: string): string {
   if (!dueAtString) return 'Overdue';
@@ -62,7 +60,8 @@ function getOverdueDuration(dueAtString: string): string {
 export function Operations() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month'>('Day');
+  const { showToast } = useToast();
+  const scope = usePeriodScope();
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
   const [complianceScore, setComplianceScore] = useState<ComplianceScoreResponse | null>(null);
   const [failures, setFailures] = useState<FailureItem[]>([]);
@@ -70,11 +69,58 @@ export function Operations() {
   const [failuresTotal, setFailuresTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isFailuresLoading, setIsFailuresLoading] = useState(false);
-  
+
   // Sheet states for navigation fallbacks
   const [selectedFailure, setSelectedFailure] = useState<FailureItem | null>(null);
   const [selectedSopTitle, setSelectedSopTitle] = useState<string | null>(null);
   const [selectedSopFailures, setSelectedSopFailures] = useState<FailureItem[]>([]);
+
+  // Action menu dialog states
+  const [actionMenuFailure, setActionMenuFailure] = useState<FailureItem | null>(null);
+  const [waiveDialogOpen, setWaiveDialogOpen] = useState(false);
+  const [waiveReason, setWaiveReason] = useState('');
+  const [waiveImpactCount, setWaiveImpactCount] = useState<number>(0);
+  const [deferDialogOpen, setDeferDialogOpen] = useState(false);
+  const [deferDate, setDeferDate] = useState('');
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [reassignEmployeeId, setReassignEmployeeId] = useState('');
+  const [escalateDialogOpen, setEscalateDialogOpen] = useState(false);
+  const [isActionProcessing, setIsActionProcessing] = useState(false);
+
+  // Refetch failures list after an action succeeds
+  const refetchFailures = async () => {
+    setIsFailuresLoading(true);
+    try {
+      let allFailures: FailureItem[] = [];
+      let currentPage = 1;
+      let total = 0;
+      const pageSize = 100;
+      do {
+        const failRes = await getFailureList(scope.range.start, scope.range.end, currentPage, pageSize);
+        if (failRes && failRes.items) {
+          allFailures = [...allFailures, ...failRes.items];
+          total = failRes.total;
+        } else {
+          break;
+        }
+        currentPage++;
+      } while (allFailures.length < total && allFailures.length < 500);
+
+      const isTruncated = allFailures.length < total;
+      setFailures(allFailures);
+      setFailuresTruncated(isTruncated);
+      setFailuresTotal(total);
+    } catch (error) {
+      console.error('Failed to refetch failures', error);
+      showToast({
+        variant: 'fail',
+        title: 'Refetch Failed',
+        description: 'Could not reload failures list',
+      });
+    } finally {
+      setIsFailuresLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchOperations() {
@@ -84,15 +130,13 @@ export function Operations() {
       }
       setIsLoading(true);
       setIsFailuresLoading(true);
-      const today = todayISO();
-      const range = getPeriodRange(periodType);
 
       try {
         const [overviewRes, scoreRes] = await Promise.all([
-          getOperationsOverview(currentUser.id, today, periodType),
-          getComplianceScore(currentUser.id, 'inherited', today, periodType)
+          getOperationsOverview(currentUser.id, scope.refDate, scope.legacyPeriodType),
+          getComplianceScore(currentUser.id, 'inherited', scope.refDate, scope.legacyPeriodType)
         ]);
-        
+
         setTreeData(overviewRes);
         setComplianceScore(scoreRes);
 
@@ -101,7 +145,7 @@ export function Operations() {
         let total = 0;
         const pageSize = 100;
         do {
-          const failRes = await getFailureList(range.start, range.end, currentPage, pageSize);
+          const failRes = await getFailureList(scope.range.start, scope.range.end, currentPage, pageSize);
           if (failRes && failRes.items) {
             allFailures = [...allFailures, ...failRes.items];
             total = failRes.total;
@@ -123,7 +167,230 @@ export function Operations() {
       }
     }
     fetchOperations();
-  }, [currentUser, periodType]);
+  }, [currentUser, scope.legacyPeriodType, scope.refDate, scope.range]);
+
+  // Action handlers
+  const handleAcknowledge = async (failure: FailureItem) => {
+    if (!failure.corrective_action) {
+      setIsActionProcessing(true);
+      try {
+        await createCorrectiveActionForRun(failure.run, 'Acknowledged');
+        showToast({
+          variant: 'pass',
+          title: 'Success',
+          description: 'Corrective action created and acknowledged.',
+        });
+        await refetchFailures();
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Failed to acknowledge';
+        showToast({
+          variant: 'fail',
+          title: 'Error',
+          description: msg,
+        });
+      } finally {
+        setIsActionProcessing(false);
+        setActionMenuFailure(null);
+      }
+    }
+  };
+
+  const handleWaive = async (failure: FailureItem) => {
+    setActionMenuFailure(failure);
+    setWaiveReason('');
+
+    // Fetch open corrective actions count for this employee
+    try {
+      const caList = await listCorrectiveActions('Open', failure.person.employee, 1, 1000);
+      setWaiveImpactCount(caList.total);
+    } catch (error) {
+      console.error('Failed to fetch open corrective actions count', error);
+      setWaiveImpactCount(0);
+    }
+
+    setWaiveDialogOpen(true);
+  };
+
+  const submitWaive = async () => {
+    if (!actionMenuFailure || !waiveReason.trim()) {
+      showToast({
+        variant: 'fail',
+        title: 'Validation Error',
+        description: 'Waive reason is required.',
+      });
+      return;
+    }
+
+    setIsActionProcessing(true);
+    try {
+      if (!actionMenuFailure.corrective_action) {
+        // Create CA first, then immediately waive it
+        const caName = await createCorrectiveActionForRun(
+          actionMenuFailure.run,
+          'Waived: ' + waiveReason
+        );
+        await updateCorrectiveAction(caName, {
+          status: 'Waived',
+          waive_reason: waiveReason,
+        });
+      } else {
+        // Update existing CA to Waived
+        await updateCorrectiveAction(actionMenuFailure.corrective_action, {
+          status: 'Waived',
+          waive_reason: waiveReason,
+        });
+      }
+
+      showToast({
+        variant: 'pass',
+        title: 'Success',
+        description: 'Corrective action waived.',
+      });
+      await refetchFailures();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to waive';
+      showToast({
+        variant: 'fail',
+        title: 'Error',
+        description: msg,
+      });
+    } finally {
+      setIsActionProcessing(false);
+      setWaiveDialogOpen(false);
+      setWaiveReason('');
+      setActionMenuFailure(null);
+    }
+  };
+
+  const handleEscalate = async (failure: FailureItem) => {
+    setActionMenuFailure(failure);
+    setEscalateDialogOpen(true);
+  };
+
+  const submitEscalate = async () => {
+    if (!actionMenuFailure) return;
+
+    setIsActionProcessing(true);
+    try {
+      await escalateCorrectiveAction(
+        actionMenuFailure.run,
+        actionMenuFailure.corrective_action || undefined
+      );
+      showToast({
+        variant: 'pass',
+        title: 'Success',
+        description: 'Corrective action escalated.',
+      });
+      await refetchFailures();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to escalate';
+      showToast({
+        variant: 'fail',
+        title: 'Error',
+        description: msg,
+      });
+    } finally {
+      setIsActionProcessing(false);
+      setEscalateDialogOpen(false);
+      setActionMenuFailure(null);
+    }
+  };
+
+  const handleDefer = async (failure: FailureItem) => {
+    setActionMenuFailure(failure);
+    setDeferDate('');
+    setDeferDialogOpen(true);
+  };
+
+  const submitDefer = async () => {
+    if (!actionMenuFailure || !deferDate.trim() || !actionMenuFailure.corrective_action) {
+      showToast({
+        variant: 'fail',
+        title: 'Validation Error',
+        description: 'A date and existing corrective action are required.',
+      });
+      return;
+    }
+
+    setIsActionProcessing(true);
+    try {
+      await updateCorrectiveAction(actionMenuFailure.corrective_action, {
+        defer_until: deferDate,
+      });
+      showToast({
+        variant: 'pass',
+        title: 'Success',
+        description: 'Corrective action snoozed.',
+      });
+      await refetchFailures();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to snooze';
+      showToast({
+        variant: 'fail',
+        title: 'Error',
+        description: msg,
+      });
+    } finally {
+      setIsActionProcessing(false);
+      setDeferDialogOpen(false);
+      setDeferDate('');
+      setActionMenuFailure(null);
+    }
+  };
+
+  const handleReassign = async (failure: FailureItem) => {
+    setActionMenuFailure(failure);
+    setReassignEmployeeId('');
+    setReassignDialogOpen(true);
+  };
+
+  const submitReassign = async () => {
+    if (!actionMenuFailure || !reassignEmployeeId.trim()) {
+      showToast({
+        variant: 'fail',
+        title: 'Validation Error',
+        description: 'Employee ID is required.',
+      });
+      return;
+    }
+
+    setIsActionProcessing(true);
+    try {
+      if (!actionMenuFailure.corrective_action) {
+        // Create CA with specified assignee
+        await createCorrectiveActionForRun(
+          actionMenuFailure.run,
+          'Assigned',
+          'Medium',
+          reassignEmployeeId
+        );
+      } else {
+        // Update existing CA with new assignee
+        await updateCorrectiveAction(actionMenuFailure.corrective_action, {
+          assigned_to: reassignEmployeeId,
+        });
+      }
+
+      showToast({
+        variant: 'pass',
+        title: 'Success',
+        description: 'Corrective action reassigned.',
+      });
+      await refetchFailures();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to reassign';
+      showToast({
+        variant: 'fail',
+        title: 'Error',
+        description: msg,
+      });
+    } finally {
+      setIsActionProcessing(false);
+      setReassignDialogOpen(false);
+      setReassignEmployeeId('');
+      setActionMenuFailure(null);
+    }
+  };
 
   if (!currentUser || ['Pulse User', 'Pulse Manager'].includes(currentUser.systemRole ?? '')) {
     return (
@@ -221,8 +488,8 @@ export function Operations() {
         subtitle="Hierarchical roll-up of organizational execution."
         action={
           <PeriodToggle
-            value={periodType}
-            onChange={setPeriodType}
+            value={scope.periodType === 'Custom' ? 'Day' : scope.periodType}
+            onChange={scope.setPeriodType}
           />
         }
       />
@@ -345,15 +612,108 @@ export function Operations() {
                             Due: {new Date(f.due_at.replace(' ', 'T')).toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <StatusChip status="fail" className="text-[10px] uppercase font-mono">
-                            {getOverdueDuration(f.due_at)}
-                          </StatusChip>
-                          {f.repeatCount > 1 && (
-                            <StatusChip status="risk" className="text-[10px] uppercase font-mono">
-                              {f.repeatCount}x repeat fail
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex flex-col items-end gap-1.5">
+                            <StatusChip status="fail" className="text-[10px] uppercase font-mono">
+                              {getOverdueDuration(f.due_at)}
                             </StatusChip>
-                          )}
+                            {f.repeatCount > 1 && (
+                              <StatusChip status="risk" className="text-[10px] uppercase font-mono">
+                                {f.repeatCount}x repeat fail
+                              </StatusChip>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              className="h-8 w-8 p-0 text-mute hover:text-text hover:bg-slab-2 rounded-[var(--radius)] transition-colors outline-none flex items-center justify-center"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Actions"
+                              aria-label="Actions"
+                            >
+                              <MoreVertical size={16} />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              {!f.has_corrective_action ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAcknowledge(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Acknowledge
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReassign(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Assign to…
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEscalate(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Escalate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleWaive(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Waive…
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReassign(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Reassign…
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleWaive(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Waive…
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEscalate(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Escalate
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDefer(f);
+                                    }}
+                                    disabled={isActionProcessing}
+                                  >
+                                    Snooze until…
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     ))}
@@ -420,7 +780,7 @@ export function Operations() {
               title={
                 <span className="flex items-center gap-2">
                   <Trophy size={16} className="text-mute" />
-                  Organization Health ({periodType})
+                  Organization Health ({scope.periodType})
                 </span>
               }
               meta="Click a row to drill down · use +/− to expand"
@@ -565,6 +925,157 @@ export function Operations() {
           </SheetContent>
         </Sheet>
       )}
+
+      {/* Waive Dialog */}
+      <Dialog open={waiveDialogOpen} onOpenChange={setWaiveDialogOpen}>
+        <DialogContent className="bg-slab border-rule sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-text">Waive Corrective Action</DialogTitle>
+            <DialogDescription className="text-mute">
+              Provide a reason for waiving this corrective action.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <textarea
+              className="flex min-h-[100px] w-full rounded-[var(--radius)] border border-rule bg-slab px-3 py-2 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-sel focus:border-transparent"
+              placeholder="Reason for waiving..."
+              value={waiveReason}
+              onChange={(e) => setWaiveReason(e.target.value)}
+              disabled={isActionProcessing}
+            />
+            <ImpactStrip
+              impactCount={waiveImpactCount}
+              impactLabel="Open items"
+              deltaDisplay={Math.max(0, waiveImpactCount - 1)}
+              deltaLabel="After waiving"
+              message="Waiving does not change the Failed result or this period's score — it only marks the follow-up as not requiring further action."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setWaiveDialogOpen(false)}
+              disabled={isActionProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitWaive}
+              disabled={!waiveReason.trim() || isActionProcessing}
+            >
+              Waive
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Defer/Snooze Dialog */}
+      <Dialog open={deferDialogOpen} onOpenChange={setDeferDialogOpen}>
+        <DialogContent className="bg-slab border-rule sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-text">Snooze Until</DialogTitle>
+            <DialogDescription className="text-mute">
+              Choose a date when this corrective action should reappear.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <Input
+              type="datetime-local"
+              value={deferDate}
+              onChange={(e) => setDeferDate(e.target.value)}
+              disabled={isActionProcessing}
+              className="border-rule text-text"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeferDialogOpen(false)}
+              disabled={isActionProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitDefer}
+              disabled={!deferDate.trim() || isActionProcessing}
+            >
+              Snooze
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reassign Dialog */}
+      <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
+        <DialogContent className="bg-slab border-rule sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-text">Reassign Corrective Action</DialogTitle>
+            <DialogDescription className="text-mute">
+              Enter the employee ID to assign this corrective action to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <Input
+              type="text"
+              placeholder="Employee ID"
+              value={reassignEmployeeId}
+              onChange={(e) => setReassignEmployeeId(e.target.value)}
+              disabled={isActionProcessing}
+              className="border-rule text-text"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setReassignDialogOpen(false)}
+              disabled={isActionProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitReassign}
+              disabled={!reassignEmployeeId.trim() || isActionProcessing}
+            >
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Escalate Dialog */}
+      <Dialog open={escalateDialogOpen} onOpenChange={setEscalateDialogOpen}>
+        <DialogContent className="bg-slab border-rule sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-text">Escalate Corrective Action</DialogTitle>
+            <DialogDescription className="text-mute">
+              Escalate this corrective action to the employee's manager.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <ImpactStrip
+              impactCount={1}
+              impactLabel="Workload impact"
+              deltaDisplay="↑ 1"
+              message="This will assign a corrective action to this employee's manager."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEscalateDialogOpen(false)}
+              disabled={isActionProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitEscalate}
+              disabled={isActionProcessing}
+            >
+              Escalate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

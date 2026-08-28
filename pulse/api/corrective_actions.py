@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import now_datetime
 
 from pulse.api.permissions import get_scope_for_user, _get_employee_for_user
+from pulse.domain.escalation import resolve_escalation_target
 
 
 def _check_corrective_action_write_permission():
@@ -167,6 +168,8 @@ def update_corrective_action(
 	status: str | None = None,
 	resolution: str | None = None,
 	assigned_to: str | None = None,
+	waive_reason: str | None = None,
+	defer_until: str | None = None,
 ) -> dict:
 	"""Update an existing Corrective Action.
 
@@ -175,13 +178,20 @@ def update_corrective_action(
 
 	If status is being set to "Resolved" or "Closed", the resolved_at timestamp
 	is automatically set to the current time if not already set. Resolution text
-	is required when marking a CA as resolved or closed.
+	is required when marking a CA as resolved or closed. If status is being set
+	to "Waived", waive_reason is required instead; resolved_at is intentionally
+	left untouched, since waiving is a distinct disposition from resolving (the
+	underlying problem was not fixed, management just decided not to chase it).
 
 	Args:
 		name: Name of the Corrective Action to update.
-		status: Optional new status (Open, In Progress, Resolved, Closed).
+		status: Optional new status (Open, In Progress, Resolved, Closed, Waived).
 		resolution: Optional resolution text (required if status is Resolved/Closed).
 		assigned_to: Optional new assigned_to employee.
+		waive_reason: Optional waive reason text (required if status is Waived).
+		defer_until: Optional datetime string to set ca.defer_until. Independent of
+			status - can be combined with any other update, or passed alone with
+			no status change at all.
 
 	Returns:
 		{
@@ -190,12 +200,15 @@ def update_corrective_action(
 			"resolution": <resolution>,
 			"resolvedAt": <datetime or null>,
 			"assignedTo": <employee id>,
+			"waiveReason": <waive reason or null>,
+			"deferUntil": <datetime or null>,
 		}
 
 	Raises:
 		frappe.PermissionError: If caller lacks write permission or scope.
 		frappe.DoesNotExistError: If the CA does not exist.
-		frappe.ValidationError: If validation fails (e.g., resolution required for resolved status).
+		frappe.ValidationError: If validation fails (e.g., resolution required for resolved status,
+			waive_reason required for Waived status).
 	"""
 	_check_corrective_action_write_permission()
 
@@ -220,7 +233,7 @@ def update_corrective_action(
 
 	# Update status if provided
 	if status is not None:
-		valid_statuses = ["Open", "In Progress", "Resolved", "Closed"]
+		valid_statuses = ["Open", "In Progress", "Resolved", "Closed", "Waived"]
 		if status not in valid_statuses:
 			frappe.throw(
 				_("Status must be one of {0}. Got '{1}'.").format(
@@ -239,6 +252,15 @@ def update_corrective_action(
 			ca.resolution = resolution
 			if not ca.resolved_at:
 				ca.resolved_at = now_datetime()
+		elif status == "Waived":
+			if not waive_reason:
+				frappe.throw(
+					_("Waive reason is required when marking a Corrective Action as 'Waived'."),
+				)
+			ca.waive_reason = waive_reason
+			# Deliberately do NOT touch ca.resolved_at here: waiving is not resolving.
+			# Resolved/resolved_at implies the underlying problem got fixed; Waived
+			# means management decided not to chase it despite the failure standing.
 
 	# Update resolution if provided (without changing status)
 	elif resolution is not None:
@@ -252,10 +274,72 @@ def update_corrective_action(
 				_("Assigned employee '{0}' does not exist or is inactive.").format(assigned_to),
 				frappe.DoesNotExistError,
 			)
+		# Verify the assignee is within the caller's scope — a manager may only
+		# reassign to someone they can already see, not to an arbitrary employee
+		# elsewhere in the org.
+		if assigned_to not in scope:
+			frappe.throw(
+				_("Not permitted. Employee '{0}' is outside your scope.").format(assigned_to),
+				frappe.PermissionError,
+			)
 		ca.assigned_to = assigned_to
+
+	# Update defer_until if provided, independent of status changes
+	if defer_until is not None:
+		ca.defer_until = defer_until
 
 	# Save the updated CA
 	ca.save(ignore_permissions=True)
+
+	# T4 — Notify raised_by employee if CA was just marked Resolved or Closed
+	if status is not None and status in ("Resolved", "Closed"):
+		try:
+			# Fetch run's template title
+			run_template_title = frappe.db.get_value(
+				"SOP Run",
+				ca.run,
+				"template_title_snapshot",
+			)
+
+			# Get assigned_to employee's name
+			assigned_to_name = _employee_name_for_link(ca.assigned_to)
+
+			# Resolve raised_by employee's user and email
+			raised_by_user = frappe.db.get_value(
+				"Pulse Employee",
+				ca.raised_by,
+				"user",
+			)
+			raised_by_email = None
+			if raised_by_user:
+				raised_by_email = frappe.db.get_value("User", raised_by_user, "email")
+
+			# Create in-app notification for raised_by
+			frappe.get_doc({
+				"doctype": "Pulse Notification",
+				"recipient": ca.raised_by,
+				"kind": "CA Resolved",
+				"title": f"Corrective action on {run_template_title} — {ca.status}.",
+				"reference_doctype": "Corrective Action",
+				"reference_name": ca.name,
+			}).insert(ignore_permissions=True)
+
+			# Send email to raised_by if email found
+			if raised_by_email:
+				frappe.sendmail(
+					recipients=[raised_by_email],
+					subject=f"Resolved: corrective action on {run_template_title}",
+					message=f"{assigned_to_name} marked the corrective action on run {ca.run} as {ca.status}.",
+				)
+			else:
+				frappe.logger("corrective_actions").warning(
+					f"Could not resolve email for raised_by {ca.raised_by} on corrective action {ca.name}"
+				)
+		except Exception as e:
+			# Log notification failure but do not crash the operation
+			frappe.logger("corrective_actions").error(
+				f"Notification insert/send failed for corrective action {ca.name}: {str(e)}"
+			)
 
 	return {
 		"name": ca.name,
@@ -263,4 +347,135 @@ def update_corrective_action(
 		"resolution": ca.resolution,
 		"resolvedAt": ca.resolved_at,
 		"assignedTo": ca.assigned_to,
+		"waiveReason": ca.waive_reason,
+		"deferUntil": ca.defer_until,
+	}
+
+
+@frappe.whitelist()
+def escalate_corrective_action(run_name: str, existing_ca: str | None = None) -> dict:
+	"""Escalate a failed run: create or re-assign its CA to the employee's
+	escalation target (resolve_escalation_target), and flag ca.escalated = 1.
+
+	Args:
+		run_name: SOP Run name (must be Failed, same validation as
+			create_corrective_action_for_run).
+		existing_ca: If the run already has a CA, its name — re-assigns and
+			flags that CA instead of creating a second one for the same run.
+
+	Returns:
+		{
+			"name": <CA name>,
+			"assignedTo": <employee id>,
+			"assignedToName": <employee_name>,
+			"escalated": true,
+		}
+
+	Raises:
+		frappe.PermissionError / frappe.DoesNotExistError / frappe.ValidationError,
+		same conditions as create_corrective_action_for_run, plus:
+		frappe.ValidationError if resolve_escalation_target(employee) returns None
+		(no manager to escalate to).
+	"""
+	_check_corrective_action_write_permission()
+
+	if not run_name:
+		frappe.throw(_("SOP Run name is required."))
+
+	# Verify the run exists and is failed (same validation as create_corrective_action_for_run)
+	run_row = frappe.db.get_value(
+		"SOP Run",
+		run_name,
+		["name", "employee", "compliance_result"],
+		as_dict=True,
+	)
+	if not run_row:
+		frappe.throw(
+			_("SOP Run '{0}' does not exist.").format(run_name),
+			frappe.DoesNotExistError,
+		)
+	if run_row["compliance_result"] != "Failed":
+		frappe.throw(
+			_(
+				"Corrective action can only be created for failed SOP runs. Run '{0}' has "
+				"compliance result '{1}'."
+			).format(run_name, run_row["compliance_result"]),
+		)
+
+	# Verify the caller has permission to create work for this employee (scope check)
+	failed_employee = run_row["employee"]
+	scope = get_scope_for_user(frappe.session.user)
+	if failed_employee not in scope:
+		frappe.throw(
+			_(
+				"Not permitted. Employee '{0}' (from run '{1}') is outside your scope."
+			).format(failed_employee, run_name),
+			frappe.PermissionError,
+		)
+
+	# Resolve the escalation target for this employee
+	assigned_to = resolve_escalation_target(failed_employee)
+	if not assigned_to:
+		frappe.throw(
+			_(
+				"Cannot escalate corrective action: employee '{0}' has no active manager "
+				"or escalation target."
+			).format(failed_employee),
+			frappe.ValidationError,
+		)
+
+	# Handle existing_ca case: update the existing CA
+	if existing_ca:
+		ca = frappe.get_doc("Corrective Action", existing_ca)
+		if not ca:
+			frappe.throw(
+				_("Corrective Action '{0}' does not exist.").format(existing_ca),
+				frappe.DoesNotExistError,
+			)
+
+		# Verify the CA is actually linked to this run
+		if ca.run != run_name:
+			frappe.throw(
+				_(
+					"Corrective Action '{0}' is not linked to run '{1}'. "
+					"It belongs to run '{2}'."
+				).format(existing_ca, run_name, ca.run),
+				frappe.ValidationError,
+			)
+
+		# Update the CA with escalation target and flag
+		ca.assigned_to = assigned_to
+		ca.escalated = 1
+		ca.save(ignore_permissions=True)
+	else:
+		# Create a new CA with escalation target and flag
+		raised_by = _get_employee_for_user(frappe.session.user)
+		if not raised_by:
+			frappe.throw(
+				_("Current user is not linked to a Pulse Employee. Cannot raise corrective action."),
+			)
+
+		doc = frappe.get_doc(
+			{
+				"doctype": "Corrective Action",
+				"run": run_name,
+				"description": _("Escalation: {0}").format(run_name),
+				"status": "Open",
+				"assigned_to": assigned_to,
+				"raised_by": raised_by,
+				"priority": "Medium",
+				"escalated": 1,
+			}
+		)
+		doc.insert(ignore_permissions=True)
+		ca = doc
+
+	# Get the resolved employee name for the response
+	assigned_to_name = _employee_name_for_link(ca.assigned_to)
+
+	return {
+		"name": ca.name,
+		"assignedTo": ca.assigned_to,
+		"assignedToName": assigned_to_name,
+		"escalated": True,
 	}
