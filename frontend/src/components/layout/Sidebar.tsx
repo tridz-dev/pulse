@@ -9,7 +9,8 @@ import {
     Search,
     LogOut,
     FileText,
-    BarChart3
+    BarChart3,
+    AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -52,6 +53,7 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
         { name: 'My Tasks', path: '/tasks', icon: CheckSquare },
         { name: 'Team', path: '/team', icon: Users, hideFor: ['Pulse User'] },
         { name: 'Operations', path: '/operations', icon: Network, hideFor: ['Pulse User', 'Pulse Manager'] },
+        { name: 'Corrective Actions', path: '/corrective-actions', icon: AlertCircle, hideFor: ['Pulse User'] },
         { name: 'Insights', path: '/insights', icon: BarChart3, hideFor: ['Pulse User', 'Pulse Manager'] },
         { name: 'SOP Templates', path: '/templates', icon: FileText, hideFor: ['Pulse User'] },
     ];

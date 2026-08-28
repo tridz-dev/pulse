@@ -14,6 +14,8 @@ import {
   getMostMissedItems,
   getEmployeesByDepartment,
   getEmployeesByBranch,
+  getInsightDepartments,
+  getInsightBranches,
 } from '@/services/insights';
 import type {
   ScoreTrendPoint,
@@ -29,9 +31,9 @@ import type {
   FilteredEmployeeScore,
 } from '@/services/insights';
 import {
-  InsightsFiltersBar,
   rangeFromPreset,
   type DateRangeValue,
+  type DateRangePreset,
 } from '@/components/insights/InsightsFilters';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +45,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BarChart3, TrendingUp, AlertTriangle } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { BarChart3, TrendingUp, AlertTriangle, ChevronDown, X } from 'lucide-react';
 import { TableEmptyState } from '@/components/ui/table-states';
 import {
   LineChart,
@@ -241,6 +251,49 @@ export function Insights() {
     setDrillLabel(null);
   };
 
+  // Departments and branches helpers
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [branches, setBranches] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadDepts = async () => {
+      try {
+        const depts = await getInsightDepartments();
+        setDepartments(depts || []);
+      } catch (e) {
+        console.error('Failed to load departments', e);
+      }
+    };
+    const loadBranches = async () => {
+      try {
+        const brnchs = await getInsightBranches();
+        setBranches(brnchs || []);
+      } catch (e) {
+        console.error('Failed to load branches', e);
+      }
+    };
+    loadDepts();
+    loadBranches();
+  }, []);
+
+  const selectedDepts = Array.isArray(filters.department) ? filters.department : filters.department ? [filters.department] : [];
+  const selectedBranches = Array.isArray(filters.branch) ? filters.branch : filters.branch ? [filters.branch] : [];
+
+  const toggleDepartment = (name: string) => {
+    const next = selectedDepts.includes(name) ? selectedDepts.filter((d) => d !== name) : [...selectedDepts, name];
+    setFilters({ ...filters, department: next.length ? next : undefined });
+  };
+
+  const toggleBranch = (name: string) => {
+    const next = selectedBranches.includes(name) ? selectedBranches.filter((b) => b !== name) : [...selectedBranches, name];
+    setFilters({ ...filters, branch: next.length ? next : undefined });
+  };
+
+  const clearAllFilters = () => {
+    setFilters({});
+    setDateRange(rangeFromPreset('90d'));
+  };
+
   if (!currentUser) return null;
 
   if (!showInsights) {
@@ -281,29 +334,143 @@ export function Insights() {
         subtitle="Organizational analytics and performance trends."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <PeriodToggle
-              value={periodType === 'Custom' ? 'Day' : (periodType as 'Day' | 'Week' | 'Month')}
-              onChange={(p) => setPeriodType(p)}
-            />
+            {periodType !== 'Custom' && (
+              <PeriodToggle
+                value={periodType as 'Day' | 'Week' | 'Month'}
+                onChange={(p) => setPeriodType(p)}
+              />
+            )}
             {periodType === 'Custom' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPeriodType('Day')}
-                className="h-8 px-3 text-xs font-medium"
-              >
-                Clear Custom
-              </Button>
+              <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium bg-slab-2 border border-rule rounded-[var(--radius)] text-mute">
+                <span>Custom date range active</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPeriodType('Day')}
+                  className="h-6 px-2 text-xs font-medium ml-1"
+                >
+                  Clear
+                </Button>
+              </div>
             )}
           </div>
         }
       />
-      <InsightsFiltersBar
-        filters={filters}
-        dateRange={dateRange}
-        onFiltersChange={setFilters}
-        onDateRangeChange={setDateRange}
-      />
+      {/* Custom date range and filter controls with Demo data separated visually */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Date range presets (without Demo data) */}
+        <div className="flex gap-1 rounded-[var(--radius)] border border-rule bg-slab-2 p-1">
+          {[
+            { id: '7d' as DateRangePreset, label: 'Last 7 days' },
+            { id: '30d' as DateRangePreset, label: 'Last 30 days' },
+            { id: '90d' as DateRangePreset, label: 'Last 90 days' },
+            { id: 'month' as DateRangePreset, label: 'This month' },
+          ].map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setDateRange(rangeFromPreset(id))}
+              className={cn(
+                'rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium transition-colors',
+                dateRange.preset === id
+                  ? 'bg-slab text-text'
+                  : 'text-mute hover:bg-slab hover:text-text'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Visual divider */}
+        <div className="w-px h-6 bg-rule opacity-30" />
+
+        {/* Demo data (data-source switch, visually separated) */}
+        <button
+          type="button"
+          onClick={() => setDateRange(rangeFromPreset('demo'))}
+          className={cn(
+            'rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium transition-colors border border-rule',
+            dateRange.preset === 'demo'
+              ? 'bg-slab text-text'
+              : 'text-mute hover:bg-slab hover:text-text'
+          )}
+        >
+          Demo data
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Department dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="inline-flex items-center h-8 px-3 text-sm rounded-[var(--radius)] border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
+          >
+            Department {selectedDepts.length > 0 ? `(${selectedDepts.length})` : ''}
+            <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Filter by department</DropdownMenuLabel>
+              {departments.map((d) => (
+                <DropdownMenuCheckboxItem
+                  key={d}
+                  checked={selectedDepts.includes(d)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={() => toggleDepartment(d)}
+                >
+                  {d}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {departments.length === 0 && (
+                <div className="px-2 py-4 text-center text-xs text-faint">No departments</div>
+              )}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Branch dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="inline-flex items-center h-8 px-3 text-sm rounded-[var(--radius)] border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
+          >
+            Branch {selectedBranches.length > 0 ? `(${selectedBranches.length})` : ''}
+            <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Filter by branch</DropdownMenuLabel>
+              {branches.map((b) => (
+                <DropdownMenuCheckboxItem
+                  key={b}
+                  checked={selectedBranches.includes(b)}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={() => toggleBranch(b)}
+                >
+                  {b}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {branches.length === 0 && (
+                <div className="px-2 py-4 text-center text-xs text-faint">No branches</div>
+              )}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Clear filters button */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="h-8 gap-1 text-mute hover:text-text"
+          >
+            <X className="h-3.5 w-3.5" />
+            Clear filters
+          </Button>
+        )}
+      </div>
 
       {filteredEmployees.length > 0 && (
         <Card className="bg-slab border-rule">

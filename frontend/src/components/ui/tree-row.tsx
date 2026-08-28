@@ -21,8 +21,9 @@ const treeRowVariants = cva(
 )
 
 interface TreeRowProps extends Omit<React.ComponentPropsWithoutRef<"button">, "name"> {
-  /** Nesting level: 0 (default, top-level) or 1 (nested under parent). Level 1 renders an indent rail. */
-  level?: 0 | 1
+  /** Nesting level: 0 (top-level) or any positive integer for deeper descendants.
+   *  Renders one indent rail per level, so depth scales visually instead of clamping at 1. */
+  level?: number
   /** Row name/label — required. */
   name: React.ReactNode
   /** Optional small mono badge (e.g., "3 SOPs") positioned after the name. */
@@ -35,8 +36,15 @@ interface TreeRowProps extends Omit<React.ComponentPropsWithoutRef<"button">, "n
   meter?: { value: number; className: string }[]
   /** If true, row is expandable; renders +/− toggle glyph. If false/omitted, renders as leaf. */
   expanded?: boolean
-  /** Callback when toggle is clicked (only used if expanded is defined). */
+  /** Callback when the +/− toggle glyph is clicked (only used if expanded is defined).
+   *  When `onDrillDown` is also provided, the toggle glyph becomes its own click zone so this
+   *  fires only from the glyph, not from clicking anywhere else on the row. */
   onToggle?: () => void
+  /** Optional callback for drilling into a row's detail view. When provided alongside `expanded`,
+   *  the row is split into two independent click zones: the +/− glyph (calls `onToggle`) and the
+   *  rest of the row (calls `onDrillDown`). Omit it to keep the legacy behavior where clicking
+   *  anywhere on an expandable row just toggles it. */
+  onDrillDown?: () => void
   /** If true, render a pulsing skeleton instead of content. */
   loading?: boolean
   /** Custom CSS class for the row. */
@@ -51,17 +59,42 @@ function TreeRow({
   meter,
   expanded,
   onToggle,
+  onDrillDown,
   loading,
   className,
+  onClick,
   ...props
 }: TreeRowProps) {
   // Determine if this is an interactive row (expandable) and if it's empty (null score, no toggle)
   const isInteractive = expanded !== undefined
   const isEmpty = score === null
   const isLeaf = !isInteractive
+  // Once a separate drill-down callback exists, the toggle glyph becomes its own click zone
+  // and must not also fire from a click on the rest of the row.
+  const hasSplitZones = isInteractive && !!onDrillDown
 
   // Score color logic: < 50 = fail, >= 80 = pass, else default
   const scoreColor = score === null ? "text-faint" : score < 50 ? "text-fail" : score >= 80 ? "text-pass" : "text-text"
+
+  // Row-level click: drill down when available, otherwise fall back to the legacy
+  // toggle-on-click behavior, otherwise whatever onClick the caller passed in (leaf rows).
+  const handleRowClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+    if (loading) return
+    if (isInteractive) {
+      if (hasSplitZones) {
+        onDrillDown?.()
+      } else {
+        onToggle?.()
+      }
+      return
+    }
+    onClick?.(e)
+  }
+
+  const handleToggleClick: React.MouseEventHandler<HTMLSpanElement> = (e) => {
+    e.stopPropagation()
+    onToggle?.()
+  }
 
   return (
     <button
@@ -73,21 +106,46 @@ function TreeRow({
         treeRowVariants({ interactive: isInteractive, empty: isLeaf && isEmpty }),
         className
       )}
-      onClick={isInteractive ? onToggle : undefined}
+      onClick={handleRowClick}
       disabled={loading}
       {...props}
     >
       {/* Name column: toggle glyph + indent rail + name + tag */}
       <div className="flex min-w-0 items-center gap-2">
-        {/* Toggle glyph (+/−) — only shown if expandable */}
+        {/* Toggle glyph (+/−) — only shown if expandable. Becomes its own click zone (via
+            role="button" + stopPropagation) once `onDrillDown` is provided, so toggling and
+            drilling down are unambiguous, independently discoverable actions. */}
         {isInteractive && (
-          <span className="font-mono text-xs font-medium text-faint" aria-hidden="true">
+          <span
+            role={hasSplitZones ? "button" : undefined}
+            tabIndex={hasSplitZones ? 0 : undefined}
+            onClick={hasSplitZones ? handleToggleClick : undefined}
+            onKeyDown={
+              hasSplitZones
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      handleToggleClick(e as unknown as React.MouseEvent<HTMLSpanElement>)
+                    }
+                  }
+                : undefined
+            }
+            className={cn(
+              "font-mono text-xs font-medium text-faint",
+              hasSplitZones && "cursor-pointer px-1 -mx-1 hover:text-text"
+            )}
+            aria-hidden={hasSplitZones ? undefined : true}
+            aria-label={hasSplitZones ? (expanded ? "Collapse" : "Expand") : undefined}
+          >
             {expanded ? "−" : "+"}
           </span>
         )}
 
-        {/* Indent rail (13px wide) — only shown at level 1 */}
-        {level === 1 && <div className="h-7 w-[13px] flex-none border-l border-rule-2" />}
+        {/* Indent rails (13px wide each) — one per nesting level, so depth beyond 1 keeps
+            rendering a visually distinct, scaling indent instead of clamping. */}
+        {Array.from({ length: Math.max(level, 0) }).map((_, i) => (
+          <div key={i} className="h-7 w-[13px] flex-none border-l border-rule-2" />
+        ))}
 
         {/* Name text */}
         {loading ? (

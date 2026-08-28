@@ -9,6 +9,7 @@ import { Team } from './pages/Team';
 import { Operations } from './pages/Operations';
 import { Templates } from './pages/Templates';
 import { Insights } from './pages/Insights';
+import { CorrectiveActions } from './pages/CorrectiveActions';
 import { UserProfile } from './pages/UserProfile';
 import { DesignGallery } from './pages/DesignGallery';
 
@@ -26,6 +27,7 @@ export default function App() {
                 <Route path="operations" element={<Operations />} />
                 <Route path="operations/:userId" element={<UserProfile />} />
                 <Route path="templates" element={<Templates />} />
+                <Route path="corrective-actions" element={<CorrectiveActions />} />
                 <Route path="insights" element={<Insights />} />
               </Route>
               <Route path="/__design" element={<DesignGallery />} />

@@ -25,7 +25,7 @@ function todayISO(): string {
 function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; end: string } {
   const today = new Date();
   const formatStr = (d: Date) => d.toISOString().slice(0, 10);
-  
+
   if (periodType === 'Day') {
     const s = formatStr(today);
     return { start: s, end: s };
@@ -33,7 +33,8 @@ function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; 
   if (periodType === 'Week') {
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-    const start = new Date(today.setDate(diff));
+    const start = new Date(today);
+    start.setDate(diff);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     return { start: formatStr(start), end: formatStr(end) };
@@ -65,6 +66,8 @@ export function Operations() {
   const [treeData, setTreeData] = useState<TreeNode | null>(null);
   const [complianceScore, setComplianceScore] = useState<ComplianceScoreResponse | null>(null);
   const [failures, setFailures] = useState<FailureItem[]>([]);
+  const [failuresTruncated, setFailuresTruncated] = useState(false);
+  const [failuresTotal, setFailuresTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isFailuresLoading, setIsFailuresLoading] = useState(false);
   
@@ -108,7 +111,10 @@ export function Operations() {
           currentPage++;
         } while (allFailures.length < total && allFailures.length < 500);
 
+        const isTruncated = allFailures.length < total;
         setFailures(allFailures);
+        setFailuresTruncated(isTruncated);
+        setFailuresTotal(total);
       } catch (error) {
         console.error('Failed to load operations data', error);
       } finally {
@@ -291,6 +297,11 @@ export function Operations() {
                   <CardDescription className="text-xs text-faint">
                     Failing SOP runs ordered by overdue duration, repeat occurrences, and due time.
                   </CardDescription>
+                  {failuresTruncated && (
+                    <p className="text-xs text-faint mt-2">
+                      Showing {sortedFailures.length} of {failuresTotal} failures
+                    </p>
+                  )}
                 </div>
                 <StatusChip status="fail" className="font-mono">
                   {sortedFailures.length} Failed
@@ -412,7 +423,7 @@ export function Operations() {
                   Organization Health ({periodType})
                 </span>
               }
-              meta="Select a row to drill down"
+              meta="Click a row to drill down · use +/− to expand"
             >
               <div className="overflow-x-auto -mx-1.5 -my-1">
                 <div className="min-w-[600px]">
@@ -587,12 +598,10 @@ function OperationNode({
         ]
       : [{ value: 1, className: 'bg-none' }];
 
-  const rowLevel: 0 | 1 = level > 0 ? 1 : 0;
-
   return (
-    <div className="flex flex-col" style={{ marginLeft: level > 1 ? `${(level - 1) * 1.5}rem` : undefined }}>
+    <div className="flex flex-col">
       <TreeRow
-        level={rowLevel}
+        level={level}
         name={
           <span className="flex flex-col items-start min-w-0">
             <span className="truncate">{node.user.name}</span>
@@ -605,8 +614,8 @@ function OperationNode({
         meter={meter}
         expanded={hasChildren ? isExpanded : undefined}
         onToggle={hasChildren ? () => setIsExpanded(!isExpanded) : undefined}
+        onDrillDown={() => onUserClick(node.user)}
         onClick={hasChildren ? undefined : () => onUserClick(node.user)}
-        onDoubleClick={hasChildren ? () => onUserClick(node.user) : undefined}
       />
       {isExpanded && hasChildren && (
         <div className="flex flex-col">
