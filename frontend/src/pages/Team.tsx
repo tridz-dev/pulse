@@ -23,6 +23,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Meter } from '@/components/ui/meter';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { PeriodToggle } from '@/components/shared/period-toggle';
+import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
+import { TableEmptyState } from '@/components/ui/table-states';
+import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
 import { formatScore, scoreTextClass, scoreBgClass } from '@/lib/score';
 import { Users, TrendingDown, Target, UsersRound, Settings, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -115,8 +120,8 @@ export function Team() {
 
   useEffect(() => {
     if (!showSetupTab || activeTab !== 'setup') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshSetupData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSetupTab, activeTab]);
 
   async function handleCreateDepartment(e: FormEvent) {
@@ -165,48 +170,27 @@ export function Team() {
 
   if (currentUser?.systemRole === 'Pulse User') {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-rule border-dashed bg-slab">
-        <Users size={48} className="text-faint mb-4" />
-        <h3 className="text-base font-medium text-text">No Direct Reports</h3>
-        <p className="text-sm text-mute mt-1 text-center max-w-sm">
-          Your role does not have team visibility enabled.
-        </p>
-      </div>
+      <PageShell>
+        <TableEmptyState
+          icon={<Users size={16} />}
+          title="No Direct Reports"
+          description="Your role does not have team visibility enabled."
+        />
+      </PageShell>
     );
   }
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-text">Team</h1>
-          <p className="text-mute text-sm mt-1">
-            {showAllTeamsTab
-              ? 'Your direct reports and organization-wide team view.'
-              : 'Operational performance for your direct reports.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeTab !== 'setup' && (
-            <div className="flex gap-1 bg-slab-2 p-1 border border-rule">
-              {(['Day', 'Week', 'Month'] as const).map((p) => (
-                <Button
-                  key={p}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPeriodType(p)}
-                  className={cn(
-                    'h-10 md:h-8 px-3 text-xs font-medium',
-                    periodType === p ? 'bg-slab text-text' : 'text-mute hover:text-text'
-                  )}
-                >
-                  {p}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Team"
+        subtitle={
+          showAllTeamsTab
+            ? 'Your direct reports and organization-wide team view.'
+            : 'Operational performance for your direct reports.'
+        }
+        action={activeTab !== 'setup' && <PeriodToggle value={periodType} onChange={setPeriodType} />}
+      />
 
       {(showAllTeamsTab || showSetupTab) && (
         <TabsList>
@@ -232,16 +216,17 @@ export function Team() {
       {activeTab === 'my-team' && (
         <>
           {isLoadingMyTeam ? (
-            <div className="space-y-4 mt-4">
-              <div className="h-10 bg-slab-2 animate-pulse" />
-              <div className="h-40 bg-slab-2 animate-pulse" />
+            <div className="space-y-3 mt-4">
+              <SkeletonRow cellCount={5} cellWidths={['250px', '100px', '100px', '100px', '100px']} height="md" />
+              <SkeletonRow cellCount={5} cellWidths={['250px', '100px', '100px', '100px', '100px']} height="md" />
+              <SkeletonRow cellCount={5} cellWidths={['250px', '100px', '100px', '100px', '100px']} height="md" />
             </div>
           ) : teamScores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-rule border-dashed bg-slab">
-              <Users size={48} className="text-faint mb-4" />
-              <h3 className="text-base font-medium text-text">No Team Members</h3>
-              <p className="text-sm text-mute mt-1">You don&apos;t have any active direct reports.</p>
-            </div>
+            <TableEmptyState
+              icon={<Users size={16} />}
+              title="No Team Members"
+              description="You don't have any active direct reports."
+            />
           ) : (
             <div className="mt-4 border border-rule bg-slab overflow-hidden">
               <Table>
@@ -328,16 +313,17 @@ export function Team() {
       {activeTab === 'all-teams' && showAllTeamsTab && (
         <>
           {isLoadingAllTeams ? (
-            <div className="space-y-4 mt-4">
-              <div className="h-10 bg-slab-2 animate-pulse" />
-              <div className="h-40 bg-slab-2 animate-pulse" />
+            <div className="space-y-3 mt-4">
+              <SkeletonRow cellCount={7} cellWidths={['220px', '100px', '100px', '100px', '100px', '100px', '100px']} height="md" />
+              <SkeletonRow cellCount={7} cellWidths={['220px', '100px', '100px', '100px', '100px', '100px', '100px']} height="md" />
+              <SkeletonRow cellCount={7} cellWidths={['220px', '100px', '100px', '100px', '100px', '100px', '100px']} height="md" />
             </div>
           ) : allTeamScores.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 mt-4 border border-rule border-dashed bg-slab">
-              <UsersRound size={48} className="text-faint mb-4" />
-              <h3 className="text-base font-medium text-text">No Team Data</h3>
-              <p className="text-sm text-mute mt-1">No employees in scope for this period.</p>
-            </div>
+            <TableEmptyState
+              icon={<UsersRound size={16} />}
+              title="No Team Data"
+              description="No employees in scope for this period."
+            />
           ) : (
             <div className="mt-4 border border-rule bg-slab overflow-hidden">
               <Table>
@@ -412,19 +398,19 @@ export function Team() {
       {activeTab === 'setup' && showSetupTab && (
         <div className="flex flex-col gap-6">
           {setupError && (
-            <div className="rounded-md border border-rule bg-fail/10 px-4 py-3 text-sm text-fail">
+            <StatusStrokeCard status="fail" className="px-4 py-3 text-sm text-fail">
               {setupError}
-            </div>
+            </StatusStrokeCard>
           )}
 
           {isLoadingSetup ? (
             <div className="space-y-4 mt-4">
-              <div className="h-32 bg-slab rounded-lg animate-pulse" />
-              <div className="h-32 bg-slab rounded-lg animate-pulse" />
+              <Skeleton height="80px" width="100%" />
+              <Skeleton height="80px" width="100%" />
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-md border border-rule bg-slab-2 p-4 flex flex-col gap-4">
+              <div className="rounded-[var(--radius)] border border-rule bg-slab-2 p-4 flex flex-col gap-4">
                 <h3 className="text-sm font-medium text-text">Departments</h3>
                 <form onSubmit={handleCreateDepartment} className="flex flex-col sm:flex-row gap-2">
                   <input
@@ -432,7 +418,7 @@ export function Team() {
                     value={newDepartmentName}
                     onChange={(e) => setNewDepartmentName(e.target.value)}
                     placeholder="New department name"
-                    className="flex-1 h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-sel"
+                    className="flex-1 h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-sel"
                   />
                   <Button
                     type="submit"
@@ -444,7 +430,7 @@ export function Team() {
                     Add
                   </Button>
                 </form>
-                <div className="rounded-md border border-rule overflow-hidden">
+                <div className="rounded-[var(--radius)] border border-rule overflow-hidden">
                   <Table>
                     <TableHeader className="bg-slab/50">
                       <TableRow className="border-rule hover:bg-transparent">
@@ -469,7 +455,7 @@ export function Team() {
                                 className={cn(
                                   'text-[10px] uppercase',
                                   dept.is_active
-                                    ? 'text-pass border-rule bg-pass/10'
+                                    ? 'text-pass border-rule'
                                     : 'text-faint border-rule bg-slab'
                                 )}
                               >
@@ -484,7 +470,7 @@ export function Team() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-rule bg-slab-2 p-4 flex flex-col gap-4">
+              <div className="rounded-[var(--radius)] border border-rule bg-slab-2 p-4 flex flex-col gap-4">
                 <h3 className="text-sm font-medium text-text">Create Employee Profile</h3>
                 {unlinkedUsers.length === 0 ? (
                   <p className="text-sm text-faint">No unlinked users available to onboard.</p>
@@ -493,7 +479,7 @@ export function Team() {
                     <select
                       value={newEmployeeUser}
                       onChange={(e) => setNewEmployeeUser(e.target.value)}
-                      className="h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
+                      className="h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
                     >
                       <option value="">Select user…</option>
                       {unlinkedUsers.map((u) => (
@@ -506,7 +492,7 @@ export function Team() {
                       <select
                         value={newEmployeeRole}
                         onChange={(e) => setNewEmployeeRole(e.target.value)}
-                        className="h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
+                        className="h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
                       >
                         <option value="">Select role…</option>
                         {PULSE_ROLES.map((r) => (
@@ -518,7 +504,7 @@ export function Team() {
                       <select
                         value={newEmployeeDepartment}
                         onChange={(e) => setNewEmployeeDepartment(e.target.value)}
-                        className="h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
+                        className="h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
                       >
                         <option value="">No department</option>
                         {departments.map((dept) => (
@@ -534,12 +520,12 @@ export function Team() {
                         value={newEmployeeBranch}
                         onChange={(e) => setNewEmployeeBranch(e.target.value)}
                         placeholder="Branch (optional)"
-                        className="h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-sel"
+                        className="h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-sel"
                       />
                       <select
                         value={newEmployeeManager}
                         onChange={(e) => setNewEmployeeManager(e.target.value)}
-                        className="h-9 rounded-md border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
+                        className="h-9 rounded-[var(--radius)] border border-rule bg-slab px-3 text-sm text-text focus:outline-none focus:ring-1 focus:ring-sel"
                       >
                         <option value="">No manager</option>
                         {employees.map((emp) => (
@@ -562,7 +548,7 @@ export function Team() {
                 )}
               </div>
 
-              <div className="lg:col-span-2 rounded-md border border-rule bg-slab-2 overflow-hidden">
+              <div className="lg:col-span-2 rounded-[var(--radius)] border border-rule bg-slab-2 overflow-hidden">
                 <Table>
                   <TableHeader className="bg-slab/50">
                     <TableRow className="border-rule hover:bg-transparent">
@@ -602,7 +588,7 @@ export function Team() {
                               className={cn(
                                 'text-[10px] uppercase',
                                 emp.is_active
-                                  ? 'text-pass border-rule bg-pass/10'
+                                  ? 'text-pass border-rule'
                                   : 'text-faint border-rule bg-slab'
                               )}
                             >
@@ -619,7 +605,7 @@ export function Team() {
           )}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 

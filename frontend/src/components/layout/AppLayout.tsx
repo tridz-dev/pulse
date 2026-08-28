@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { CommandSearch } from './CommandSearch';
 import { Sheet, SheetContent } from '../ui/sheet';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
@@ -53,7 +54,11 @@ export function AppLayout() {
     }
 
     return (
+        // eslint-disable-next-line no-restricted-syntax -- text-selection highlight, the in-spec use of --sel, not a status/card fill
         <div className="h-screen w-full flex overflow-hidden bg-ink text-text font-sans selection:bg-sel/30">
+            {/* Global Cmd/Ctrl+K search shortcut — active regardless of sidebar collapse state */}
+            <CommandSearch />
+
             {/* Sidebar — inline on md+, hidden below md (drawer takes over) */}
             <div className="hidden md:flex">
                 <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((c) => !c)} />

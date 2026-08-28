@@ -104,6 +104,10 @@ Reusable UI primitives live in `frontend/src/components/ui/`:
 - `meter`, `status-chip`, `status-stroke-card`, `tree-row`, `ledger`, `disclosure`, `toggle-tag`, `checkbox-row`, `radio-option-card`, `toast`, and `table-states`.
 - The shared helper `frontend/src/lib/score.ts` handles score-to-status/color mapping.
 
+**Composition layer** (shared page templates) lives in `frontend/src/components/shared/`:
+- Use **PageShell**, **PageHeader**, **SectionCard** for page structure; **StatTile** for KPI display; **PeriodToggle**, **FilterBar** for controls; **ChartFrame** for chart empty/error states; **Skeleton/SkeletonRow** for loading. Do not hand-roll page headers, empty states, loading skeletons, or chart state wrappers — the composition layer is now the canonical pattern.
+- **ESLint rule** (`frontend/eslint.config.js`) forbids `rounded-lg/xl/md/full/2xl` and opacity-suffixed status-fill classes (`bg-pass/NN`, `bg-risk/NN`, etc.) outside `src/components/ui/**`. This prevents design-system drift. Do not disable without discussion.
+
 ---
 
 ## Repository layout

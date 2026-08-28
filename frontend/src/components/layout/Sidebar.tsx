@@ -7,11 +7,22 @@ import {
     PanelLeftClose,
     PanelLeft,
     Search,
-    Bell,
+    LogOut,
     FileText,
     BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { ThemeToggle } from '../shared/ThemeToggle';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuItem,
+} from '../ui/dropdown-menu';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -29,7 +40,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, onNavigate }: SidebarProps) {
-    const { currentUser } = useAuth();
+    const { currentUser, logout } = useAuth();
     const location = useLocation();
     const isCollapsed = forceExpanded ? false : collapsed;
 
@@ -60,7 +71,20 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
 
             {!isCollapsed && (
                 <div className="px-3 mb-6">
-                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded-sm hover:bg-slab-2 transition-colors">
+                    {/* The real search affordance is the global Cmd/Ctrl+K shortcut (registered in
+                        CommandSearch, mounted in AppLayout) so it keeps working even when this
+                        button disappears at collapsed width. This button just dispatches the same
+                        shortcut for discoverability when the sidebar is expanded. */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            window.dispatchEvent(
+                                new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
+                            );
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-mute bg-slab-2 border border-rule rounded-sm hover:bg-slab-2 transition-colors"
+                        aria-label="Search tasks, people, and operations"
+                    >
                         <Search size={14} className="text-mute" />
                         <span>Search...</span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-60">
@@ -112,7 +136,53 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
             </div>
 
             {/* Bottom Actions */}
-            <div className={cn("p-3 mt-auto shrink-0 border-t border-rule flex items-center gap-1", isCollapsed && "flex-col")}>
+            <div className="p-3 mt-auto shrink-0 border-t border-rule flex flex-col items-center gap-1">
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        className={cn(
+                            "flex items-center gap-2 rounded-sm py-1.5 hover:bg-slab-2 transition-colors outline-none w-full",
+                            isCollapsed ? "justify-center px-0" : "px-1.5 text-left"
+                        )}
+                        title={currentUser?.name}
+                        aria-label="User menu"
+                    >
+                        <Avatar className={cn("rounded-sm border border-rule shrink-0", isCollapsed ? "h-6 w-6" : "h-6 w-6")}>
+                            <AvatarImage src={currentUser?.avatarUrl} />
+                            <AvatarFallback className="text-[10px] bg-slab-2 text-text rounded-sm">
+                                {currentUser?.name?.charAt(0) ?? '?'}
+                            </AvatarFallback>
+                        </Avatar>
+                        {!isCollapsed && (
+                            <div className="flex flex-col items-start translate-y-[-1px] min-w-0">
+                                <span className="text-xs font-medium leading-none text-text truncate w-full">{currentUser?.name}</span>
+                                <span className="text-[10px] leading-none text-faint mt-1 truncate w-full">{currentUser?.role}</span>
+                            </div>
+                        )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="min-w-56 bg-slab border-rule">
+                        <DropdownMenuGroup>
+                            <DropdownMenuLabel className="text-mute font-mono text-[10px] uppercase tracking-wide">
+                                Theme
+                            </DropdownMenuLabel>
+                            <div className="px-1.5 py-1">
+                                <ThemeToggle />
+                            </div>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator className="bg-rule" />
+                        <DropdownMenuGroup>
+                            <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => {
+                                    void logout();
+                                }}
+                                className="text-fail data-[variant=destructive]:text-fail"
+                            >
+                                <LogOut size={14} />
+                                Log out
+                            </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 {!forceExpanded && (
                     <button
                         type="button"
@@ -124,9 +194,6 @@ export function Sidebar({ collapsed, onToggleCollapse, forceExpanded = false, on
                         {collapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
                     </button>
                 )}
-                <button className="p-3 md:p-2 text-mute hover:text-text hover:bg-slab-2 rounded-sm transition-colors shrink-0" title="Notifications" aria-label="Notifications">
-                    <Bell size={16} />
-                </button>
             </div>
         </aside>
     );

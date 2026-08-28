@@ -20,6 +20,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/store/AuthContext';
 import { Input } from '@/components/ui/input';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { ConsequenceRail } from '@/components/shared/consequence-rail';
+import { Skeleton } from '@/components/shared/skeleton';
+import { TableEmptyState } from '@/components/ui/table-states';
 import {
   FileText,
   Printer,
@@ -74,6 +78,7 @@ export function Templates() {
   const [formCompletionWindow, setFormCompletionWindow] = useState<number>(60);
   const [formScheduleTimezone, setFormScheduleTimezone] = useState('UTC');
   const [formChecklist, setFormChecklist] = useState<SOPChecklistItem[]>([]);
+  const [originalChecklist, setOriginalChecklist] = useState<SOPChecklistItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [formFieldErrors, setFormFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,6 +176,34 @@ export function Templates() {
     window.print();
   };
 
+  // Lightweight, honest diff between the checklist as loaded and the checklist
+  // as currently drafted — used only for the edit-flow consequence disclosure.
+  // Compares by position, not by stable item identity, so it is an
+  // approximation (a reorder can read as "edited"), not a byte-exact diff.
+  const checklistDiff = (() => {
+    const before = originalChecklist;
+    const after = formChecklist;
+    const overlap = Math.min(before.length, after.length);
+    let edited = 0;
+    for (let i = 0; i < overlap; i++) {
+      if (
+        before[i].description !== after[i].description ||
+        before[i].weight !== after[i].weight ||
+        before[i].evidence_required !== after[i].evidence_required ||
+        before[i].item_type !== after[i].item_type
+      ) {
+        edited += 1;
+      }
+    }
+    return {
+      added: Math.max(0, after.length - before.length),
+      removed: Math.max(0, before.length - after.length),
+      edited,
+      totalBefore: before.length,
+      totalAfter: after.length,
+    };
+  })();
+
   const handleOpenCreate = () => {
     setEditingTemplate(null);
     setFormTitle('');
@@ -185,6 +218,7 @@ export function Templates() {
     setFormChecklist([
       { description: '', sequence: 1, weight: 1, item_type: 'Checkbox', evidence_required: 'None' }
     ]);
+    setOriginalChecklist([]);
     setFormError(null);
     setFormFieldErrors({});
     setIsEditorOpen(true);
@@ -208,10 +242,12 @@ export function Templates() {
       setFormScheduleTimezone(fullDoc.schedule_timezone || 'UTC');
       
       const items = await getTemplateItems(template.name);
-      setFormChecklist(items.length > 0 ? items : [
+      const initialItems: SOPChecklistItem[] = items.length > 0 ? items : [
         { description: '', sequence: 1, weight: 1, item_type: 'Checkbox', evidence_required: 'None' }
-      ]);
-      
+      ];
+      setFormChecklist(initialItems);
+      setOriginalChecklist(initialItems);
+
       setFormError(null);
       setFormFieldErrors({});
       setIsEditorOpen(true);
@@ -337,30 +373,49 @@ export function Templates() {
   };
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-text">SOP Templates</h1>
-          <p className="text-mute text-sm mt-1">Master definitions of all operational checklists.</p>
-        </div>
-        {canEdit && (
-          <Button
-            onClick={handleOpenCreate}
-            variant="outline"
-            className="bg-slab border-rule text-text gap-2 hover:bg-slab-2"
-          >
-            <LayoutList size={16} />
-            <span>Create Template</span>
-          </Button>
-        )}
-      </div>
+    <PageShell className="pb-10">
+      <PageHeader
+        title="SOP Templates"
+        subtitle="Master definitions of all operational checklists."
+        action={
+          canEdit ? (
+            <Button
+              onClick={handleOpenCreate}
+              variant="outline"
+              className="bg-slab border-rule text-text gap-2 hover:bg-slab-2"
+            >
+              <LayoutList size={16} />
+              <span>Create Template</span>
+            </Button>
+          ) : null
+        }
+      />
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-slab rounded-xl animate-pulse" />
+            <div key={i} className="h-48 bg-slab rounded-[var(--radius)] animate-pulse" />
           ))}
         </div>
+      ) : templates.length === 0 ? (
+        <TableEmptyState
+          icon={<FileText size={16} />}
+          title="No templates yet"
+          description="Create your first SOP template to define operational checklists."
+          action={
+            canEdit && (
+              <Button
+                onClick={handleOpenCreate}
+                variant="outline"
+                size="sm"
+                className="bg-slab border-rule text-text gap-2 hover:bg-slab-2 mt-2"
+              >
+                <LayoutList size={14} />
+                <span>Create Template</span>
+              </Button>
+            )
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
@@ -455,9 +510,9 @@ export function Templates() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto p-8 print:p-0">
                 {isSheetLoading ? (
-                  <div className="space-y-4 animate-pulse">
+                  <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="h-12 bg-slab rounded-lg" />
+                      <Skeleton key={i} height="lg" width="100%" />
                     ))}
                   </div>
                 ) : (
@@ -471,9 +526,9 @@ export function Templates() {
                       {templateItems.map((item, index) => (
                         <div
                           key={item.name ?? index}
-                          className="flex items-start gap-4 p-4 rounded-xl hover:bg-slab/50 transition-colors border border-transparent hover:border-rule/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
+                          className="flex items-start gap-4 p-4 rounded-[var(--radius)] hover:bg-slab/50 transition-colors border border-transparent hover:border-rule/50 group print:border-zinc-200 print:rounded-none print:hover:bg-transparent print:p-6"
                         >
-                          <div className="w-6 h-6 rounded-md border-2 border-rule mt-0.5 flex items-center justify-center shrink-0 group-hover:border-rule-2 print:border-zinc-300">
+                          <div className="w-6 h-6 rounded-[var(--radius)] border-2 border-rule mt-0.5 flex items-center justify-center shrink-0 group-hover:border-rule-2 print:border-zinc-300">
                             <span className="text-[10px] text-mute font-mono print:hidden">
                               {index + 1}
                             </span>
@@ -529,16 +584,16 @@ export function Templates() {
                       {/* Assignment list */}
                       <div className="space-y-2">
                         {isAssignmentsLoading ? (
-                          <div className="h-12 bg-slab rounded-lg animate-pulse" />
+                          <Skeleton height="lg" width="100%" />
                         ) : assignments.length === 0 ? (
-                          <div className="p-4 bg-slab-2/20 border border-rule/50 rounded-xl text-center text-mute text-xs">
+                          <div className="p-4 bg-slab-2/20 border border-rule/50 rounded-[var(--radius)] text-center text-mute text-xs">
                             No active assignments for this template.
                           </div>
                         ) : (
                           assignments.map((assignment) => (
                             <div
                               key={assignment.name}
-                              className="flex items-center justify-between p-3 bg-slab-2/40 border border-rule/60 rounded-xl gap-4 text-xs"
+                              className="flex items-center justify-between p-3 bg-slab-2/40 border border-rule/60 rounded-[var(--radius)] gap-4 text-xs"
                             >
                               <div className="flex flex-col gap-1 min-w-0">
                                 <span className="font-medium text-text truncate">
@@ -567,7 +622,7 @@ export function Templates() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeactivate(assignment.name)}
-                                  className="text-fail hover:bg-fail-bg px-2.5 py-1 h-auto rounded-lg text-xs"
+                                  className="text-fail hover:bg-fail-bg px-2.5 py-1 h-auto rounded-[var(--radius)] text-xs"
                                 >
                                   Deactivate
                                 </Button>
@@ -584,7 +639,7 @@ export function Templates() {
 
                       {/* Assign form */}
                       {canEdit && (
-                        <div className="p-4 bg-slab/20 border border-rule/80 rounded-xl space-y-4">
+                        <div className="p-4 bg-slab/20 border border-rule/80 rounded-[var(--radius)] space-y-4">
                           <h5 className="text-xs font-semibold text-mute">
                             Assign to Employee
                           </h5>
@@ -596,7 +651,7 @@ export function Templates() {
                               <select
                                 value={selectedEmployeeName}
                                 onChange={(e) => setSelectedEmployeeName(e.target.value)}
-                                className="w-full h-9 bg-slab border border-rule rounded-lg text-xs text-text px-2 outline-none focus:border-rule-2"
+                                className="w-full h-9 bg-slab border border-rule rounded-[var(--radius)] text-xs text-text px-2 outline-none focus:border-rule-2"
                               >
                                 <option value="">-- Choose Employee --</option>
                                 {eligibleEmployees
@@ -640,13 +695,13 @@ export function Templates() {
                               <button
                                 type="button"
                                 onClick={() => setShowAdvancedAssign(!showAdvancedAssign)}
-                                className="text-[10px] text-sel hover:text-sel/80 font-medium flex items-center gap-1 focus:outline-none"
+                                className="text-[10px] text-sel hover:text-sel font-medium flex items-center gap-1 focus:outline-none"
                               >
                                 {showAdvancedAssign ? 'Hide advanced overrides' : 'Show advanced overrides'}
                               </button>
 
                               {showAdvancedAssign && (
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slab-2/40 border border-rule/50 rounded-lg animate-in fade-in duration-200">
+                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slab-2/40 border border-rule/50 rounded-[var(--radius)] animate-in fade-in duration-200">
                                   <div className="space-y-1">
                                     <label className="text-[10px] uppercase font-bold text-mute">
                                       Timezone Override
@@ -688,7 +743,7 @@ export function Templates() {
                             <Button
                               onClick={handleAssign}
                               disabled={isAssigning || !selectedEmployeeName}
-                              className="w-full bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-xs py-1.5 h-auto rounded-lg"
+                              className="w-full bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-xs py-1.5 h-auto rounded-[var(--radius)]"
                             >
                               {isAssigning ? 'Assigning...' : 'Assign'}
                             </Button>
@@ -706,7 +761,9 @@ export function Templates() {
 
       {/* Create / Edit Form Sheet */}
       <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <SheetContent className="bg-ink border-rule w-[500px] sm:w-[640px] p-0 flex flex-col max-h-screen">
+        <SheetContent
+          className={`bg-ink border-rule w-[500px] sm:w-[640px] ${editingTemplate ? 'lg:w-[900px]' : ''} p-0 flex flex-col max-h-screen`}
+        >
           <SheetHeader className="p-6 border-b border-rule/80 bg-slab/30 shrink-0">
             <SheetTitle className="text-xl text-text">
               {editingTemplate ? 'Edit SOP Template' : 'Create SOP Template'}
@@ -716,9 +773,10 @@ export function Templates() {
             </SheetDescription>
           </SheetHeader>
 
+          <div className="flex-1 flex overflow-hidden min-h-0">
           <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
             {formError && (
-              <div className="p-3 bg-fail-bg border border-fail-bd rounded-lg text-fail text-xs">
+              <div className="p-3 bg-fail-bg border border-fail-bd rounded-[var(--radius)] text-fail text-xs">
                 {formError}
               </div>
             )}
@@ -754,7 +812,7 @@ export function Templates() {
                   <select
                     value={formFrequencyType}
                     onChange={(e) => setFormFrequencyType(e.target.value as any)}
-                    className="w-full h-8 bg-slab border border-rule rounded-lg text-sm text-text px-2 outline-none focus:border-rule-2"
+                    className="w-full h-8 bg-slab border border-rule rounded-[var(--radius)] text-sm text-text px-2 outline-none focus:border-rule-2"
                   >
                     <option value="Daily">Daily</option>
                     <option value="Weekly">Weekly</option>
@@ -854,7 +912,7 @@ export function Templates() {
 
               <div className="space-y-4">
                 {formChecklist.map((item, index) => (
-                  <div key={index} className="p-4 bg-slab-2/40 border border-rule/60 rounded-xl space-y-3">
+                  <div key={index} className="p-4 bg-slab-2/40 border border-rule/60 rounded-[var(--radius)] space-y-3">
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-xs font-mono text-mute">#{index + 1}</span>
                       <div className="flex items-center gap-1">
@@ -905,7 +963,7 @@ export function Templates() {
                         <select
                           value={item.item_type}
                           onChange={(e) => updateChecklistItem(index, 'item_type', e.target.value)}
-                          className="w-full h-8 bg-slab border border-rule rounded-lg text-xs text-text px-1 outline-none focus:border-rule-2"
+                          className="w-full h-8 bg-slab border border-rule rounded-[var(--radius)] text-xs text-text px-1 outline-none focus:border-rule-2"
                         >
                           <option value="Checkbox">Checkbox</option>
                           <option value="Numeric">Numeric</option>
@@ -926,7 +984,7 @@ export function Templates() {
                         <select
                           value={item.evidence_required || 'None'}
                           onChange={(e) => updateChecklistItem(index, 'evidence_required', e.target.value)}
-                          className="w-full h-8 bg-slab border border-rule rounded-lg text-xs text-text px-1 outline-none focus:border-rule-2"
+                          className="w-full h-8 bg-slab border border-rule rounded-[var(--radius)] text-xs text-text px-1 outline-none focus:border-rule-2"
                         >
                           <option value="None">None</option>
                           <option value="Photo">Photo</option>
@@ -939,7 +997,80 @@ export function Templates() {
             </div>
           </form>
 
-          <div className="border-t border-rule p-4 bg-slab/50 flex justify-end gap-2 shrink-0">
+          {editingTemplate && (
+            <ConsequenceRail
+              className="hidden lg:flex shrink-0"
+              cards={[
+                {
+                  key: 'changes',
+                  title: 'What changed',
+                  children: (
+                    <div className="flex flex-col gap-1 text-xs text-mute">
+                      {checklistDiff.added === 0 && checklistDiff.removed === 0 && checklistDiff.edited === 0 ? (
+                        <span>No checklist changes yet.</span>
+                      ) : (
+                        <>
+                          {checklistDiff.added > 0 && <span>{checklistDiff.added} item(s) added</span>}
+                          {checklistDiff.removed > 0 && <span>{checklistDiff.removed} item(s) removed</span>}
+                          {checklistDiff.edited > 0 && <span>{checklistDiff.edited} item(s) edited</span>}
+                        </>
+                      )}
+                      <span className="text-faint mt-1">
+                        {checklistDiff.totalBefore} → {checklistDiff.totalAfter} total items
+                      </span>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'effect',
+                  title: 'Likely effect',
+                  children: (
+                    <p className="text-xs text-mute">
+                      Runs already in progress keep the checklist they started with. New runs generated
+                      after you save will use this updated structure.
+                    </p>
+                  ),
+                },
+                {
+                  key: 'scope',
+                  title: 'Applies to',
+                  children: (
+                    <div className="flex flex-col gap-1 text-xs text-mute">
+                      <span>Department: {formDepartment || 'General'}</span>
+                      <span>Owner role: {formOwnerRole || '—'}</span>
+                    </div>
+                  ),
+                },
+              ]}
+              footerText="Saving publishes this as the active version. Nothing is scheduled until you save."
+              footerActions={[
+                <Button
+                  key="save"
+                  onClick={handleSave}
+                  disabled={isSubmitting}
+                  className="bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-sm"
+                >
+                  {isSubmitting ? 'Saving...' : 'Save Template'}
+                </Button>,
+                <Button
+                  key="cancel"
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsEditorOpen(false)}
+                  className="text-mute hover:text-text"
+                >
+                  Cancel
+                </Button>,
+              ]}
+            />
+          )}
+          </div>
+
+          <div
+            className={`border-t border-rule p-4 bg-slab/50 flex justify-end gap-2 shrink-0 ${
+              editingTemplate ? 'lg:hidden' : ''
+            }`}
+          >
             <Button
               type="button"
               variant="ghost"
@@ -951,7 +1082,7 @@ export function Templates() {
             <Button
               onClick={handleSave}
               disabled={isSubmitting}
-              className="bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-sm px-4 py-2 rounded-lg"
+              className="bg-slab-2 border border-rule-2 hover:bg-slab text-text font-medium text-sm px-4 py-2 rounded-[var(--radius)]"
             >
               {isSubmitting ? 'Saving...' : 'Save Template'}
             </Button>
@@ -974,7 +1105,7 @@ export function Templates() {
             `,
         }}
       />
-    </div>
+    </PageShell>
   );
 }
 

@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Target,
-  Users,
   Activity,
   TrendingUp,
   TrendingDown,
@@ -19,7 +17,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
-import { Meter } from '@/components/ui/meter';
 import {
   BarChart,
   Bar,
@@ -30,14 +27,13 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { ScoreBreakdown } from '@/components/shared/ScoreBreakdown';
-import { scoreStatus, scoreTextClass, scoreBgClass, formatScore } from '@/lib/score';
-
-function cn(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
+import { PageShell, PageHeader, SectionCard } from '@/components/shared/page-shell';
+import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
+import { StatTile } from '@/components/shared/stat-tile';
+import { PeriodToggle } from '@/components/shared/period-toggle';
+import { scoreStatus, scoreTextClass, scoreBgClass } from '@/lib/score';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -112,13 +108,21 @@ export function UserProfile() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6 animate-pulse">
-        <div className="h-10 w-48 bg-slab" />
+      <PageShell>
+        <Skeleton height="lg" width="48%" />
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="h-96 md:col-span-2 bg-slab" />
-          <div className="h-96 bg-slab" />
+          <div className="md:col-span-2 flex flex-col gap-4">
+            <SkeletonRow cellCount={3} cellWidths={[40, 35, 25]} />
+            <SkeletonRow cellCount={2} cellWidths={[60, 40]} />
+            <SkeletonRow cellCount={4} />
+          </div>
+          <div className="flex flex-col gap-4">
+            <SkeletonRow cellCount={2} cellWidths={[50, 50]} />
+            <SkeletonRow cellCount={1} cellWidths={[100]} />
+            <SkeletonRow cellCount={1} cellWidths={[70]} />
+          </div>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -150,45 +154,27 @@ export function UserProfile() {
   }));
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex flex-col gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/operations')}
-          className="w-fit text-mute hover:text-text -ml-2"
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Back to Operations
-        </Button>
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 border border-rule">
-            <AvatarImage src={user.avatarUrl} />
-            <AvatarFallback className="bg-slab-2 text-text">{user.name?.charAt(0) ?? '?'}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-semibold tracking-tight text-text">{user.name}</h1>
-            <p className="text-mute font-mono text-sm uppercase tracking-wider">
-              {user.role} {user.branch ? `• ${user.branch}` : ''}
-            </p>
-          </div>
-          <div className="ml-auto flex items-center gap-1 bg-slab-2 p-1 border border-rule">
-            {(['Day', 'Week', 'Month'] as const).map((p) => (
-              <Button
-                key={p}
-                variant="ghost"
-                size="sm"
-                onClick={() => setPeriodType(p)}
-                className={cn(
-                  'h-8 px-3 text-xs font-medium transition-all',
-                  periodType === p ? 'bg-slab text-text' : 'text-mute hover:text-text hover:bg-slab/50'
-                )}
-              >
-                {p}
-              </Button>
-            ))}
-          </div>
-        </div>
+    <PageShell>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate('/operations')}
+        className="w-fit text-mute hover:text-text -ml-2"
+      >
+        <ArrowLeft size={16} className="mr-2" />
+        Back to Operations
+      </Button>
+      <div className="flex items-center gap-4">
+        <Avatar className="h-14 w-14 border border-rule">
+          <AvatarImage src={user.avatarUrl} />
+          <AvatarFallback className="bg-slab-2 text-text">{user.name?.charAt(0) ?? '?'}</AvatarFallback>
+        </Avatar>
+        <PageHeader
+          title={user.name}
+          subtitle={`${user.role} ${user.branch ? `• ${user.branch}` : ''}`}
+          action={<PeriodToggle value={periodType} onChange={setPeriodType} />}
+          className="flex-1"
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -235,69 +221,34 @@ export function UserProfile() {
           </div>
         </Card>
         <div className="flex flex-col gap-4">
-          <Card
-            className="bg-slab border-rule flex-1 cursor-pointer hover:border-rule-2 transition-all"
-            onClick={() => setIsBreakdownOpen(true)}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
-                Personal KPI
-              </CardTitle>
-              <Target className="h-4 w-4 text-mute" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="text-lg font-mono font-semibold text-mute">{formatScore(personalPct)}</div>
-              {eligibleRuns > 0 && (
-                <Meter
-                  size="sm"
-                  className="w-full"
-                  segments={[
-                    { value: passedRuns, className: scoreBgClass(personalPct, eligibleRuns) },
-                    { value: eligibleRuns - passedRuns, className: 'bg-slab-2' },
-                  ]}
-                />
-              )}
-              <p className="text-[10px] text-mute mt-1 font-mono uppercase">
-                {passedRuns} / {eligibleRuns} Runs
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-slab border-rule flex-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
-                {teamData.length > 0 ? 'Direct Reports' : 'Active Checklists'}
-              </CardTitle>
-              {teamData.length > 0 ? (
-                <Users className="h-4 w-4 text-mute" />
-              ) : (
-                <Activity className="h-4 w-4 text-mute" />
-              )}
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="text-lg font-mono font-semibold text-mute">
-                {teamData.length > 0 ? formatScore(inheritedPct) : recentRuns.length}
-              </div>
-              {teamData.length > 0 && (
-                <Meter
-                  size="sm"
-                  className="w-full"
-                  segments={[
-                    {
-                      value: Math.max(0, Math.min(100, inheritedPct ?? 0)),
-                      className: scoreBgClass(inheritedPct, 100),
-                    },
-                    {
-                      value: 100 - Math.max(0, Math.min(100, inheritedPct ?? 0)),
-                      className: 'bg-slab-2',
-                    },
-                  ]}
-                />
-              )}
-              <p className="text-[10px] text-mute mt-1 font-mono uppercase">
-                {teamData.length > 0 ? 'Team-Inclusive Score' : "Today's Schedule"}
-              </p>
-            </CardContent>
-          </Card>
+          <SectionCard className="flex-1 cursor-pointer hover:border-rule-2 transition-all" onClick={() => setIsBreakdownOpen(true)}>
+            <StatTile
+              value={personalPct}
+              label="Personal KPI"
+              description={`${passedRuns} / ${eligibleRuns} Runs`}
+              segments={eligibleRuns > 0 ? [
+                { value: passedRuns, className: scoreBgClass(personalPct, eligibleRuns) },
+                { value: eligibleRuns - passedRuns, className: 'bg-slab-2' },
+              ] : undefined}
+            />
+          </SectionCard>
+          <SectionCard className="flex-1">
+            <StatTile
+              value={teamData.length > 0 ? inheritedPct : recentRuns.length}
+              label={teamData.length > 0 ? 'Direct Reports' : 'Active Checklists'}
+              description={teamData.length > 0 ? 'Team-Inclusive Score' : "Today's Schedule"}
+              segments={teamData.length > 0 && inheritedPct !== null ? [
+                {
+                  value: Math.max(0, Math.min(100, inheritedPct)),
+                  className: scoreBgClass(inheritedPct, 100),
+                },
+                {
+                  value: 100 - Math.max(0, Math.min(100, inheritedPct)),
+                  className: 'bg-slab-2',
+                },
+              ] : undefined}
+            />
+          </SectionCard>
         </div>
       </div>
 
@@ -373,10 +324,10 @@ export function UserProfile() {
                         </Badge>
                         <Badge
                           className={cn(
-                            'text-[9px] uppercase px-1.5 py-0.5',
+                            'text-[9px] uppercase px-1.5 py-0.5 border',
                             run.status === 'Closed'
-                              ? 'bg-pass/10 text-pass border-pass/20'
-                              : 'bg-risk/10 text-risk border-risk/20'
+                              ? 'border-pass text-pass'
+                              : 'border-risk text-risk'
                           )}
                           variant="outline"
                         >
@@ -388,7 +339,7 @@ export function UserProfile() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-[10px] bg-fail/5 border-fail/20 text-fail hover:bg-fail/10"
+                        className="h-7 px-2 text-[10px] border-fail text-fail hover:text-fail"
                         onClick={(e) => {
                           e.stopPropagation();
                           // TODO: Flag corrective action
@@ -400,7 +351,14 @@ export function UserProfile() {
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="h-2 flex-1 bg-slab-2 overflow-hidden">
+                    <div
+                      className="h-2 flex-1 bg-slab-2 overflow-hidden rounded-sm"
+                      role="progressbar"
+                      aria-valuenow={Math.round(run.progress ?? 0)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${(typeof run.template === 'object' && run.template?.title) ? run.template.title : 'Checklist'} progress`}
+                    >
                       <div
                         className="h-full bg-mute transition-all duration-700"
                         style={{ width: `${run.progress ?? 0}%` }}
@@ -422,6 +380,6 @@ export function UserProfile() {
         open={isBreakdownOpen}
         onOpenChange={setIsBreakdownOpen}
       />
-    </div>
+    </PageShell>
   );
 }

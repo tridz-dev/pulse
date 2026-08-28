@@ -3,15 +3,26 @@ import { useAuth } from '@/store/AuthContext';
 import { getMyRuns, getRunDetails, updateRunItem, completeRun } from '@/services/tasks';
 import type { RunListItem } from '@/services/tasks';
 import type { SOPRunItem } from '@/types';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Meter } from '@/components/ui/meter';
+import { StatusChip, type StatusChipProps } from '@/components/ui/status-chip';
+import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { ImpactStrip } from '@/components/shared/impact-strip';
+import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
 import { CheckCircle2, CheckSquare, Lock, Upload, CheckCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { CheckboxRow } from '@/components/ui/checkbox-row';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/store/ToastContext';
 import { file } from '@/lib/frappe-sdk';
+
+const RUN_STATUS_TO_CHIP: Record<string, NonNullable<StatusChipProps['status']>> = {
+  Open: 'none',
+  'In Progress': 'risk',
+  Completed: 'pass',
+  Locked: 'none',
+};
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -36,18 +47,19 @@ export function MyTasks() {
   }, [currentUser]);
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-text">My Tasks</h1>
-        <p className="text-mute text-sm mt-1">
-          Manage your active operations and standard operating procedures.
-        </p>
-      </div>
+    <PageShell className="pb-10">
+      <PageHeader
+        title="My Tasks"
+        subtitle="Manage your active operations and standard operating procedures."
+      />
 
       {isLoading ? (
-        <div className="grid gap-4 mt-4">
+        <div className="grid gap-3 mt-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-slab rounded-[var(--radius)] animate-pulse" />
+            <div key={i} className="p-4 bg-slab border border-rule rounded-[var(--radius)] flex flex-col gap-3">
+              <SkeletonRow cellCount={2} cellWidths={[40, 20]} height="sm" />
+              <Skeleton height="sm" width={30} />
+            </div>
           ))}
         </div>
       ) : runs.length === 0 ? (
@@ -87,7 +99,7 @@ export function MyTasks() {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 
@@ -96,23 +108,21 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
   const isLocked = run.status === 'Locked';
   const template = (typeof run.template === 'object' && run.template !== null ? run.template : null) as { title?: string; frequency_type?: string } | null;
   const progress = Math.round(run.progress ?? 0);
+  const chipStatus = RUN_STATUS_TO_CHIP[run.status] ?? 'none';
 
   return (
-    <Card
+    <StatusStrokeCard
+      status={chipStatus}
       onClick={onClick}
-      className={`p-4 bg-slab border-rule hover:border-rule-2 hover:bg-slab-2/30 transition-all cursor-pointer group flex items-center justify-between gap-4 ${isCompleted ? 'opacity-70' : ''}`}
+      className={`p-4 transition-all group flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
+        isLocked
+          ? 'opacity-60 cursor-not-allowed'
+          : 'hover:border-rule-2 hover:bg-slab-2/30 cursor-pointer'
+      } ${isCompleted ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center gap-4">
-        <div
-          className={`w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 ${
-            isCompleted
-              ? 'bg-pass/10 text-pass'
-              : isLocked
-                ? 'bg-slab-2 text-mute'
-                : 'bg-sel/10 text-sel group-hover:bg-sel/20'
-          }`}
-        >
-          {isCompleted ? <CheckCircle2 size={20} /> : <CheckSquare size={20} />}
+        <div className="w-10 h-10 rounded-[var(--radius)] flex items-center justify-center shrink-0 bg-slab-2 text-mute">
+          {isCompleted ? <CheckCircle2 size={20} /> : isLocked ? <Lock size={20} /> : <CheckSquare size={20} />}
         </div>
         <div>
           <h3 className="text-sm font-medium text-text">
@@ -125,8 +135,8 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="w-24 hidden sm:block">
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex-1 sm:w-24 sm:flex-none">
           <Meter
             size="sm"
             segments={[
@@ -135,19 +145,9 @@ function RunCard({ run, onClick }: { run: RunListItem; onClick: () => void }) {
             ]}
           />
         </div>
-        <Badge
-          variant="outline"
-          className={`
-          ${run.status === 'Open' ? 'text-sel border-sel/20 bg-sel/10' : ''}
-          ${run.status === 'In Progress' ? 'text-risk border-risk/20 bg-risk/10' : ''}
-          ${run.status === 'Completed' ? 'text-pass border-pass/20 bg-pass/10' : ''}
-          ${run.status === 'Locked' ? 'text-mute border-rule-2 bg-slab-2' : ''}
-        `}
-        >
-          {run.status}
-        </Badge>
+        <StatusChip status={chipStatus}>{run.status}</StatusChip>
       </div>
-    </Card>
+    </StatusStrokeCard>
   );
 }
 
@@ -338,22 +338,19 @@ function ChecklistRunner({
             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-          <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-2 scrollbar-thin">
+          <div className="flex flex-col">
             {details.items.map((item) => {
               const needsEvidence =
                 item.evidence_required && item.evidence_required !== 'None';
               const uploadState = uploadStates[item.name];
               const hasEvidenceAttached = uploadState?.hasEvidence || uploadState?.evidenceUrl;
+              const itemWeight = item.template_item?.weight ?? item.weight;
 
               return (
                 <div
                   key={item.name}
-                  className={`p-4 rounded-[var(--radius)] border ${
-                    item.status === 'Completed'
-                      ? 'bg-sel/5 border-sel/20'
-                      : 'bg-slab-2/50 border-rule'
-                  } transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
+                  className={`py-3 border-b border-rule last:border-b-0 transition-colors ${isReadOnly ? 'opacity-80' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -362,11 +359,7 @@ function ChecklistRunner({
                         disabled={isReadOnly}
                         onCheckedChange={() => toggleItem(item.name, item.status)}
                         label={item.template_item?.description ?? item.checklist_item}
-                        secondary={
-                          (item.template_item?.weight ?? item.weight) > 1
-                            ? `Weight: ${item.template_item?.weight ?? item.weight}`
-                            : undefined
-                        }
+                        secondary={itemWeight != null && itemWeight > 1 ? `Weight: ${itemWeight}` : undefined}
                         className={item.status === 'Completed' ? 'text-mute line-through opacity-70' : ''}
                       />
                     </div>
@@ -388,9 +381,9 @@ function ChecklistRunner({
                             className="hidden"
                           />
                           <div
-                            className={`h-7 px-2 rounded-[var(--radius)] border flex items-center justify-center cursor-pointer transition-colors shrink-0 ${
+                            className={`h-7 px-2 rounded-[var(--radius)] border flex items-center justify-center gap-1.5 cursor-pointer transition-colors shrink-0 ${
                               hasEvidenceAttached
-                                ? 'bg-pass/10 text-pass border-pass/20'
+                                ? 'bg-transparent text-pass border-pass'
                                 : 'border-rule text-mute hover:bg-slab-2'
                             } ${uploadState?.isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onClick={(e) => {
@@ -404,26 +397,35 @@ function ChecklistRunner({
                             ) : (
                               <Upload size={14} />
                             )}
+                            <span className="text-xs">
+                              {uploadState?.isUploading
+                                ? 'Uploading…'
+                                : hasEvidenceAttached
+                                  ? 'Photo attached'
+                                  : 'Photo'}
+                            </span>
                           </div>
                         </label>
-                        {uploadState?.error && (
-                          <span
-                            className="text-xs text-risk"
-                            title={uploadState.error}
-                          >
-                            !
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
+                  {uploadState?.error && (
+                    <p className="text-xs text-risk mt-1.5">{uploadState.error}</p>
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
         {!isReadOnly && (
-          <div className="p-6 border-t border-rule bg-ink/50 sticky bottom-0">
+          <div className="p-6 border-t border-rule bg-ink/50 sticky bottom-0 flex flex-col gap-4">
+            <ImpactStrip
+              impactCount={completedCount}
+              impactLabel="Items completed"
+              deltaDisplay={`${Math.round(progress)}%`}
+              deltaLabel="Completion"
+              message="Submitting closes this run and updates the compliance record for this period. Nothing is recalculated until you decide to submit."
+            />
             <Button className="w-full bg-slab-2 border border-rule-2 hover:bg-slab text-text" onClick={completeRunHandler}>
               Submit & Close Checklist
             </Button>

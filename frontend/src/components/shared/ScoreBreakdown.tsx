@@ -43,31 +43,31 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
   const [initiallyExpandedGroups, setInitiallyExpandedGroups] = useState<string[]>([]);
 
   useEffect(() => {
+    async function loadBreakdown() {
+      if (!userId) return;
+      setIsLoading(true);
+      try {
+        const [data, personal, inherited] = await Promise.all([
+          getUserRunBreakdown(userId, date, periodType),
+          getComplianceScore(userId, 'personal', date, periodType).catch(() => null),
+          getComplianceScore(userId, 'inherited', date, periodType).catch(() => null),
+        ]);
+        setBreakdown(data);
+        setPersonalScore(personal);
+        setInheritedScore(inherited);
+        setInitiallyExpandedGroups(
+          data.templateGroups.filter((g) => g.missedItems > 0).map((g) => g.templateId)
+        );
+      } catch (error) {
+        console.error('Failed to load breakdown', error);
+      }
+      setIsLoading(false);
+    }
+
     if (open && userId) {
       loadBreakdown();
     }
   }, [open, userId, date, periodType]);
-
-  async function loadBreakdown() {
-    if (!userId) return;
-    setIsLoading(true);
-    try {
-      const [data, personal, inherited] = await Promise.all([
-        getUserRunBreakdown(userId, date, periodType),
-        getComplianceScore(userId, 'personal', date, periodType).catch(() => null),
-        getComplianceScore(userId, 'inherited', date, periodType).catch(() => null),
-      ]);
-      setBreakdown(data);
-      setPersonalScore(personal);
-      setInheritedScore(inherited);
-      setInitiallyExpandedGroups(
-        data.templateGroups.filter((g) => g.missedItems > 0).map((g) => g.templateId)
-      );
-    } catch (error) {
-      console.error('Failed to load breakdown', error);
-    }
-    setIsLoading(false);
-  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -136,7 +136,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slab-2/50 border border-rule-2 p-4 rounded-xl flex flex-col gap-1">
+                <div className="bg-slab-2/50 border border-rule-2 p-4 rounded-[var(--radius)] flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] text-faint font-mono uppercase tracking-widest font-bold">
                       Personal Compliance
@@ -160,7 +160,7 @@ export function ScoreBreakdown({ userId, date, periodType, open, onOpenChange }:
                   </span>
                 </div>
 
-                <div className="bg-slab-2/50 border border-rule-2 p-4 rounded-xl flex flex-col gap-1">
+                <div className="bg-slab-2/50 border border-rule-2 p-4 rounded-[var(--radius)] flex flex-col gap-1">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] text-faint font-mono uppercase tracking-widest font-bold">
                       Inherited Compliance

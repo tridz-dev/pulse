@@ -43,7 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { BarChart3, TrendingUp, AlertTriangle, CalendarDays } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertTriangle } from 'lucide-react';
 import { TableEmptyState } from '@/components/ui/table-states';
 import {
   LineChart,
@@ -65,6 +65,11 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { scoreStatus, scoreBgClass, formatScore } from '@/lib/score';
 import { Meter } from '@/components/ui/meter';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { StatTile } from '@/components/shared/stat-tile';
+import { PeriodToggle } from '@/components/shared/period-toggle';
+import { ChartFrame } from '@/components/shared/chart-frame';
+import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -82,6 +87,24 @@ const DAY_INTENSITY_CLASS: Record<'pass' | 'risk' | 'fail' | 'none', string> = {
   fail: 'bg-fail',
   none: 'bg-slab-2',
 };
+
+function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: ScoreTrendPoint & { pct: number | null } }>; label?: string }) {
+  if (active && payload && payload.length) {
+    const p = payload[0].payload;
+    return (
+      <div className="bg-slab border border-rule-2 p-3 rounded-[var(--radius)] shadow-lg">
+        <p className="text-xs text-mute mb-1">{label}</p>
+        <p className="text-lg font-bold font-mono text-text">
+          {p.pct != null ? `${p.pct}%` : '—'}
+        </p>
+        <p className="text-[10px] text-faint mt-1 font-mono">
+          {p.eligible_runs} eligible • {p.passed_runs} passed • {p.failed_runs} failed
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
 
 export function Insights() {
   const { currentUser } = useAuth();
@@ -102,16 +125,19 @@ export function Insights() {
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => rangeFromPreset('90d'));
   const [filteredEmployees, setFilteredEmployees] = useState<FilteredEmployeeScore[]>([]);
   const [drillLabel, setDrillLabel] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
 
   const showInsights = currentUser && currentUser.systemRole && ['Pulse Executive', 'Pulse Leader'].includes(currentUser.systemRole);
+  const hasActiveFilters = Object.keys(filters).length > 0 || drillLabel !== null;
 
   useEffect(() => {
     if (!showInsights) {
-      setIsLoading(false);
       return;
     }
     async function load() {
       setIsLoading(true);
+      setLoadError(null);
       const { start, end } = dateRange;
       // Use range end for single-date widgets so "Demo data" preset shows data
       const refDate = end || todayISO();
@@ -142,11 +168,14 @@ export function Insights() {
         setMostMissed(missed);
       } catch (e) {
         console.error('Insights load failed', e);
+        setLoadError(e instanceof Error ? e.message : 'Could not load insights data.');
       }
       setIsLoading(false);
     }
     load();
-  }, [showInsights, periodType, filters, dateRange.start, dateRange.end]);
+  }, [showInsights, periodType, filters, dateRange, retryToken]);
+
+  const retryLoad = () => setRetryToken((t) => t + 1);
 
   const legacyPeriodType = periodType === 'Custom' ? 'Day' : periodType;
 
@@ -173,7 +202,7 @@ export function Insights() {
 
   if (!showInsights) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-rule border-dashed rounded-lg bg-slab/50">
+      <div className="flex flex-col items-center justify-center p-12 mt-10 border border-rule border-dashed rounded-[var(--radius)] bg-slab/50">
         <BarChart3 size={48} className="text-mute mb-4" />
         <h3 className="text-base font-medium text-text">Access Restricted</h3>
         <p className="text-sm text-mute mt-1 text-center max-w-sm">
@@ -202,58 +231,36 @@ export function Insights() {
     { eligible: 0, passed: 0, failed: 0 }
   );
 
-  function TrendTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: typeof trendData[number] }>; label?: string }) {
-    if (active && payload && payload.length) {
-      const p = payload[0].payload;
-      return (
-        <div className="bg-slab border border-rule-2 p-3 rounded-lg shadow-lg">
-          <p className="text-xs text-mute mb-1">{label}</p>
-          <p className="text-lg font-bold font-mono text-text">
-            {p.avg_score != null ? `${Math.round(p.avg_score * 100)}%` : '—'}
-          </p>
-          <p className="text-[10px] text-faint mt-1 font-mono">
-            {p.eligible_runs} eligible • {p.passed_runs} passed • {p.failed_runs} failed
-          </p>
-        </div>
-      );
-    }
-    return null;
-  }
-
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-text">Insights</h1>
-            <p className="text-mute text-sm mt-1">Organizational analytics and performance trends.</p>
-          </div>
+    <PageShell className="pb-10">
+      <PageHeader
+        title="Insights"
+        subtitle="Organizational analytics and performance trends."
+        action={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex gap-1 bg-slab/50 p-1 rounded-lg border border-rule">
-              {(['Day', 'Week', 'Month', 'Custom'] as const).map((p) => (
-                <Button
-                  key={p}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPeriodType(p)}
-                  className={cn(
-                    'h-8 px-3 text-xs font-medium',
-                    periodType === p ? 'bg-slab-2 text-text' : 'text-faint hover:text-mute'
-                  )}
-                >
-                  {p}
-                </Button>
-              ))}
-            </div>
+            <PeriodToggle
+              value={periodType === 'Custom' ? 'Day' : (periodType as 'Day' | 'Week' | 'Month')}
+              onChange={(p) => setPeriodType(p)}
+            />
+            {periodType === 'Custom' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPeriodType('Day')}
+                className="h-8 px-3 text-xs font-medium"
+              >
+                Clear Custom
+              </Button>
+            )}
           </div>
-        </div>
-        <InsightsFiltersBar
-          filters={filters}
-          dateRange={dateRange}
-          onFiltersChange={setFilters}
-          onDateRangeChange={setDateRange}
-        />
-      </div>
+        }
+      />
+      <InsightsFiltersBar
+        filters={filters}
+        dateRange={dateRange}
+        onFiltersChange={setFilters}
+        onDateRangeChange={setDateRange}
+      />
 
       {filteredEmployees.length > 0 && (
         <Card className="bg-slab border-rule">
@@ -298,46 +305,70 @@ export function Insights() {
         </Card>
       )}
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(12)].map((_, i) => (
-            <div key={i} className="h-48 bg-slab rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : (
+      {!isLoading && (
         <>
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Org Score Trend</CardTitle>
-                <CardDescription className="text-xs">Run-level compliance score over selected range</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px] flex flex-col gap-2">
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
-                      <XAxis dataKey="date" tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
-                      <YAxis domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                      <Tooltip content={<TrendTooltip />} />
-                      <Line type="monotone" dataKey="pct" stroke="var(--mute)" strokeWidth={2} dot={false} connectNulls={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-mute shrink-0">
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Org Score Trend</h3>
+                <p className="text-xs text-mute">Run-level compliance score over selected range</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : trendData.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No score data',
+                  description: 'Scores will appear here once runs are completed in this period.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No score data matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                    <YAxis domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Line type="monotone" dataKey="pct" stroke="var(--mute)" strokeWidth={2} dot={false} connectNulls={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+                <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-mute px-4 pb-4 shrink-0">
                   <span>Eligible {trendTotals.eligible}</span>
                   <span className="text-pass">Passed {trendTotals.passed}</span>
                   <span className="text-fail">Failed {trendTotals.failed}</span>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Completion Rate Trend</CardTitle>
-                <CardDescription className="text-xs">Daily completion rate</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+              </ChartFrame>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Completion Rate Trend</h3>
+                <p className="text-xs text-mute">Daily completion rate</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : completionTrend.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No completion data',
+                  description: 'Completion rates will appear here once checklists are completed in this period.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No completion rates match the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={completionTrend.map((t) => ({ ...t, pct: Math.round(t.rate * 100) }))}>
                     <defs>
                       <linearGradient id="complGrad" x1="0" y1="0" x2="0" y2="1">
@@ -352,94 +383,119 @@ export function Insights() {
                     <Area type="monotone" dataKey="pct" stroke="var(--mute)" fill="url(#complGrad)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </ChartFrame>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-4">
-            <Card className="bg-slab border-rule">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-mute uppercase">Dept Avg</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="text-2xl font-bold font-mono text-text">{formatScore(deptAvg * 100)}</div>
-                <Meter
-                  size="sm"
-                  segments={[
-                    { value: Math.max(0, Math.min(100, deptAvg * 100)), className: scoreBgClass(deptAvg * 100, 100) },
-                    { value: 100 - Math.max(0, Math.min(100, deptAvg * 100)), className: 'bg-slab-2' },
-                  ]}
-                />
-              </CardContent>
+            <Card className="bg-slab border-rule p-4">
+              <StatTile
+                value={deptComparison.length > 0 ? Math.round(deptAvg * 100) : 0}
+                label="Dept Avg"
+                segments={
+                  deptComparison.length > 0
+                    ? [
+                        { value: Math.max(0, Math.min(100, deptAvg * 100)), className: scoreBgClass(deptAvg * 100, 100) },
+                        { value: 100 - Math.max(0, Math.min(100, deptAvg * 100)), className: 'bg-slab-2' },
+                      ]
+                    : undefined
+                }
+              />
             </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-mute uppercase">Branch Avg</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="text-2xl font-bold font-mono text-text">{formatScore(branchAvg * 100)}</div>
-                <Meter
-                  size="sm"
-                  segments={[
-                    { value: Math.max(0, Math.min(100, branchAvg * 100)), className: scoreBgClass(branchAvg * 100, 100) },
-                    { value: 100 - Math.max(0, Math.min(100, branchAvg * 100)), className: 'bg-slab-2' },
-                  ]}
-                />
-              </CardContent>
+            <Card className="bg-slab border-rule p-4">
+              <StatTile
+                value={branchComparison.length > 0 ? Math.round(branchAvg * 100) : 0}
+                label="Branch Avg"
+                segments={
+                  branchComparison.length > 0
+                    ? [
+                        { value: Math.max(0, Math.min(100, branchAvg * 100)), className: scoreBgClass(branchAvg * 100, 100) },
+                        { value: 100 - Math.max(0, Math.min(100, branchAvg * 100)), className: 'bg-slab-2' },
+                      ]
+                    : undefined
+                }
+              />
             </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-mute uppercase">Open CAs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono text-risk">{openCount + inProgressCount}</div>
-              </CardContent>
+            <Card className="bg-slab border-rule p-4">
+              <StatTile
+                value={openCount + inProgressCount}
+                label="Open CAs"
+              />
             </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs text-mute uppercase">Avg Resolution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono text-text">
-                  {caSummary?.avg_resolution_hours != null ? `${caSummary.avg_resolution_hours.toFixed(1)} hrs` : '—'}
-                </div>
-              </CardContent>
+            <Card className="bg-slab border-rule p-4">
+              <StatTile
+                value={caSummary?.avg_resolution_hours != null ? Number(caSummary.avg_resolution_hours.toFixed(1)) : null}
+                label="Avg Resolution"
+                description={caSummary?.avg_resolution_hours != null ? 'hrs' : undefined}
+              />
             </Card>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Department Comparison</CardTitle>
-                <CardDescription className="text-xs">Click a bar to see employees</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Department Comparison</h3>
+                <p className="text-xs text-mute">Click a bar to see employees</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : deptComparison.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No department data',
+                  description: 'Department comparisons will appear here once data is available.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No department data matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={deptComparison.map((d) => ({ name: d.department ?? '—', dept: d.department ?? '—', score: Math.round((d.avg_score ?? 0) * 100) }))} layout="vertical" margin={{ left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                     <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'var(--mute)', fontSize: 10 }} />
-                    <Bar dataKey="score" fill="var(--mute)" radius={[0, 4, 4, 0]} barSize={20} onClick={(_data, _i, _e) => { const payload = (_data as { payload?: { dept?: string } }).payload; if (payload?.dept) handleDeptBarClick(payload.dept); }} cursor="pointer" />
+                    <Bar dataKey="score" fill="var(--mute)" radius={[0, 4, 4, 0]} barSize={20} onClick={(_data) => { const payload = (_data as { payload?: { dept?: string } }).payload; if (payload?.dept) handleDeptBarClick(payload.dept); }} cursor="pointer" />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Branch Comparison</CardTitle>
-                <CardDescription className="text-xs">Click a bar to see employees</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+              </ChartFrame>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Branch Comparison</h3>
+                <p className="text-xs text-mute">Click a bar to see employees</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : branchComparison.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No branch data',
+                  description: 'Branch comparisons will appear here once data is available.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No branch data matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={branchComparison.map((b) => ({ name: b.branch ?? '—', branch: b.branch ?? '—', score: Math.round((b.avg_score ?? 0) * 100) }))} layout="vertical" margin={{ left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" horizontal={false} />
                     <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--mute)', fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                     <YAxis type="category" dataKey="name" width={80} tick={{ fill: 'var(--mute)', fontSize: 10 }} />
-                    <Bar dataKey="score" fill="var(--mute)" radius={[0, 4, 4, 0]} barSize={20} onClick={(_data, _i, _e) => { const payload = (_data as { payload?: { branch?: string } }).payload; if (payload?.branch) handleBranchBarClick(payload.branch); }} cursor="pointer" />
+                    <Bar dataKey="score" fill="var(--mute)" radius={[0, 4, 4, 0]} barSize={20} onClick={(_data) => { const payload = (_data as { payload?: { branch?: string } }).payload; if (payload?.branch) handleBranchBarClick(payload.branch); }} cursor="pointer" />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </ChartFrame>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -450,9 +506,10 @@ export function Insights() {
               <CardContent>
                 <div className="space-y-2">
                   {performers.top.map((p) => (
-                    <div
+                    <StatusStrokeCard
                       key={p.employee}
-                      className="flex items-center justify-between p-2 rounded-lg bg-pass/10 border border-pass/20 cursor-pointer hover:bg-pass/20"
+                      status="pass"
+                      className="flex items-center justify-between cursor-pointer hover:bg-slab-2/50"
                       onClick={() => navigate(`/operations/${p.employee}`)}
                     >
                       <span className="text-sm font-medium text-text">{p.employee_name}</span>
@@ -467,7 +524,7 @@ export function Insights() {
                           ]}
                         />
                       </div>
-                    </div>
+                    </StatusStrokeCard>
                   ))}
                   {performers.top.length === 0 && (
                     <TableEmptyState
@@ -486,9 +543,10 @@ export function Insights() {
               <CardContent>
                 <div className="space-y-2">
                   {performers.bottom.map((p) => (
-                    <div
+                    <StatusStrokeCard
                       key={p.employee}
-                      className="flex items-center justify-between p-2 rounded-lg bg-fail/10 border border-fail/20 cursor-pointer hover:bg-fail/20"
+                      status="fail"
+                      className="flex items-center justify-between cursor-pointer hover:bg-slab-2/50"
                       onClick={() => navigate(`/operations/${p.employee}`)}
                     >
                       <span className="text-sm font-medium text-text">{p.employee_name}</span>
@@ -503,7 +561,7 @@ export function Insights() {
                           ]}
                         />
                       </div>
-                    </div>
+                    </StatusStrokeCard>
                   ))}
                   {performers.bottom.length === 0 && (
                     <TableEmptyState
@@ -518,13 +576,29 @@ export function Insights() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Template Performance</CardTitle>
-                <CardDescription className="text-xs">Avg completion rate by SOP</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Template Performance</h3>
+                <p className="text-xs text-mute">Avg completion rate by SOP</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : templatePerf.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No template data',
+                  description: 'Template performance metrics will appear here once data is available.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No template data matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={templatePerf.map((t) => ({ name: t.title?.slice(0, 15) ?? t.template, pct: Math.round(t.avg_completion * 100) }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
                     <XAxis dataKey="name" tick={{ fill: 'var(--mute)', fontSize: 9 }} />
@@ -532,46 +606,71 @@ export function Insights() {
                     <Bar dataKey="pct" fill="var(--mute)" radius={[4, 4, 0, 0]} barSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Day of Week</CardTitle>
-                <CardDescription className="text-xs">Completion rate by weekday</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[220px] flex items-center justify-center">
-                <div className="flex gap-2 flex-wrap justify-center">
+              </ChartFrame>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Day of Week</h3>
+                <p className="text-xs text-mute">Completion rate by weekday</p>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : dayHeatmap.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'Not enough data for this period',
+                  description: 'Day-of-week completion rates will appear once checklists have been completed across multiple days.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No day-of-week data matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <div className="flex gap-2 flex-wrap justify-center items-center py-8">
                   {dayHeatmap.map((d) => {
                     const rate = d.avg_rate;
                     const intensity = DAY_INTENSITY_CLASS[scoreStatus(rate * 100)];
                     return (
                       <div key={d.day_num} className="flex flex-col items-center gap-1">
-                        <div className={cn('w-10 h-8 rounded flex items-center justify-center text-[10px] font-bold font-mono text-text', intensity)} style={{ opacity: 0.5 + rate * 0.5 }}>
+                        <div className={cn('w-10 h-8 rounded-[var(--radius)] flex items-center justify-center text-[10px] font-bold font-mono text-text', intensity)} style={{ opacity: 0.5 + rate * 0.5 }}>
                           {Math.round(rate * 100)}%
                         </div>
                         <span className="text-[10px] text-mute">{d.day_name?.slice(0, 2)}</span>
                       </div>
                     );
                   })}
-                  {dayHeatmap.length === 0 && (
-                    <TableEmptyState
-                      icon={<CalendarDays size={16} />}
-                      title="Not enough data for this period"
-                      description="Day-of-week completion rates will appear once checklists have been completed across multiple days."
-                    />
-                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </ChartFrame>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Score Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Score Distribution</h3>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : scoreDist.length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No score distribution data',
+                  description: 'Score distribution will appear once employees complete runs in this period.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No score distribution matches the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={scoreDist.map((s) => ({ name: s.bracket, count: s.count }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--rule)" />
                     <XAxis dataKey="name" tick={{ fill: 'var(--mute)', fontSize: 9 }} />
@@ -579,14 +678,30 @@ export function Insights() {
                     <Bar dataKey="count" fill="var(--mute)" radius={[4, 4, 0, 0]} barSize={24} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card className="bg-slab border-rule">
-              <CardHeader>
-                <CardTitle className="text-sm text-text">Corrective Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+              </ChartFrame>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text">Corrective Actions</h3>
+              </div>
+              <ChartFrame
+                state={loadError ? 'error' : isLoading ? 'loading' : (caSummary?.by_status ?? []).length === 0 ? (hasActiveFilters ? 'filtered-empty' : 'zero') : 'ready'}
+                minHeight="220px"
+                zeroMessage={{
+                  title: 'No corrective actions',
+                  description: 'Corrective actions will appear once they are created.',
+                }}
+                filteredEmptyMessage={{
+                  title: 'No matching data',
+                  description: 'No corrective actions match the active filters for this period. Try clearing a filter.',
+                }}
+                errorMessage={{
+                  title: "Couldn't load",
+                  description: 'Something went wrong loading this chart. Try again.',
+                  action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                }}
+              >
+                <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
                       data={caSummary?.by_status ?? []}
@@ -604,8 +719,8 @@ export function Insights() {
                     <Tooltip contentStyle={{ backgroundColor: 'var(--slab)', border: '1px solid var(--rule)', borderRadius: 8, color: 'var(--text)' }} />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </ChartFrame>
+            </div>
           </div>
 
           <Card className="bg-slab border-rule">
@@ -645,7 +760,7 @@ export function Insights() {
           </Card>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 

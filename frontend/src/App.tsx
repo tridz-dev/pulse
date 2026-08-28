@@ -10,6 +10,7 @@ import { Operations } from './pages/Operations';
 import { Templates } from './pages/Templates';
 import { Insights } from './pages/Insights';
 import { UserProfile } from './pages/UserProfile';
+import { DesignGallery } from './pages/DesignGallery';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
                 <Route path="templates" element={<Templates />} />
                 <Route path="insights" element={<Insights />} />
               </Route>
+              <Route path="/__design" element={<DesignGallery />} />
             </Routes>
           </BrowserRouter>
         </AuthProvider>

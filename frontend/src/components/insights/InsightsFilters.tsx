@@ -102,14 +102,14 @@ export function InsightsFiltersBar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Date range presets */}
-      <div className="flex gap-1 rounded-lg border border-rule bg-slab-2 p-1">
+      <div className="flex gap-1 rounded-[var(--radius)] border border-rule bg-slab-2 p-1">
         {PRESETS.map(({ id, label }) => (
           <button
             key={id}
             type="button"
             onClick={() => onDateRangeChange(rangeFromPreset(id))}
             className={cn(
-              'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+              'rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium transition-colors',
               dateRange.preset === id
                 ? 'bg-slab text-text'
                 : 'text-mute hover:bg-slab hover:text-text'
@@ -123,7 +123,7 @@ export function InsightsFiltersBar({
       {/* Department multi-select */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
+          className="inline-flex items-center h-8 px-3 text-sm rounded-[var(--radius)] border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
         >
           Department {selectedDepts.length > 0 ? `(${selectedDepts.length})` : ''}
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
@@ -151,7 +151,7 @@ export function InsightsFiltersBar({
       {/* Branch multi-select */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="inline-flex items-center h-8 px-3 text-sm rounded-md border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
+          className="inline-flex items-center h-8 px-3 text-sm rounded-[var(--radius)] border border-rule bg-slab-2 text-text hover:bg-slab gap-1"
         >
           Branch {selectedBranches.length > 0 ? `(${selectedBranches.length})` : ''}
           <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />

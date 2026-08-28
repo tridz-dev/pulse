@@ -7,15 +7,20 @@ import { getDemoStatus, installDemoData } from '@/services/demo';
 import { getFailureList, getComplianceScore } from '@/services/operations';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, Users, Activity, Calendar, TrendingUp, TrendingDown, Database, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Database, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Ledger } from '@/components/ui/ledger';
 import { Gauge } from '@/components/ui/gauge';
 
 // Hero metric display: 'ledger' (big number, default) or 'arc' (Core · optional
 // hero-arc variant per pulse_design/DESIGN.md). Exactly one hero per page either way.
 const HERO_VARIANT: 'ledger' | 'arc' = 'arc';
-import { Meter } from '@/components/ui/meter';
 import { StatusStrokeCard } from '@/components/ui/status-stroke-card';
+import { StatusChip } from '@/components/ui/status-chip';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { PeriodToggle } from '@/components/shared/period-toggle';
+import { StatTile } from '@/components/shared/stat-tile';
+import { ChartFrame } from '@/components/shared/chart-frame';
+import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
 import {
   Sheet,
   SheetContent,
@@ -36,7 +41,7 @@ import {
 } from 'recharts';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { scoreStatus, scoreTextClass, scoreBgClass, formatScore } from '@/lib/score';
+import { scoreStatus, scoreTextClass, scoreBgClass } from '@/lib/score';
 
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
@@ -76,7 +81,7 @@ function getPeriodRange(periodType: 'Day' | 'Week' | 'Month'): { start: string; 
   return { start: formatStr(start), end: formatStr(end) };
 }
 
-export function getOverdueDuration(dueAtString: string): string {
+function getOverdueDuration(dueAtString: string): string {
   if (!dueAtString) return 'Overdue';
   // Standardize timestamp separator to avoid safari parse issues
   const sanitized = dueAtString.includes('T') ? dueAtString : dueAtString.replace(' ', 'T');
@@ -112,6 +117,9 @@ export function Dashboard() {
   const [isFailuresSheetOpen, setIsFailuresSheetOpen] = useState(false);
   const [selectedFailure, setSelectedFailure] = useState<FailureItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const retryLoad = () => setRetryToken((t) => t + 1);
   const [demoStatus, setDemoStatus] = useState<{ can_load_demo: boolean; can_clear_demo: boolean; has_demo_data: boolean } | null>(null);
   const [demoLoading, setDemoLoading] = useState(false);
 
@@ -123,6 +131,7 @@ export function Dashboard() {
     async function loadStats() {
       if (!currentUser) return;
       setIsLoading(true);
+      setLoadError(null);
       const today = todayISO();
       const isManager = !!currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole);
       try {
@@ -161,11 +170,12 @@ export function Dashboard() {
         }
       } catch (error) {
         console.error('Failed to load dashboard stats', error);
+        setLoadError(error instanceof Error ? error.message : 'Could not load dashboard data.');
       }
       setIsLoading(false);
     }
     loadStats();
-  }, [currentUser, periodType]);
+  }, [currentUser, periodType, retryToken]);
 
   const handleLoadDemo = async () => {
     setDemoLoading(true);
@@ -186,8 +196,8 @@ export function Dashboard() {
   if (!currentUser) {
     const canLoad = demoStatus?.can_load_demo && !demoStatus?.has_demo_data;
     return (
-      <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-text">Execution Dashboard</h1>
+      <PageShell className="pb-10">
+        <PageHeader title="Execution Dashboard" />
         <Card className="bg-slab border-rule max-w-xl">
           <CardHeader>
             <CardTitle className="text-lg text-text">No employee record</CardTitle>
@@ -206,7 +216,7 @@ export function Dashboard() {
             </CardContent>
           )}
         </Card>
-      </div>
+      </PageShell>
     );
   }
 
@@ -248,7 +258,7 @@ export function Dashboard() {
   const showLoadDemoCard = demoStatus?.can_load_demo && !demoStatus?.has_demo_data;
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
+    <PageShell className="pb-10">
       {showLoadDemoCard && (
         <Card className="bg-risk-bg border-risk-bd">
           <CardContent className="flex flex-row items-center justify-between gap-4 py-4">
@@ -256,7 +266,7 @@ export function Dashboard() {
               <Database className="h-5 w-5 text-risk" />
               <div>
                 <p className="text-sm font-medium text-risk">No demo data on this site</p>
-                <p className="text-xs text-risk/70">Load sample users, employees, SOPs and runs to explore the app.</p>
+                <p className="text-xs text-risk">Load sample users, employees, SOPs and runs to explore the app.</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={handleLoadDemo} disabled={demoLoading} className="gap-2 border-risk-bd text-risk hover:bg-risk-bg">
@@ -266,43 +276,26 @@ export function Dashboard() {
           </CardContent>
         </Card>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-text">Execution Dashboard</h1>
-          <p className="text-mute text-sm mt-1">
-            {currentUser.systemRole === 'Pulse User'
-              ? 'Your performance overview.'
-              : 'High-level metrics and performance roll-ups.'}
-          </p>
-        </div>
-        <div className="flex items-center gap-1 bg-slab-2 p-1 border border-rule shrink-0 self-start sm:self-center">
-          {(['Day', 'Week', 'Month'] as const).map((p) => (
-            <Button
-              key={p}
-              variant="ghost"
-              size="sm"
-              onClick={() => setPeriodType(p)}
-              className={cn(
-                'h-8 px-3 text-xs font-medium transition-all',
-                periodType === p
-                  ? 'bg-slab text-text'
-                  : 'text-mute hover:text-text hover:bg-slab/50'
-              )}
-            >
-              {p}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Execution Dashboard"
+        subtitle={currentUser.systemRole === 'Pulse User'
+          ? 'Your performance overview.'
+          : 'High-level metrics and performance roll-ups.'}
+        action={<PeriodToggle value={periodType} onChange={setPeriodType} />}
+      />
 
       {isLoading ? (
-        <div className="flex flex-col gap-6 animate-pulse">
+        <div className="flex flex-col gap-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-slab" />
+              <div key={i} className="h-32">
+                <Skeleton height="lg" />
+              </div>
             ))}
           </div>
-          <div className="h-96 bg-slab mt-4" />
+          <div className="h-96 mt-4">
+            <Skeleton height="lg" />
+          </div>
         </div>
       ) : (
         <>
@@ -347,7 +340,7 @@ export function Dashboard() {
                     </p>
                   )}
                   {currentUser.systemRole && ['Pulse Executive', 'Pulse Leader', 'Pulse Manager'].includes(currentUser.systemRole) && (
-                    <span className="text-xs text-sel font-medium inline-flex items-center gap-1 mt-3 group-hover:text-sel/80 transition-colors">
+                    <span className="text-xs text-sel font-medium inline-flex items-center gap-1 mt-3 group-hover:text-sel transition-colors">
                       View failing runs in scope ({failures.length}) <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
                   )}
@@ -388,70 +381,40 @@ export function Dashboard() {
                   managers, whose hero is the team-inherited score, get a distinct
                   personal number worth a second card. */}
               {isManager && (
-                <Card className="bg-slab border-rule flex-1">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
-                      Own Execution
-                    </CardTitle>
-                    <Target className="h-4 w-4 text-mute" />
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2">
-                    <div className="text-lg font-mono font-semibold text-mute">{formatScore(ownPct, 100)}</div>
-                    {totalItems > 0 && (
-                      <Meter
-                        size="sm"
-                        className="w-full"
-                        segments={[
-                          { value: Math.max(0, Math.min(100, ownPct ?? 0)), className: scoreBgClass(ownPct, 100) },
-                          { value: 100 - Math.max(0, Math.min(100, ownPct ?? 0)), className: 'bg-slab-2' },
-                        ]}
-                      />
-                    )}
-                    <p className="text-[10px] text-mute mt-1 font-mono uppercase">{totalItems} Assigned Tasks</p>
-                  </CardContent>
+                <Card className="bg-slab border-rule flex-1 p-4">
+                  <StatTile
+                    value={ownPct}
+                    label="Own Execution"
+                    description={`${totalItems} Assigned Tasks`}
+                    segments={totalItems > 0 ? [
+                      { value: Math.max(0, Math.min(100, ownPct ?? 0)), className: scoreBgClass(ownPct, 100) },
+                      { value: 100 - Math.max(0, Math.min(100, ownPct ?? 0)), className: 'bg-slab-2' },
+                    ] : undefined}
+                  />
                 </Card>
               )}
-              <Card className="bg-slab border-rule flex-1">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-xs font-bold text-mute uppercase tracking-wider">
-                    {teamData.length > 0 ? 'Team Roll-up' : 'Activity'}
-                  </CardTitle>
-                  {teamData.length > 0 ? (
-                    <Users className="h-4 w-4 text-mute" />
-                  ) : (
-                    <Activity className="h-4 w-4 text-mute" />
-                  )}
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                  <div className="text-lg font-mono font-semibold text-mute">
-                    {teamData.length > 0 ? formatScore(Math.round(teamScore * 100), 100) : completedItems}
-                  </div>
-                  {teamData.length > 0 && (
-                    <Meter
-                      size="sm"
-                      className="w-full"
-                      segments={[
-                        {
-                          value: Math.max(0, Math.min(100, Math.round(teamScore * 100))),
-                          className: scoreBgClass(Math.round(teamScore * 100), 100),
-                        },
-                        {
-                          value: 100 - Math.max(0, Math.min(100, Math.round(teamScore * 100))),
-                          className: 'bg-slab-2',
-                        },
-                      ]}
-                    />
-                  )}
-                  <p className="text-[10px] text-mute mt-1 font-mono uppercase">
-                    {teamData.length > 0 ? 'Direct Reports Avg' : 'Items Completed'}
-                  </p>
-                </CardContent>
+              <Card className="bg-slab border-rule flex-1 p-4">
+                <StatTile
+                  value={teamData.length > 0 ? Math.round(teamScore * 100) : completedItems}
+                  label={teamData.length > 0 ? 'Team Roll-up' : 'Activity'}
+                  description={teamData.length > 0 ? 'Direct Reports Avg' : 'Items Completed'}
+                  segments={teamData.length > 0 ? [
+                    {
+                      value: Math.max(0, Math.min(100, Math.round(teamScore * 100))),
+                      className: scoreBgClass(Math.round(teamScore * 100), 100),
+                    },
+                    {
+                      value: 100 - Math.max(0, Math.min(100, Math.round(teamScore * 100))),
+                      className: 'bg-slab-2',
+                    },
+                  ] : undefined}
+                />
               </Card>
             </div>
           </div>
 
-          {teamData.length > 0 && (
-            <Card className="bg-slab border-rule mt-2">
+          {isManager && (
+            <Card className="bg-slab border-rule">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-base text-text">Execution by Group</CardTitle>
@@ -461,50 +424,64 @@ export function Dashboard() {
                 </div>
                 <Calendar className="h-4 w-4 text-mute" />
               </CardHeader>
-              <CardContent className="h-[300px] w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--rule)" />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'var(--mute)', fontSize: 12 }}
-                      dy={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'var(--mute)', fontSize: 12 }}
-                      domain={[0, 100]}
-                      tickFormatter={(val) => `${val}%`}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'var(--slab-2)' }}
-                      contentStyle={{
-                        backgroundColor: 'var(--slab)',
-                        border: '1px solid var(--rule)',
-                        borderRadius: 'var(--radius)',
-                        color: 'var(--text)',
-                      }}
-                      itemStyle={{ color: 'var(--text)' }}
-                    />
-                    <Bar dataKey="score" radius={[0, 0, 0, 0]} barSize={40}>
-                      {barChartData.map((entry, index) => {
-                        const status = scoreStatus(entry.score, 100);
-                        const color =
-                          status === 'pass'
-                            ? 'var(--pass)'
-                            : status === 'risk'
-                              ? 'var(--risk)'
-                              : status === 'fail'
-                                ? 'var(--fail)'
-                                : 'var(--mute)';
-                        return <Cell key={`cell-${index}`} fill={color} />;
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="w-full mt-4">
+                <ChartFrame
+                  state={loadError ? 'error' : isLoading ? 'loading' : barChartData.length === 0 ? 'zero' : 'ready'}
+                  minHeight="300px"
+                  zeroMessage={{
+                    title: 'No team data yet',
+                    description: 'Team performance data will appear once your direct reports have run items.',
+                  }}
+                  errorMessage={{
+                    title: "Couldn't load",
+                    description: 'Something went wrong loading this chart. Try again.',
+                    action: <Button variant="outline" size="sm" onClick={retryLoad}>Retry</Button>,
+                  }}
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--rule)" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--mute)', fontSize: 12 }}
+                        dy={10}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'var(--mute)', fontSize: 12 }}
+                        domain={[0, 100]}
+                        tickFormatter={(val) => `${val}%`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'var(--slab-2)' }}
+                        contentStyle={{
+                          backgroundColor: 'var(--slab)',
+                          border: '1px solid var(--rule)',
+                          borderRadius: 'var(--radius)',
+                          color: 'var(--text)',
+                        }}
+                        itemStyle={{ color: 'var(--text)' }}
+                      />
+                      <Bar dataKey="score" radius={[0, 0, 0, 0]} barSize={40}>
+                        {barChartData.map((entry, index) => {
+                          const status = scoreStatus(entry.score, 100);
+                          const color =
+                            status === 'pass'
+                              ? 'var(--pass)'
+                              : status === 'risk'
+                                ? 'var(--risk)'
+                                : status === 'fail'
+                                  ? 'var(--fail)'
+                                  : 'var(--mute)';
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
               </CardContent>
             </Card>
           )}
@@ -553,21 +530,21 @@ export function Dashboard() {
                   Failed SOP runs in visible scope • {periodType}
                 </SheetDescription>
               </div>
-              <Badge variant="outline" className="ml-auto text-fail bg-fail/10 border-fail/20 font-mono">
+              <StatusChip status="fail" className="ml-auto font-mono">
                 {failures.length} Failed
-              </Badge>
+              </StatusChip>
             </div>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col gap-4">
             {isFailuresLoading ? (
-              <div className="flex flex-col gap-4 animate-pulse">
-                <div className="h-16 bg-slab rounded-xl" />
-                <div className="h-16 bg-slab rounded-xl" />
-                <div className="h-16 bg-slab rounded-xl" />
+              <div className="flex flex-col gap-4">
+                <SkeletonRow cellCount={1} height="lg" />
+                <SkeletonRow cellCount={1} height="lg" />
+                <SkeletonRow cellCount={1} height="lg" />
               </div>
             ) : failures.length === 0 ? (
-              <div className="p-12 text-center border border-dashed border-rule rounded-2xl bg-slab/20">
+              <div className="p-12 text-center border border-dashed border-rule rounded-[var(--radius)] bg-slab/20">
                 <p className="text-mute text-sm">No failing SOP runs found in your scope for this period.</p>
               </div>
             ) : (
@@ -575,7 +552,7 @@ export function Dashboard() {
                 {failures.map((f) => (
                   <div
                     key={f.run}
-                    className="flex items-center justify-between p-4 rounded-xl border border-rule bg-slab/40 hover:bg-slab-2/30 transition-all cursor-pointer group"
+                    className="flex items-center justify-between p-4 rounded-[var(--radius)] border border-rule bg-slab/40 hover:bg-slab-2/30 transition-all cursor-pointer group"
                     onClick={() => setSelectedFailure(f)}
                   >
                     <div className="flex flex-col gap-1">
@@ -590,9 +567,9 @@ export function Dashboard() {
                       </span>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
-                      <Badge variant="outline" className="text-[10px] uppercase font-mono bg-fail/10 text-fail border-fail/20">
+                      <StatusChip status="fail" className="text-[10px] uppercase font-mono">
                         {getOverdueDuration(f.due_at)}
-                      </Badge>
+                      </StatusChip>
                       <ChevronRight size={16} className="text-faint group-hover:text-mute transition-colors" />
                     </div>
                   </div>
@@ -608,9 +585,9 @@ export function Dashboard() {
           <SheetContent className="bg-slab-2 border-rule sm:max-w-md w-full p-6 flex flex-col h-full text-text">
             <SheetHeader className="text-left border-b border-rule pb-4">
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10">
+                <StatusChip status="fail">
                   Failed Run
-                </Badge>
+                </StatusChip>
                 <Badge variant="secondary" className="bg-slab text-mute">
                   Read Only
                 </Badge>
@@ -622,7 +599,7 @@ export function Dashboard() {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-6">
-              <div className="bg-slab/50 border border-rule rounded-xl p-4 flex flex-col gap-4">
+              <div className="bg-slab/50 border border-rule rounded-[var(--radius)] p-4 flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-mute font-mono uppercase tracking-widest font-bold">
                     Assigned Person
@@ -649,9 +626,9 @@ export function Dashboard() {
                     Current Status
                   </span>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10 uppercase text-[10px]">
+                    <StatusChip status="fail" className="uppercase text-[10px]">
                       {selectedFailure.status}
-                    </Badge>
+                    </StatusChip>
                     <span className="text-xs text-fail font-mono">
                       ({getOverdueDuration(selectedFailure.due_at)})
                     </span>
@@ -671,6 +648,6 @@ export function Dashboard() {
           </SheetContent>
         </Sheet>
       )}
-    </div>
+    </PageShell>
   );
 }

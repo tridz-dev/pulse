@@ -4,6 +4,7 @@ import { getOperationsOverview, getFailureList, getComplianceScore } from '@/ser
 import type { TreeNode } from '@/services/operations';
 import type { FailureItem, ComplianceScoreResponse } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { StatusChip } from '@/components/ui/status-chip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -13,6 +14,9 @@ import { useNavigate } from 'react-router-dom';
 import { TreeRow, TreeRowGroup } from '@/components/ui/tree-row';
 import { Disclosure } from '@/components/ui/disclosure';
 import { scoreStatus } from '@/lib/score';
+import { PageShell, PageHeader } from '@/components/shared/page-shell';
+import { PeriodToggle } from '@/components/shared/period-toggle';
+import { Skeleton, SkeletonRow } from '@/components/shared/skeleton';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -205,35 +209,31 @@ export function Operations() {
   })).sort((a, b) => b.count - a.count).slice(0, 5);
 
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col gap-6 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-text">Mission Control</h1>
-          <p className="text-mute text-sm mt-1">Hierarchical roll-up of organizational execution.</p>
-        </div>
-        <div className="flex items-center gap-1 bg-slab p-1 rounded-sm border border-rule shrink-0 self-start sm:self-center">
-          {(['Day', 'Week', 'Month'] as const).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriodType(p)}
-              className={
-                'h-8 px-3 text-xs font-medium transition-all rounded-sm ' +
-                (periodType === p ? 'bg-slab-2 text-text' : 'text-faint hover:text-mute hover:bg-slab-2')
-              }
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Mission Control"
+        subtitle="Hierarchical roll-up of organizational execution."
+        action={
+          <PeriodToggle
+            value={periodType}
+            onChange={setPeriodType}
+          />
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-4">
-          <div className="h-48 bg-slab animate-pulse" />
+          <div className="bg-slab rounded-[var(--radius)] border border-rule p-6">
+            <Skeleton height="lg" width="80px" className="mb-4" />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="h-64 bg-slab animate-pulse lg:col-span-2" />
-            <div className="h-64 bg-slab animate-pulse" />
+            <div className="bg-slab rounded-[var(--radius)] border border-rule p-6 lg:col-span-2">
+              <SkeletonRow cellCount={2} cellWidths={["60%", "40%"]} height="md" className="mb-4" />
+              <SkeletonRow cellCount={2} cellWidths={["60%", "40%"]} height="md" />
+            </div>
+            <div className="bg-slab rounded-[var(--radius)] border border-rule p-6">
+              <SkeletonRow cellCount={1} cellWidths={["100%"]} height="md" />
+            </div>
           </div>
         </div>
       ) : (
@@ -273,9 +273,9 @@ export function Operations() {
                 </div>
                 <div className="mt-4 pt-4 border-t border-rule flex items-center justify-between">
                   <span className="text-xs text-faint">Score</span>
-                  <Badge variant="outline" className="text-fail bg-fail/10 border-fail/20 font-mono text-xs font-bold">
+                  <StatusChip status="fail" className="font-mono text-xs font-bold">
                     {Math.round((weakestNode.score.combinedScore ?? 0) * 100)}%
-                  </Badge>
+                  </StatusChip>
                 </div>
               </Card>
             )}
@@ -292,15 +292,15 @@ export function Operations() {
                     Failing SOP runs ordered by overdue duration, repeat occurrences, and due time.
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-fail bg-fail/10 border-fail/20 font-mono">
+                <StatusChip status="fail" className="font-mono">
                   {sortedFailures.length} Failed
-                </Badge>
+                </StatusChip>
               </CardHeader>
               <CardContent className="p-0">
                 {isFailuresLoading ? (
                   <div className="p-6 space-y-3">
-                    <div className="h-12 bg-slab-2 animate-pulse" />
-                    <div className="h-12 bg-slab-2 animate-pulse" />
+                    <SkeletonRow cellCount={3} cellWidths={["50%", "30%", "20%"]} height="md" />
+                    <SkeletonRow cellCount={3} cellWidths={["50%", "30%", "20%"]} height="md" />
                   </div>
                 ) : sortedFailures.length === 0 ? (
                   <div className="p-12 text-center">
@@ -335,13 +335,13 @@ export function Operations() {
                           </span>
                         </div>
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
-                          <Badge variant="outline" className="text-[10px] uppercase font-mono bg-fail/10 text-fail border-fail/20">
+                          <StatusChip status="fail" className="text-[10px] uppercase font-mono">
                             {getOverdueDuration(f.due_at)}
-                          </Badge>
+                          </StatusChip>
                           {f.repeatCount > 1 && (
-                            <Badge variant="outline" className="text-[10px] uppercase font-mono bg-risk/10 text-risk border-risk/20">
+                            <StatusChip status="risk" className="text-[10px] uppercase font-mono">
                               {f.repeatCount}x repeat fail
-                            </Badge>
+                            </StatusChip>
                           )}
                         </div>
                       </div>
@@ -362,8 +362,8 @@ export function Operations() {
               <CardContent className="p-0">
                 {isFailuresLoading ? (
                   <div className="p-6 space-y-3">
-                    <div className="h-12 bg-slab-2 animate-pulse" />
-                    <div className="h-12 bg-slab-2 animate-pulse" />
+                    <SkeletonRow cellCount={2} cellWidths={["70%", "30%"]} height="md" />
+                    <SkeletonRow cellCount={2} cellWidths={["70%", "30%"]} height="md" />
                   </div>
                 ) : sortedSops.length === 0 ? (
                   <div className="p-12 text-center">
@@ -437,9 +437,9 @@ export function Operations() {
           <SheetContent className="bg-slab border-rule sm:max-w-md w-full p-6 flex flex-col h-full text-text">
             <SheetHeader className="text-left border-b border-rule pb-4">
               <div className="flex items-center justify-between">
-                <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10">
+                <StatusChip status="fail">
                   Failed Run
-                </Badge>
+                </StatusChip>
                 <Badge variant="secondary" className="bg-slab-2 text-mute">
                   Read Only
                 </Badge>
@@ -484,9 +484,9 @@ export function Operations() {
                     Current Status
                   </span>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10 uppercase text-[10px]">
+                    <StatusChip status="fail" className="uppercase text-[10px]">
                       {selectedFailure.status}
-                    </Badge>
+                    </StatusChip>
                     <span className="text-xs text-fail font-mono">
                       ({getOverdueDuration(selectedFailure.due_at)})
                     </span>
@@ -512,9 +512,9 @@ export function Operations() {
         <Sheet open={!!selectedSopTitle} onOpenChange={(open) => { if (!open) { setSelectedSopTitle(null); setSelectedSopFailures([]); } }}>
           <SheetContent className="bg-slab border-rule sm:max-w-md w-full p-6 flex flex-col h-full text-text">
             <SheetHeader className="text-left border-b border-rule pb-4">
-              <Badge variant="outline" className="text-fail border-fail/20 bg-fail/10 w-fit">
+              <StatusChip status="fail" className="w-fit">
                 SOP Failed Runs
-              </Badge>
+              </StatusChip>
               <SheetTitle className="text-xl text-text mt-2">{selectedSopTitle}</SheetTitle>
               <SheetDescription className="text-faint">
                 Failed runs for this SOP template in the selected period.
@@ -536,9 +536,9 @@ export function Operations() {
                       Due: {new Date(f.due_at.replace(' ', 'T')).toLocaleString()}
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-[9px] uppercase font-mono bg-fail/10 text-fail border-fail/20 shrink-0">
+                  <StatusChip status="fail" className="text-[9px] uppercase font-mono shrink-0">
                     {getOverdueDuration(f.due_at)}
-                  </Badge>
+                  </StatusChip>
                 </div>
               ))}
             </div>
@@ -554,7 +554,7 @@ export function Operations() {
           </SheetContent>
         </Sheet>
       )}
-    </div>
+    </PageShell>
   );
 }
 
