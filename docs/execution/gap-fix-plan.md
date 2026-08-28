@@ -110,40 +110,64 @@ blocker — it's promoted into Wave 0 execution alongside the other 8 READY
 items, run as a 2-task split (backend endpoints, then frontend page depends on
 backend landing).
 
-## Execution tracker (updated live as agents report)
+## Execution tracker
 
 | ID | Wave | Model | Status | Files | Notes |
 |---|---|---|---|---|---|
-| F-C9 | 0 | Haiku | pending | `pulse/api/operations.py`, `pulse/hooks.py` | security, highest priority |
-| F-B1 | 0 | Haiku | pending | `frontend/src/pages/Operations.tsx` | |
-| F-B2 | 0 | Haiku | pending | `frontend/src/pages/Dashboard.tsx` | |
-| F-B6 | 0 | Haiku | pending | `frontend/src/index.css` | |
-| F-A1 | 0 | Haiku | pending | `frontend/src/components/layout/Sidebar.tsx` | |
-| F-A3 | 0 | Haiku | pending | `frontend/src/components/shared/period-toggle.tsx` | |
-| F-A2 | 0 | Sonnet | pending | `Sidebar.tsx`, `CommandSearch.tsx`, `AppLayout.tsx` | cross-file state lift, escalate |
-| F-B5 | 0 | Haiku | pending | `Insights.tsx`, `Dashboard.tsx`, new shared helper | |
-| F-C3a | 0 | Haiku | pending | `pulse/api/operations.py` or new `pulse/api/corrective_actions.py` | backend first |
-| F-C3b | 0→1 | Haiku | blocked on F-C3a | new `frontend/src/pages/CorrectiveActions.tsx` | |
-| F-B3 | 1 | Haiku | blocked on F-B2 | `Dashboard.tsx` | |
-| F-B4 | 1 | Haiku | blocked on F-B1 | verify only | |
-| F-A5 | 1 | Sonnet | pending | `tree-row.tsx`, `Operations.tsx` | escalate: layout-affecting |
-| F-A6 | 1 | Haiku | pending | `Operations.tsx` | standalone bugfix half |
-| F-A7 | 1 | Haiku | pending | `Insights.tsx` | standalone bugfix half |
-| F-A4 | 1→2 | Sonnet | blocked on S-C10 partial | `Topbar.tsx` | may ship a minimal version now, full version after C10 |
-| S-C10 | 2 | Sonnet | pending | scope doc only | |
-| S-C1 | 2 | Sonnet | pending | scope doc only | |
-| S-C2 | 2 | Sonnet | pending | scope doc only | |
-| S-C5 | 2 | Sonnet | pending | scope doc only, **needs human sign-off before Wave 3** | |
-| F-C10 | 3 | Sonnet | blocked on S-C10 | multi-file | |
-| F-C1 | 3 | Sonnet+Haiku fan-out | blocked on S-C1 | multi-file | |
-| F-C2 | 3 | Sonnet+Haiku fan-out | blocked on S-C2 | multi-file | |
-| F-C5 | 3 | blocked on S-C5 sign-off | | | **held for human decision** |
+| F-C9 | 0 | Haiku | **done, verified** | `pulse/api/operations.py`, `pulse/api/permissions.py`, `pulse/hooks.py` | security — code-read confirmed correct |
+| F-B1 | 0 | Haiku | **done, verified** | `frontend/src/pages/Operations.tsx` | |
+| F-B2 | 0 | Haiku | **done, verified** | `frontend/src/pages/Dashboard.tsx` | B3 folded in here (same file/root cause) |
+| F-B6 | 0 | Haiku | **done** | `frontend/src/index.css` | |
+| F-A1 | 0 | Haiku | **done** | `frontend/src/components/layout/Sidebar.tsx` | |
+| F-A3 | 0 | Haiku | **done, verified** | `frontend/src/components/shared/period-toggle.tsx` | contrast measured 5.16:1 / 4.95:1 |
+| F-A2 | 0 | Sonnet | **done** | `Sidebar.tsx`, `CommandSearch.tsx`, `AppLayout.tsx` | serialized after F-A1 (same file) |
+| F-B5 | 0 | Haiku | **done** | `Insights.tsx`, new `lib/chart-helpers.ts` | Dashboard has no daily-trend chart, correctly skipped |
+| F-C3a | 0 | Haiku | **done, verified** | new `pulse/api/corrective_actions.py` | status/priority Select options checked against DocType JSON |
+| F-B3 | 0 | (folded into F-B2) | **done** | `Dashboard.tsx` | |
+| F-B4 | 1 | Haiku | **done — verified resolved, no code change needed** | | |
+| F-A5 | 1 | Sonnet | **done** | `tree-row.tsx`, `Operations.tsx` | `level` widened to `number`, `onDrillDown` added |
+| F-A6 | 1 | Haiku | **done** | `Operations.tsx` | serialized after F-A5 (same file) |
+| F-A7 | 1 | Haiku | **done, cleaned up** | `Insights.tsx`, `InsightsFilters.tsx` | exceeded scope (inlined filters instead of surgical patch) but verified correct; removed the dead `InsightsFiltersBar` export left behind |
+| F-C3b | 1 | Haiku | **done** | new `CorrectiveActions.tsx`, `services/correctiveActions.ts`, `App.tsx`, `Sidebar.tsx` | gated `hideFor: ['Pulse User']`, matching Team |
+| F-A4 | — | — | **not started** | `Topbar.tsx` | still open; give the header a job (title/scope strip) or make it `md:hidden` — small, unblocked, can run standalone anytime |
+| S-C10 | 2 | Sonnet | **done** | `docs/execution/scope-c10-shared-period-model.md` | found Operations.tsx already has a latent frontend/backend period-derivation split risk |
+| S-C1 | 2 | Sonnet | **done** | `docs/execution/scope-c1-action-loop.md` | recommends routing all actions through Corrective Action, no new SOP Run fields |
+| S-C2 | 2 | Sonnet | **done** | `docs/execution/scope-c2-notifications.md` | found the overdue-run scheduled job already exists — no new cron needed |
+| S-C5 | 2 | Sonnet | **done — explicitly NOT approved for implementation** | `docs/execution/scope-c5-coverage-model.md` | 7 open questions need human sign-off; also surfaced an adjacent bug (deactivating an employee doesn't cascade to their assignments) |
+| F-C10 | 3 | not started | blocked on: none (S-C10 is done) | multi-file | ready to fan out into its 5-task breakdown whenever resumed |
+| F-C1 | 3 | not started | blocked on: none (S-C1 is done) | multi-file | ready to fan out into its 5-task breakdown |
+| F-C2 | 3 | not started | blocked on: none (S-C2 is done) | multi-file | ready to fan out into its 4-task breakdown |
+| F-C5 | 3 | **held** | blocked on human sign-off | | do not start — see S-C5 open questions |
 | F-C4 | 4 | not started | | | own sub-plan when reached |
 | F-C6 | 4 | not started | | | |
 | F-C7 | 4 | not started | | | |
 | F-C8 | 4 | not started | | | |
-| V-ALL | 5 | Haiku swarm | not started | | |
-| R-OPUS | 5 | Opus | not started | | |
+| V-ALL | 5 | not started | | | ran an equivalent ad-hoc verification (tsc/eslint/build/py_compile) after each wave instead of one batch pass — see commits `c6e27c9`, `b8e3f69` |
+| R-OPUS | 5 | not started | | | recommended before any Wave 3 implementation spend, given its size |
+
+## Status as of this checkpoint
+
+**Shipped and verified** (commits `c6e27c9`, `b8e3f69`): all of Wave 0, all of Wave 1,
+and the Corrective Action queue (C3, frontend + backend). All 7 originally-reported
+UI defects (A1–A7) are fixed. All 6 deeper trust/data-integrity bugs (B1–B6) are
+fixed. The security finding (C9) is fixed. Full project typecheck, lint (0
+design-system violations, only pre-existing unrelated warnings remain), and
+production build all pass; backend files pass `py_compile`.
+
+**Scoped, not yet built**: C10 (shared period model), C1 (action loop), C2
+(notifications) — each has a dependency-ordered task list ready to execute.
+C5 (coverage/delegation) is scoped but explicitly held pending a human decision
+on 7 policy questions.
+
+**Not started**: A4 (Topbar header), C4/C6/C7/C8 (mobile, onboarding, evidence
+review, amendments — the largest, longest-lead items), the broad Haiku
+verification swarm, and the final Opus adversarial review.
+
+Wave 3 (C10/C1/C2 implementation) is real feature-building — multi-file,
+multi-day work with its own design decisions baked into the Wave 2 docs. Given
+the scope, this is a natural checkpoint to confirm direction before spending
+further agent-hours, rather than autonomously building three large systems in
+sequence.
 
 ## Rules for this run
 
