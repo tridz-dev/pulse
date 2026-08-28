@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store/AuthContext';
+import { usePeriodScope } from '@/hooks/usePeriodScope';
 import {
   getScoreTrends,
   getDepartmentComparison,
@@ -162,7 +163,7 @@ function CompletionTrendDot({ cx, cy, payload }: DotProps) {
 export function Insights() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [periodType, setPeriodType] = useState<'Day' | 'Week' | 'Month' | 'Custom'>('Day');
+  const scope = usePeriodScope({ allowCustom: true });
   const [isLoading, setIsLoading] = useState(true);
   const [scoreTrends, setScoreTrends] = useState<ScoreTrendPoint[]>([]);
   const [deptComparison, setDeptComparison] = useState<DeptBranchItem[]>([]);
@@ -192,21 +193,17 @@ export function Insights() {
       setIsLoading(true);
       setLoadError(null);
       const { start, end } = dateRange;
-      // Use range end for single-date widgets so "Demo data" preset shows data
-      const refDate = end || todayISO();
-      // Legacy snapshot-based charts do not support Custom; fall back to Day for those.
-      const legacyPeriodType = periodType === 'Custom' ? 'Day' : periodType;
       try {
         const [trends, dept, branch, perf, tmpl, compl, ca, heat, dist, missed] = await Promise.all([
-          getScoreTrends(start, end, periodType, filters),
-          getDepartmentComparison(refDate, legacyPeriodType, filters),
-          getBranchComparison(refDate, legacyPeriodType, filters),
-          getTopBottomPerformers(refDate, legacyPeriodType, 5, filters),
+          getScoreTrends(start, end, scope.periodType, filters),
+          getDepartmentComparison(scope.refDate, scope.legacyPeriodType, filters),
+          getBranchComparison(scope.refDate, scope.legacyPeriodType, filters),
+          getTopBottomPerformers(scope.refDate, scope.legacyPeriodType, 5, filters),
           getTemplatePerformance(start, end, filters),
           getCompletionTrend(start, end, filters),
           getCorrectiveActionSummary(filters),
           getDayOfWeekHeatmap(start, end, filters),
-          getScoreDistribution(refDate, legacyPeriodType, filters),
+          getScoreDistribution(scope.refDate, scope.legacyPeriodType, filters),
           getMostMissedItems(start, end, 10, filters),
         ]);
         setScoreTrends(trends);
@@ -226,24 +223,20 @@ export function Insights() {
       setIsLoading(false);
     }
     load();
-  }, [showInsights, periodType, filters, dateRange, retryToken]);
+  }, [showInsights, scope.refDate, scope.legacyPeriodType, scope.periodType, filters, dateRange, retryToken]);
 
   const retryLoad = () => setRetryToken((t) => t + 1);
-
-  const legacyPeriodType = periodType === 'Custom' ? 'Day' : periodType;
 
   const handleDeptBarClick = (dept: string) => {
     setFilters((f) => ({ ...f, department: dept }));
     setDrillLabel(`Department: ${dept}`);
-    const refDate = dateRange.end || todayISO();
-    getEmployeesByDepartment(dept, refDate, legacyPeriodType).then(setFilteredEmployees);
+    getEmployeesByDepartment(dept, scope.refDate, scope.legacyPeriodType).then(setFilteredEmployees);
   };
 
   const handleBranchBarClick = (branch: string) => {
     setFilters((f) => ({ ...f, branch }));
     setDrillLabel(`Branch: ${branch}`);
-    const refDate = dateRange.end || todayISO();
-    getEmployeesByBranch(branch, refDate, legacyPeriodType).then(setFilteredEmployees);
+    getEmployeesByBranch(branch, scope.refDate, scope.legacyPeriodType).then(setFilteredEmployees);
   };
 
   const clearDrill = () => {
@@ -276,6 +269,13 @@ export function Insights() {
     loadBranches();
   }, []);
 
+  // Setting a dateRange preset/custom range also flips scope.periodType to 'Custom'
+  // per usePeriodScope's setCustomRange contract — keep both states in sync.
+  const setDateRangeAndScope = (r: DateRangeValue) => {
+    setDateRange(r);
+    scope.setCustomRange({ start: r.start, end: r.end, preset: r.preset });
+  };
+
   const selectedDepts = Array.isArray(filters.department) ? filters.department : filters.department ? [filters.department] : [];
   const selectedBranches = Array.isArray(filters.branch) ? filters.branch : filters.branch ? [filters.branch] : [];
 
@@ -291,7 +291,7 @@ export function Insights() {
 
   const clearAllFilters = () => {
     setFilters({});
-    setDateRange(rangeFromPreset('90d'));
+    setDateRangeAndScope(rangeFromPreset('90d'));
   };
 
   if (!currentUser) return null;
@@ -334,19 +334,19 @@ export function Insights() {
         subtitle="Organizational analytics and performance trends."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            {periodType !== 'Custom' && (
+            {scope.periodType !== 'Custom' && (
               <PeriodToggle
-                value={periodType as 'Day' | 'Week' | 'Month'}
-                onChange={(p) => setPeriodType(p)}
+                value={scope.periodType as 'Day' | 'Week' | 'Month'}
+                onChange={(p) => scope.setPeriodType(p)}
               />
             )}
-            {periodType === 'Custom' && (
+            {scope.periodType === 'Custom' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium bg-slab-2 border border-rule rounded-[var(--radius)] text-mute">
                 <span>Custom date range active</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setPeriodType('Day')}
+                  onClick={() => scope.setPeriodType('Day')}
                   className="h-6 px-2 text-xs font-medium ml-1"
                 >
                   Clear
@@ -369,7 +369,7 @@ export function Insights() {
             <button
               key={id}
               type="button"
-              onClick={() => setDateRange(rangeFromPreset(id))}
+              onClick={() => setDateRangeAndScope(rangeFromPreset(id))}
               className={cn(
                 'rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium transition-colors',
                 dateRange.preset === id
@@ -388,7 +388,7 @@ export function Insights() {
         {/* Demo data (data-source switch, visually separated) */}
         <button
           type="button"
-          onClick={() => setDateRange(rangeFromPreset('demo'))}
+          onClick={() => setDateRangeAndScope(rangeFromPreset('demo'))}
           className={cn(
             'rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium transition-colors border border-rule',
             dateRange.preset === 'demo'
