@@ -4,7 +4,7 @@ export interface CorrectiveActionListItem {
   name: string;
   run: string;
   description: string;
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed' | 'Waived';
   priority?: string;
   assignedTo: string;
   assignedToName: string | null;
@@ -88,13 +88,15 @@ export async function createCorrectiveActionForRun(
   runName: string,
   description: string,
   priority?: string,
-  assignedTo?: string
+  assignedTo?: string,
+  notify?: boolean
 ): Promise<string> {
   const res = await call.post('pulse.api.operations.create_corrective_action_for_run', {
     run_name: runName,
     description,
     priority: priority || 'Medium',
     assigned_to: assignedTo,
+    notify,
   });
   return res.message as string;
 }

@@ -34,6 +34,7 @@ const STATUS_CHIP_MAP: Record<string, NonNullable<StatusChipProps['status']>> = 
   'In Progress': 'risk',
   'Resolved': 'pass',
   'Closed': 'none',
+  'Waived': 'waive',
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -153,7 +154,7 @@ export function CorrectiveActions() {
 
       {/* Status Filter */}
       <div className="flex gap-2 flex-wrap mt-2">
-        {['Open', 'In Progress', 'Resolved', 'Closed'].map((status) => (
+        {['Open', 'In Progress', 'Resolved', 'Closed', 'Waived'].map((status) => (
           <button
             key={status}
             onClick={() => {
@@ -247,7 +248,7 @@ export function CorrectiveActions() {
             </TableHeader>
             <TableBody>
               {actions.map((action) => {
-                const canResolve = action.status !== 'Resolved' && action.status !== 'Closed';
+                const canResolve = !['Resolved', 'Closed', 'Waived'].includes(action.status);
                 return (
                   <TableRow key={action.name}>
                     <TableCell className="max-w-[200px] overflow-hidden text-ellipsis">

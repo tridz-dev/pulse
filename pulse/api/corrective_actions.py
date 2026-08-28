@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from pulse.api.notifications import notify_ca_assigned
 from pulse.api.permissions import get_scope_for_user, _get_employee_for_user
 from pulse.domain.escalation import resolve_escalation_target
 
@@ -291,6 +292,12 @@ def update_corrective_action(
 	# Save the updated CA
 	ca.save(ignore_permissions=True)
 
+	# Notify newly-assigned employee for a plain reassignment (assigned_to changed
+	# with no status change in this same call). Status-change flows are handled by
+	# the T4 block below instead, so this and T4 never both fire for one call.
+	if assigned_to is not None and status is None:
+		notify_ca_assigned(ca.name, ca.run, assigned_to)
+
 	# T4 — Notify raised_by employee if CA was just marked Resolved or Closed
 	if status is not None and status in ("Resolved", "Closed"):
 		try:
@@ -447,6 +454,7 @@ def escalate_corrective_action(run_name: str, existing_ca: str | None = None) ->
 		ca.assigned_to = assigned_to
 		ca.escalated = 1
 		ca.save(ignore_permissions=True)
+		notify_ca_assigned(ca.name, run_name, assigned_to, kind="Escalation")
 	else:
 		# Create a new CA with escalation target and flag
 		raised_by = _get_employee_for_user(frappe.session.user)
@@ -469,6 +477,7 @@ def escalate_corrective_action(run_name: str, existing_ca: str | None = None) ->
 		)
 		doc.insert(ignore_permissions=True)
 		ca = doc
+		notify_ca_assigned(ca.name, run_name, assigned_to, kind="Escalation")
 
 	# Get the resolved employee name for the response
 	assigned_to_name = _employee_name_for_link(ca.assigned_to)

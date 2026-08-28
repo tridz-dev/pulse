@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from pulse.api.notifications import notify_ca_assigned
 from pulse.api.permissions import get_scope_for_user, _get_employee_for_user
 from pulse.api.scores import _calculate_score_snapshot, _period_range
 from pulse.domain.escalation import resolve_escalation_target
@@ -299,6 +300,7 @@ def get_failure_list(start_date: str, end_date: str, page: int = 1, page_size: i
 			"Corrective Action",
 			filters={"run": ["in", run_names]},
 			fields=["run", "name", "status"],
+			order_by="creation asc",
 		)
 		for ca_row in ca_rows:
 			# If a run somehow has more than one CA, keep the first one encountered;
@@ -346,6 +348,7 @@ def create_corrective_action_for_run(
 	description: str,
 	priority: str = "Medium",
 	assigned_to: str | None = None,
+	notify: bool = True,
 ) -> str:
 	"""Create a Corrective Action for a failed SOP Run (manager-initiated).
 
@@ -363,6 +366,11 @@ def create_corrective_action_for_run(
 			provided, defaults to the employee's escalation target (their direct manager,
 			via resolve_escalation_target()). If no escalation target exists, assignment
 			is required and the function will fail.
+		notify: Whether to send the "New corrective action assigned" notification to
+			assigned_to. Defaults to True. Callers that immediately transition the new
+			Corrective Action to a terminal, non-actionable status (e.g. waiving a run
+			with no existing CA) should pass False to avoid sending a spurious
+			actionable-work notification for something already resolved.
 
 	Returns:
 		The name of the newly created Corrective Action document.
@@ -468,49 +476,7 @@ def create_corrective_action_for_run(
 	doc.insert(ignore_permissions=True)
 
 	# T3 — Notify assigned_to employee that CA was assigned
-	try:
-		# Fetch run's template title
-		run_template_title = frappe.db.get_value(
-			"SOP Run",
-			run_name,
-			"template_title_snapshot",
-		)
-
-		# Resolve assigned_to employee's user and email
-		assigned_to_user = frappe.db.get_value(
-			"Pulse Employee",
-			assigned_to,
-			"user",
-		)
-		assigned_to_email = None
-		if assigned_to_user:
-			assigned_to_email = frappe.db.get_value("User", assigned_to_user, "email")
-
-		# Create in-app notification for assigned_to
-		frappe.get_doc({
-			"doctype": "Pulse Notification",
-			"recipient": assigned_to,
-			"kind": "CA Assigned",
-			"title": f"New corrective action assigned — {run_template_title}.",
-			"reference_doctype": "Corrective Action",
-			"reference_name": doc.name,
-		}).insert(ignore_permissions=True)
-
-		# Send email to assigned_to if email found
-		if assigned_to_email:
-			frappe.sendmail(
-				recipients=[assigned_to_email],
-				subject=f"Corrective action assigned: {run_template_title}",
-				message=f"You've been assigned a corrective action on run {run_name}: {description}",
-			)
-		else:
-			frappe.logger("operations").warning(
-				f"Could not resolve email for assigned_to {assigned_to} on corrective action {doc.name}"
-			)
-	except Exception as e:
-		# Log notification failure but do not crash the operation
-		frappe.logger("operations").error(
-			f"Notification insert/send failed for corrective action {doc.name}: {str(e)}"
-		)
+	if notify:
+		notify_ca_assigned(doc.name, run_name, assigned_to, description=description)
 
 	return doc.name

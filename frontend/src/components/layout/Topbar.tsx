@@ -17,6 +17,7 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -33,7 +34,21 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
 
   useEffect(() => {
     void fetchNotifications();
+
+    // Background refresh every 60 seconds
+    const intervalId = setInterval(() => {
+      void fetchNotifications();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
   }, []);
+
+  const handleDropdownOpenChange = (open: boolean) => {
+    setDropdownOpen(open);
+    if (open) {
+      void fetchNotifications();
+    }
+  };
 
   const handleMarkRead = async (notificationName: string) => {
     try {
@@ -84,7 +99,7 @@ export function Topbar({ onOpenMobileNav }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        <DropdownMenu>
+        <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
           <DropdownMenuTrigger
             className="relative p-2 text-mute hover:text-text hover:bg-slab-2 rounded-[var(--radius)] transition-colors outline-none"
             title="Notifications"

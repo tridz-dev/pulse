@@ -129,6 +129,64 @@ def mark_notification_read(name: str) -> dict:
 	return {"name": notif.name, "isRead": True}
 
 
+def notify_ca_assigned(
+	ca_name: str,
+	run_name: str,
+	recipient: str,
+	kind: str = "CA Assigned",
+	description: str | None = None,
+) -> None:
+	"""Insert a Pulse Notification + send email for a CA assignment. Never raises —
+	wraps its own body in try/except so a notification failure can never block the
+	caller's real state-changing operation. `kind` is normally "CA Assigned" but
+	callers may pass "Escalation" for the escalate flow (both are valid Select
+	options on Pulse Notification)."""
+	try:
+		# Fetch run's template title
+		run_template_title = frappe.db.get_value(
+			"SOP Run",
+			run_name,
+			"template_title_snapshot",
+		)
+
+		# Resolve recipient employee's user and email
+		recipient_user = frappe.db.get_value(
+			"Pulse Employee",
+			recipient,
+			"user",
+		)
+		recipient_email = None
+		if recipient_user:
+			recipient_email = frappe.db.get_value("User", recipient_user, "email")
+
+		# Create in-app notification for recipient
+		frappe.get_doc({
+			"doctype": "Pulse Notification",
+			"recipient": recipient,
+			"kind": kind,
+			"title": f"New corrective action assigned — {run_template_title}.",
+			"reference_doctype": "Corrective Action",
+			"reference_name": ca_name,
+		}).insert(ignore_permissions=True)
+
+		# Send email to recipient if email found
+		if recipient_email:
+			frappe.sendmail(
+				recipients=[recipient_email],
+				subject=f"Corrective action assigned: {run_template_title}",
+				message=f"You've been assigned a corrective action on run {run_name}: {description}",
+			)
+		else:
+			frappe.logger("notifications").warning(
+				f"Could not resolve email for recipient {recipient} on corrective action {ca_name}"
+			)
+	except Exception as e:
+		# Log notification failure but do not crash the operation
+		frappe.logger("notifications").error(
+			f"Notification insert/send failed for corrective action {ca_name}: {str(e)}"
+		)
+
+
 @frappe.whitelist()
 def mark_all_notifications_read() -> dict:
 	"""Convenience bulk action for the bell's "mark all read" affordance.

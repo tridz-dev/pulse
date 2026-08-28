@@ -299,9 +299,9 @@ def finalize_overdue_runs(evaluation_instant=None):
 			)
 
 		# T2 — Notify escalation target (manager) if resolved
-		target = resolve_escalation_target(run.employee)
-		if target:
-			try:
+		try:
+			target = resolve_escalation_target(run.employee)
+			if target:
 				# Resolve target's user and email
 				target_user = frappe.db.get_value(
 					"Pulse Employee",
@@ -333,11 +333,11 @@ def finalize_overdue_runs(evaluation_instant=None):
 					frappe.logger("scheduler").warning(
 						f"Could not resolve email for escalation target {target} on overdue run {run.name}"
 					)
-			except Exception as e:
-				# Log notification failure but do not crash the finalizer
-				frappe.logger("scheduler").error(
-					f"Escalation notification insert/send failed for run {run.name}: {str(e)}"
-				)
+		except Exception as e:
+			# Log notification failure but do not crash the finalizer
+			frappe.logger("scheduler").error(
+				f"Escalation notification insert/send failed for run {run.name}: {str(e)}"
+			)
 
 	frappe.db.commit()
 

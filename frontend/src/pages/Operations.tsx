@@ -9,6 +9,7 @@ import {
   listCorrectiveActions,
 } from '@/services/correctiveActions';
 import { usePeriodScope } from '@/hooks/usePeriodScope';
+import { getErrorMessage } from '@/lib/error-message';
 import type { TreeNode } from '@/services/operations';
 import type { FailureItem, ComplianceScoreResponse } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -182,7 +183,7 @@ export function Operations() {
         });
         await refetchFailures();
       } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Failed to acknowledge';
+        const msg = getErrorMessage(error, 'Failed to acknowledge');
         showToast({
           variant: 'fail',
           title: 'Error',
@@ -227,7 +228,10 @@ export function Operations() {
         // Create CA first, then immediately waive it
         const caName = await createCorrectiveActionForRun(
           actionMenuFailure.run,
-          'Waived: ' + waiveReason
+          'Waived: ' + waiveReason,
+          undefined,
+          undefined,
+          false
         );
         await updateCorrectiveAction(caName, {
           status: 'Waived',
@@ -248,7 +252,7 @@ export function Operations() {
       });
       await refetchFailures();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to waive';
+      const msg = getErrorMessage(error, 'Failed to waive');
       showToast({
         variant: 'fail',
         title: 'Error',
@@ -283,7 +287,7 @@ export function Operations() {
       });
       await refetchFailures();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to escalate';
+      const msg = getErrorMessage(error, 'Failed to escalate');
       showToast({
         variant: 'fail',
         title: 'Error',
@@ -324,7 +328,7 @@ export function Operations() {
       });
       await refetchFailures();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to snooze';
+      const msg = getErrorMessage(error, 'Failed to snooze');
       showToast({
         variant: 'fail',
         title: 'Error',
@@ -378,7 +382,7 @@ export function Operations() {
       });
       await refetchFailures();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to reassign';
+      const msg = getErrorMessage(error, 'Failed to reassign');
       showToast({
         variant: 'fail',
         title: 'Error',
