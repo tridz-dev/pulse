@@ -138,36 +138,43 @@ backend landing).
 | F-C1 | 3 | not started | blocked on: none (S-C1 is done) | multi-file | ready to fan out into its 5-task breakdown |
 | F-C2 | 3 | not started | blocked on: none (S-C2 is done) | multi-file | ready to fan out into its 4-task breakdown |
 | F-C5 | 3 | **held** | blocked on human sign-off | | do not start — see S-C5 open questions |
+| F-C10-T5 | 3 | **held** | blocked on human sign-off | `Insights.tsx` | Insights migration deliberately not built — real user-visible behavior change (Week/Month would start actually restricting the range), see scope-c10 §3 |
+| F-C1-T1..T5 | 3 | Sonnet+Haiku | **done, verified** | `corrective_action.json`, `corrective_actions.py`, `operations.py`, `Operations.tsx`, `correctiveActions.ts` | full action loop: acknowledge/assign/waive/snooze/escalate, ImpactStrip on waive+escalate |
+| F-C2-T1..T4 | 3 | Sonnet+Haiku | **done, verified** | new `pulse_notification/`, `notifications.py`, `permissions.py`, `hooks.py`, `tasks.py`, `Topbar.tsx` | 4 trigger points wired, real bell |
+| F-C10-T1..T4 | 3 | Sonnet+Haiku | **done, verified** | new `period-scope.ts`, `usePeriodScope.ts`, `Dashboard.tsx`, `Operations.tsx`, `Team.tsx` | backend/frontend period derivation confirmed to agree; zero behavior change on all 3 migrated pages |
 | F-C4 | 4 | not started | | | own sub-plan when reached |
 | F-C6 | 4 | not started | | | |
 | F-C7 | 4 | not started | | | |
 | F-C8 | 4 | not started | | | |
-| V-ALL | 5 | not started | | | ran an equivalent ad-hoc verification (tsc/eslint/build/py_compile) after each wave instead of one batch pass — see commits `c6e27c9`, `b8e3f69` |
-| R-OPUS | 5 | not started | | | recommended before any Wave 3 implementation spend, given its size |
+| V-ALL | 5 | Haiku swarm (4 agents) | **done** | | full pass on Wave 3: C10 hook+pages, C1 backend, C1 frontend, C2 end-to-end — see commits `54b7923`, `4762a3c` |
+| R-OPUS | 5 | Opus | **done** | | found 2 functional gaps (escalation sent no notification; Waived status unhandled in queue page) + 4 minor issues; confirmed both orchestrator security fixes correct; all converted to fix-tasks and closed in `4762a3c` |
 
 ## Status as of this checkpoint
 
-**Shipped and verified** (commits `c6e27c9`, `b8e3f69`): all of Wave 0, all of Wave 1,
-and the Corrective Action queue (C3, frontend + backend). All 7 originally-reported
-UI defects (A1–A7) are fixed. All 6 deeper trust/data-integrity bugs (B1–B6) are
-fixed. The security finding (C9) is fixed. Full project typecheck, lint (0
-design-system violations, only pre-existing unrelated warnings remain), and
-production build all pass; backend files pass `py_compile`.
+**Shipped, verified, deployed** (commits `c6e27c9` → `4762a3c`, live on
+`pulse-w1w5-reverify`): all of Wave 0, Wave 1, the Corrective Action queue (C3),
+and all of Wave 3 (C10 shared period model for Dashboard/Operations/Team, C1
+full action loop, C2 notifications end-to-end). All 7 originally-reported UI
+defects (A1–A7) fixed. All 6 trust/data-integrity bugs (B1–B6) fixed. Three
+security findings fixed across the run: C9 (unscoped hierarchy reads), an
+unscoped CA-reassignment gap found during Wave 3 verification, and an
+overly-permissive Notification DocType found the same way. Full project
+typecheck, lint (0 design-system violations), production build, and
+`py_compile` all pass; migrated and rebuilt cleanly on the bench.
 
-**Scoped, not yet built**: C10 (shared period model), C1 (action loop), C2
-(notifications) — each has a dependency-ordered task list ready to execute.
-C5 (coverage/delegation) is scoped but explicitly held pending a human decision
-on 7 policy questions.
+**Held for human decision, not built**:
+- **C10 Task 5** (Insights migration) — real behavior change, needs sign-off.
+- **C5** (coverage/delegation) — 7 open policy questions.
+- **A scope-check asymmetry** the Opus review surfaced: a manager can be
+  auto-assigned a CA upward to their own manager (via the escalation-target
+  default), but the new scope check now rejects them if they try to name that
+  same person explicitly via Reassign. Not a bug — a product question about
+  whether upward/lateral assignment should be permitted. See the Wave 3
+  correction-loop commit message for detail.
 
-**Not started**: A4 (Topbar header), C4/C6/C7/C8 (mobile, onboarding, evidence
-review, amendments — the largest, longest-lead items), the broad Haiku
-verification swarm, and the final Opus adversarial review.
-
-Wave 3 (C10/C1/C2 implementation) is real feature-building — multi-file,
-multi-day work with its own design decisions baked into the Wave 2 docs. Given
-the scope, this is a natural checkpoint to confirm direction before spending
-further agent-hours, rather than autonomously building three large systems in
-sequence.
+**Not started**: A4 (Topbar header — small, unblocked, can run anytime),
+C4/C6/C7/C8 (mobile, onboarding, evidence review, amendments — the largest,
+longest-lead items, each needs its own sub-plan when reached).
 
 ## Rules for this run
 
